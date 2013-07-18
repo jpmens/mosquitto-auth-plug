@@ -147,7 +147,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	if (ud->redis == NULL)
 		return MOSQ_ERR_ACL_DENIED;
 
-/*
+	/*
 	if (strcmp(username, "S1") == 0) {
 		return MOSQ_ERR_SUCCESS;
 	}
@@ -167,6 +167,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	if (ud->topicprefix) {
 		char *s, *t;
 		int n;
+		bool bf;
 
 #ifdef DEBUG
 		fprintf(stderr, "** topicprefix=%s\n", ud->topicprefix);
@@ -199,6 +200,18 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 #endif
 		if (strcmp(topic, tname) == 0)
 			match = 1;
+
+		/*
+		 * Check for MQTT wildcard matches in the newly constructed
+		 * topic name, and OR that into matches, allowing if allowed.
+		 */
+
+		mosquitto_topic_matches_sub(tname, topic, &bf);
+		match |= bf;
+#ifdef DEBUG
+		fprintf(stderr, "**-> wildcardcheck=%d\n", bf);
+#endif
+
 
 		free(tname);
 	}

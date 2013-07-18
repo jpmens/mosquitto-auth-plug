@@ -3,9 +3,9 @@ MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
 OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 
 OSSLINC=-I$(OPENSSLDIR)/include
-OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto
+OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto -lmosquitto
 
-CFLAGS=-I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -DDEBUG
+CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -DDEBUG
 
 all: redis-auth.so np
 

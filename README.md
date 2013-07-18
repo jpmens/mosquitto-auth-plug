@@ -85,6 +85,13 @@ if their username matches the _glob_ specified in `auth_opt_redis_superusers`.
 In our example above, any user with a username beginning with a capital `"S"`
 is exempt from ACL-checking.
 
+Wildcards are also supported. In the following example, the `%` will be replaced
+by a username, and the `#` is an MQTT wild card.
+
+```
+auth_opt_redis_topic_prefix /location/%/#
+```
+
 ## PUB/SUB
 
 At this point you ought to be able to connect to [Mosquitto].
