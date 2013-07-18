@@ -21,17 +21,18 @@ PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
 
 ## Creating a user
 
-A trivial utility to generate hases is included as `np`. (And yes, this
-needs a lot of work!)
+A trivial utility to generate hashes is included as `np`.
 
 ```bash
-$ np secret
+$ np
+Enter password:
+Re-enter same password:
 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
 ```
 
 Copy and paste the "PBKDF2" string and add it to [Redis]:
 
-```bash
+```
 $ redis-cli
 > SET n2 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
 > QUIT
@@ -40,7 +41,7 @@ $ redis-cli
 with "n2" being the name of the user you want to add. If you're using username
 prefixes you would prepend that:
 
-```bash
+```
 $ redis-cli
 > SET users:n2 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
 > QUIT
@@ -92,6 +93,13 @@ At this point you ought to be able to connect to [Mosquitto].
 mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
 ```
 
+## Requirements
+
+* [hiredis], the Minimalistic C client for Redis
+* OpenSSL (tested with 1.0.0c, but should work with earlier versions)
+* A [Mosquitto] broker
+* A [Redis] server
+
 ## Credits
 
 * Uses `base64.[ch]` (and yes, I know OpenSSL has base64 routines, but no thanks). These files are
@@ -102,3 +110,4 @@ mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
  [Redis]: http://redis.io
  [pbkdf2]: http://en.wikipedia.org/wiki/PBKDF2
  [1]: https://exyr.org/2011/hashing-passwords/
+ [hiredis]: https://github.com/redis/hiredis
