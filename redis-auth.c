@@ -37,6 +37,8 @@
 
 struct userdata {
 	redisContext *redis;
+	char *host;
+	int port;
 	char *usernameprefix;		/* e.g. "u:" */
 	char *topicprefix;
 	char *superusers;		/* fnmatch-style glob */
@@ -54,8 +56,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	int i;
 	struct mosquitto_auth_opt *o;
 	struct userdata *ud;
-	char *redis_host = NULL;
-	int redis_port = 6379;
 	int ret = MOSQ_ERR_SUCCESS;
 
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
@@ -69,6 +69,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->topicprefix		= NULL;
 	ud->superusers		= NULL;
 	ud->redis		= NULL;
+	ud->host		= NULL;
+	ud->port		= 6379;
 
 	for (i = 0, o = auth_opts; i < auth_opt_count; i++, o++) {
 #ifdef DEBUG
@@ -81,21 +83,19 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		if (!strcmp(o->key, "redis_superusers"))
 			ud->superusers = strdup(o->value);
 		if (!strcmp(o->key, "redis_host"))
-			redis_host = strdup(o->value);
+			ud->host = strdup(o->value);
 		if (!strcmp(o->key, "redis_port"))
-			redis_port = atoi(o->value);
+			ud->port = atoi(o->value);
 	}
 
-	if (redis_host == NULL)
-		redis_host = strdup("localhost");
+	if (ud->host == NULL)
+		ud->host = strdup("localhost");
 
-	ud->redis = redis_init(redis_host, redis_port);
+	ud->redis = redis_init(ud->host, ud->port);
 	if (ud->redis == NULL) {
-		fprintf(stderr, "Cannot connect to Redis on %s:%d\n", redis_host, redis_port);
+		fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
 		ret = MOSQ_ERR_UNKNOWN;
 	}
-
-	free(redis_host);
 
 	return (ret);
 }
@@ -114,6 +114,8 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 			free(ud->topicprefix);
 		if (ud->superusers)
 			free(ud->superusers);
+		if (ud->host)
+			free(ud->host);
 	}
 
 	return MOSQ_ERR_SUCCESS;
@@ -230,7 +232,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 {
 	struct userdata *ud = (struct userdata *)userdata;
 	char *phash;
-	int match;
+	int match, io;
 
 #ifdef DEBUG
 	fprintf(stderr, "auth_unpwd_check u=%s, p=%s, redisuser: %s%s\n",
@@ -247,13 +249,25 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	if (ud->redis == NULL)
 		return MOSQ_ERR_AUTH;
 
-	if ((phash = redis_getuser(ud->redis, ud->usernameprefix, username)) == NULL) {
+	if ((phash = redis_getuser(ud->redis, ud->usernameprefix, username, &io)) == NULL) {
 #ifdef DEBUG
 		fprintf(stderr, "User %s%s not found in Redis\n", 
 			ud->usernameprefix? ud->usernameprefix : "",
 			username);
 #endif
 		return MOSQ_ERR_AUTH;
+	}
+
+	if (io != 0) {
+		fprintf(stderr, "Redis IO error. Attempt to reconnect...\n");
+		redis_destroy(ud->redis);
+
+		ud->redis = redis_init(ud->host, ud->port);
+		if (ud->redis == NULL) {
+			fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
+		}
+
+		/* FIXME: reconnected? now what? */
 	}
 
 	match = pbkdf2_check((char *)password, phash);
