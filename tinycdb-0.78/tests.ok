@@ -1,0 +1,83 @@
+Create simple db
+0
+checksum may fail if no md5sum program
+97549c2e76e2d446430a392d77ed1bcb
+Dump simple db
++3,4:one->here
++1,1:a->b
++1,3:b->abc
++3,4:one->also
+
+0
+Stats for simple db
+number of records: 4
+key min/avg/max length: 1/2/3
+val min/avg/max length: 1/3/4
+hash tables/entries/collisions: 3/8/1
+hash table min/avg/max length: 2/3/4
+hash table distances:
+ d0:      3 75%
+ d1:      1 25%
+ d2:      0  0%
+ d3:      0  0%
+ d4:      0  0%
+ d5:      0  0%
+ d6:      0  0%
+ d7:      0  0%
+ d8:      0  0%
+ d9:      0  0%
+ >9:      0  0%
+0
+Query simple db (two records match)
+herealso
+0
+Query for non-existed key
+100
+Doing 600 repeated records
+0
+checksum may fail if no md5sum program
+412a0b7578efca528bf8398c8811caf4
+cdb stats should show 601 record
+number of records: 601
+key min/avg/max length: 1/1/1
+val min/avg/max length: 3/3/5
+hash tables/entries/collisions: 2/1202/599
+hash table min/avg/max length: 2/601/1200
+hash table distances:
+ d0:      2  0%
+ d1:      1  0%
+ d2:      1  0%
+ d3:      1  0%
+ d4:      1  0%
+ d5:      1  0%
+ d6:      1  0%
+ d7:      1  0%
+ d8:      1  0%
+ d9:      1  0%
+ >9:    590 98%
+0
+Querying key
+other
+0
+Dumping and re-creating db
+0
+0
+Handling large key size
+cdb: (stdin): bad format
+2
+Handling large value size
+cdb: (stdin): bad format
+2
+Handling invalid input format (short file)
+cdb: unable to read: short file
+2
+Creating db with eol in key and value
+0
+checksum may fail if no md5sum program
+1d444fe759c26d36f500d01c41cfda40
+Querying key-value with eol
+b
+0
+Handling file size limits
+cdb: cdb_make_put: File too large
+111

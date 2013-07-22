@@ -1,0 +1,25 @@
+# libcdb.map: libcdb symbol map file for GNU LD
+{
+  global:
+    cdb_hash;
+    cdb_unpack;
+    cdb_pack;
+    cdb_init;
+    cdb_free;
+    cdb_read;
+    cdb_get;
+    cdb_find;
+    cdb_findinit;
+    cdb_findnext;
+    cdb_seqnext;
+    cdb_seek;
+    cdb_bread;
+    cdb_make_start;
+    cdb_make_add;
+    cdb_make_exists;
+    cdb_make_put;
+    cdb_make_find;
+    cdb_make_finish;
+  local:
+    *;
+};

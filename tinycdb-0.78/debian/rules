@@ -1,0 +1,73 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+LIBDIR = /usr/lib/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+CFLAGS = $(shell dpkg-buildflags --get CFLAGS) \
+ $(shell dpkg-buildflags --get CPPFLAGS) \
+ -Wall -W
+LDFLAGS = $(shell dpkg-buildflags --get LDFLAGS)
+
+SOVER = 1
+
+configure:	# nothing
+	dh_testdir
+
+build:	libcdb.pc
+libcdb.pc:
+	dh_testdir
+	$(MAKE) CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+		staticlib sharedlib cdb-shared nss
+	cp -pf nss_cdb-Makefile cdb-Makefile
+	cp -pf cdb-shared cdb
+	sed 's/@VERSION@/$(shell sed -n 's/^VERSION *= *//p' Makefile)/' debian/libcdb.pc > $@
+
+clean:
+	dh_testdir
+	rm -fd cdb-Makefile libcdb.pc
+	$(MAKE) distclean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean
+	dh_installdocs -A NEWS
+
+# libcdb$(SOVER)
+	dh_install -plibcdb$(SOVER) libcdb.so.$(SOVER) $(LIBDIR)
+
+# libcdb-dev
+	dh_install -plibcdb-dev libcdb.a libcdb_pic.a libcdb.so $(LIBDIR)
+	dh_install -plibcdb-dev cdb.h usr/include
+	dh_install -plibcdb-dev libcdb.pc $(LIBDIR)/pkgconfig
+	dh_installman -plibcdb-dev cdb.3
+#	dh_installdocs -plibcdb-dev TODO
+
+# tinycdb
+	dh_install -ptinycdb cdb usr/bin
+	dh_installman -ptinycdb cdb.1 cdb.5
+
+# libnss-cdb
+#	dh_install -plibnss-cdb cdb-Makefile etc
+#	dh_install -plibnss-cdb libnss_cdb.so.2 lib
+
+binary-indep: build install
+
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps -L libcdb$(SOVER) -l debian/libcdb$(SOVER)$(LIBDIR)
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

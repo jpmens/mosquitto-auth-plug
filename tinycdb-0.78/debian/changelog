@@ -1,0 +1,243 @@
+tinycdb (0.78) unstable; urgency=low
+
+  * new release (0.78), a few minor fixes:
+   - fix handling of files >4Gb
+   - fix handling of files >2Gb on 32bit platforms (compile with _FILE_OFFSET_BITS=64)
+   - fix file size limit test
+   - fix compiler warnings (missing #include)
+  * make it multiarch-aware (install libs to /usr/lib/$arch)
+  * use dpkg-buildflags for CFLAGS/LDFLAGS
+  * update Standards-Version to 3.9.3
+  * debhelper 7
+  * simplify debian/rules quite a bit
+
+ -- Michael Tokarev <mjt@tls.msk.ru>  Fri, 11 May 2012 16:33:34 +0400
+
+tinycdb (0.77) unstable; urgency=low
+
+  * manpage typo fixes.
+
+  * in win32, close file mapping handle right after MapViewOfFile(),
+    instead of doing it in cdb_close().  This eliminates handle leak
+    on win32 platform.  And this is how mmap() works on unix, too.
+    Thanks to David Boyce for this.
+
+  * also for win32 platform, cdb.c (the utility):
+    - open cdb files in binary mode
+    - add windowsisms for include files
+    Also thanks to David Boyce for the fixes.
+
+  * fixed a bug in _cdb_make_fullwrite() - wrong logic in EINTR
+    handling.
+    Thanks to Florian Weimer.
+    Closes: #511629.
+
+  * install /usr/lib/pkgconfig/libcdb.pc from debian/rules.
+    Closes: #446751, #446752.
+
+  * lintian warnings:
+    o moved $DH_COMPAT to deban/compat (=4)
+    o set Standards-Version: 3.8.0 (no changes needed)
+    o fixed "package package" in libcdb1 description (Closes: #442571)
+    o s/${Source-Version}/${binary:Version}/
+
+  * released 0.77
+
+ -- Michael Tokarev <mjt@corpit.ru>  Sat, 31 Jan 2009 20:12:02 +0300
+
+tinycdb (0.76) unstable; urgency=low
+
+  * 0.76 release.
+    Closes: #342849, #316253, #360129, #383417.
+    Also closes: #299026, #344572.
+
+  * manpage spelling fixes, from Claus Assmann <ca+tinycdb (at) esmtp.org>.
+
+  * little mods to allow compiling tinycdb by C++ compiler,
+    from Olly Betts <olly (at) survex.com>.
+
+  * use program_invocation_short_name on GLIBC, (modified) patch
+    from Dmitry V. Levin  <ldv (at) altlinux.org>
+
+  * manpage fix (cdb_findnext() prototype),
+    from Dmitry V. Levin <ldv (at) altlinux.org>
+
+  * (somewhat silly) GCC-4.x "signedness" warnings fix, modified patch
+    from Dmitry V. Levin  <ldv (at) altlinux.org>
+
+  * more signed vs unsigned char* fixes in various places
+
+  * Makefile: always build libnss_cdb.so with libcdb_pic.a, no nss-shared
+    target: to avoid extra dependency from /usr/lib/.
+
+  * Makefile: use map files for lib*.so, with explicit list of exported
+    symbols.  This, in particular, avoids exporting of libcdb symbols by
+    libnss_cdb.so.
+
+  * mark all internal routines as internal_function (defined as
+    __attribute__((visibility("hidden"))) for GCC)
+
+  * Makefile: add tests-shared, to use cdb-shared for testing
+
+  * Makefile: allow to specify which binary (shared vs static) to install
+    in install target, by using INSTALLPROG variable
+
+  * Makefile: pass -DNSSCDB_DIR=... to compiler when building .lo files,
+    to allow setting of system config dir (/etc by default) on command line.
+    For nss_cdb module.
+
+  * Makefile: use $(CP) instead of cp, to be able to specify `cp' options
+    (CP="cp -p")
+
+  * Makefile: ship debian/ files in `dist' target as well, if not only
+    for debian/changelog.
+
+  * Makefile: bumped version to 0.76
+
+  * Use unlink(tmpname) + open(O_CREAT|O_EXCL) instead of
+    open(O_CREAT|O_TRUNC) when creating the new CDB file.
+    And use O_NOFOLLOW if defined.
+    This also works around some (probably) possible symlink attacks.
+
+  * Add -p perms option for cdb utility, to specify mode (permission bits)
+    for newly created .cdb file (default is 0666&umask(), -p forces the given
+    mode).
+
+  * allow tmpname (cdb -t) to be `-', to mean no temp file gets created.
+    Also check if tmpname is the same as database name and don't try to
+    rename() if it is.
+
+  * rewrite nss_cdb-Makefile a bit: simplify it, and use more sane
+    permission scheme for /etc/shadow
+
+  * bumped Debian Standards-Version to 3.7.2 (no changes necessary).
+
+  * fixed a typo in cdb_seek.c, -- it segfaulted if passed NULL dlenp
+    pointer.  Thanks Daiki for the patch.  Closes: #383417
+
+  * use MAP_FAILED to test mmap() return value, instead of hardcoded -1.
+
+  * several minor fixes for debian/* files, thanks to Bernhard R. Link.
+
+  * removed libnss_cdb Debian package, for now
+
+  * libcdb-dev replaces tinycdb<0.76
+
+ -- Michael Tokarev <mjt@corpit.ru>  Sat,  9 Sep 2006 13:55:10 +0400
+
+tinycdb (0.75) unstable; urgency=low
+
+  * 0.75 release
+
+  * debian packaging is now back to me.  Thank you Christian for doing
+    packaging work for me, it is greatly apprecated.
+
+  * build 4 packages out of the source base:
+    - shared library libcdb1
+    - development files libcdb-dev
+    - utility tinycdb
+    - nss module nss-cdb
+    Closes: Debian #360129, #316253.
+
+  * rewrote cdb_make_put(CDB_PUT_REPLACE) to a) actually replace *all*
+    duplicates, not just the first one, and b) perform real replace,
+    by moving tail of .cdb file.  Also, always add new record to the
+    end of the file, not to the place where a duplicate was found.
+
+  * add cdb_make_put(CDB_PUT_REPLACE0) to zerofill all duplicates,
+    which is faster than CDB_PUT_REPLACE but less accurate as it
+    leaves gaps in the file.
+
+  * ship libcdb_pic.a in the -dev package.
+
+ -- Michael Tokarev <mjt@corpit.ru>  Tue, 23 Aug 2005 20:06:01 +0400
+
+tinycdb (0.74-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Christian Kurz <shorty@debian.org>  Wed, 28 Jul 2004 20:12:02 +0200
+
+tinycdb (0.73-1) unstable; urgency=low
+
+  * First Debian release, based on the debian directory that
+    Michael Tokarev, the upstream author, had provided in the 
+    package itself. So only some minor changes were necessary.
+
+ -- Christian Kurz <shorty@debian.org>  Tue,  5 Nov 2002 10:36:59 +0100
+
+tinycdb (0.72) unstable; urgency=low
+
+  * cleaned up debian packaging and made it actually work
+  * no code changes
+
+ -- Michael Tokarev <mjt@corpit.ru>  Sun, 13 Oct 2002 03:00:32 +0400
+
+tinycdb (0.71) unstable; urgency=low
+
+  * rearranged object files to not depend on ranlib on
+    systems that requires it (i.e. OpenBSD)
+  * use ranlib but mark it's possible error as non-fatal
+
+ -- Michael Tokarev <mjt@corpit.ru>  Mon, 22 Jul 2002 13:35:14 +0400
+
+tinycdb (0.7a) unstable; urgency=low
+
+  * converted into CVS, added two missing #include <stdlib.h> for
+    malloc declaration and spec target to the Makefile
+
+ -- Michael Tokarev <mjt@corpit.ru>  Mon, 10 Dec 2001 00:21:17 +0300
+
+tinycdb (0.7) unstable; urgency=low
+
+  * added cdb_seek() and cdb_bread() routines as found
+    in freecdb/cdb-0.64
+
+ -- Michael Tokarev <mjt@corpit.ru>  Sun, 14 Oct 2001 19:29:33 +0400
+
+tinycdb (0.6) unstable; urgency=low
+
+  * added another option, CDB_PUT_WARN, to cdb_make_put's
+    flags (to allow adding unconditionally but still warn
+    about dups), now cdb_make_put seems to be logically
+    complete.
+  * added and documented -r and -u options for cdb(1)
+    command, and made them consistent with -w and -e
+    also.
+  * reorganized cdb(1) manpage and added changes made to
+    cdb command.
+  * added version references to manpages (and make them
+    autogenerated to simplify maintenance).
+  * added cdb(5) manpage describing CDB file format.
+
+ -- Michael Tokarev <mjt@corpit.ru>  Thu, 26 Jul 2001 02:38:08 +0400
+
+tinycdb (0.5) unstable; urgency=low
+
+  * added missing #include <sys/types.h> in cdb_init.c,
+    thanks to ppetru@ppetru.net (Petru Paler)
+  * removed usage of pread() in cdb_make_find() and friends,
+    suggested by Liviu Daia <Liviu.Daia@imar.ro>
+  * autogenerate tinycdb.spec file from template and debian/changelog
+  * autogenerate cdb.h from cdb.h.in (substituting version)
+
+ -- Michael Tokarev <mjt@corpit.ru>  Wed, 25 Jul 2001 17:16:39 +0400
+
+tinycdb (0.4) unstable; urgency=low
+
+  * added cdb_make_put() routine to conditionnaly add a record
+  * split cdb library to more files (finer granularity)
+  * added cdb_findinit() and cdb_findnext() routines
+  * renamed cdbtool to cdb
+  * simplified cdb utility (dropped various format spec, changed options
+    parsing) and a manpage
+  * added small note and copyright to every file in package
+  * added some testsuite (make test)
+
+ -- Michael Tokarev <mjt@corpit.ru>  Fri, 29 Jun 2001 23:39:53 +0400
+
+tinycdb (0.3) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Michael Tokarev <mjt@corpit.ru>  Sun, 27 May 2001 16:38:58 +0400

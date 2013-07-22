@@ -1,0 +1,78 @@
+.\" cdb.5: cdb file format manpage
+.\"
+.\" This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+.\" Public domain.
+.\"
+.TH cdb 5 "Apr, 2005"
+
+.SH NAME
+cdb \- Constant DataBase file format
+
+.SH DESCRIPTION
+
+A \fBcdb\fR database is a single file used to map `keys'
+to `values', having records of (key,value) pairs.  File
+consists of 3 parts: toc (table of contents), data and
+index (hash tables).
+
+Toc has fixed length of 2048 bytes, containing 256 pointers
+to hash tables inside index sections.  Every pointer consists
+of position of a hash table in bytes from the beginning of
+a file, and a size of a hash table in entries, both are
+4-bytes (32 bits) unsigned integers in little-endian form.
+Hash table length may have zero length, meaning that
+corresponding hash table is empty.
+
+Right after toc section, data section follows without any
+alingment.  It consists of series of records, each is a
+key length, value (data) length, key and value.  Again,
+key and value length are 4-byte unsigned integers.  Each
+next record follows previous without any special alignment.
+
+After data section, index (hash tables) section follows.
+It should be looked to in conjunction with toc section,
+where each of max 256 hash tables are defined.  Index
+section consists of series of hash tables, with starting
+position and length defined in toc section.  Every hash
+table is a sequence of records each holds two numbers:
+key's hash value and record position inside data section
+(bytes from the beginning of a file to first byte of
+key length starting data record).  If record position
+is zero, then this is an empty hash table slot, pointed
+to nowhere.
+
+CDB hash function is
+.nf
+  hv = ((hv << 5) + hv) ^ \fIc\fR
+.fi
+for every single \fIc\fR byte of a key, starting with
+hv = \fI5381\fR.
+
+Toc section indexed by (hv % 256), i.e. hash value modulo
+256 (number of entries in toc section).
+
+In order to find a record, one should: first, compute the hash
+value (hv) of a key.  Second, look to hash table number hv modulo
+256.  If it is empty, then there is no such key exists.  If it
+is not empty, then third, loop by slots inside that hash table,
+starting from slot with number hv divided by 256 modulo length
+of that table, or ((hv / 256) % htlen), searching for this hv
+in hash table.  Stop search on empty slot (if record position
+is zero) or when all slots was probed (note cyclic search,
+jumping from end to beginning of a table).  When hash value in
+question is found in hash table, look to key of corresponding
+record, comparing it with key in question.  If them of the same
+length and equals to each other, then record is found, overwise,
+repeat with next hash table slot.  Note that there may be several
+records with the same key.
+
+.SH SEE ALSO
+cdb(1), cdb(3).
+
+.SH AUTHOR
+The \fBtinycdb\fR package written by Michael Tokarev <mjt@corpit.ru>,
+based on ideas and shares file format with original cdb library by
+Dan Bernstein.
+
+.SH LICENSE
+Public domain.
