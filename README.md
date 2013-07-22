@@ -61,7 +61,7 @@ auth_opt_redis_port 6379
 # Clients may PUB/SUB to the following prefix. '%' is replaced
 # with an authorized user's username (sans username_prefix). So,
 # user 'jjolie' may PUB/SUB to "/location/jjolie" and her password
-# is at Redis key "u:jjolie"
+# is at Redis key "users:jjolie"
 auth_opt_redis_topic_prefix /location/%
 
 # Usernames with this fnmatch(3) (a.k.a glob(3))  pattern are exempt from the
