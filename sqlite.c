@@ -79,8 +79,6 @@ char *sqlite_getuser(struct _be_conn *bec, const char *username)
 	if (!bec)
 		return (NULL);
 
-	sqlite3_exec(bec->sq, "BEGIN TRANSACTION;", NULL, NULL, NULL);
-
 	sqlite3_reset(bec->stmt);
 	sqlite3_clear_bindings(bec->stmt);
 
@@ -99,7 +97,7 @@ char *sqlite_getuser(struct _be_conn *bec, const char *username)
 	}
 
     out:
-	sqlite3_exec(bec->sq, "COMMIT TRANSACTION;", NULL, NULL, NULL);
+	sqlite3_reset(bec->stmt);
 
 	return (value);
 }
