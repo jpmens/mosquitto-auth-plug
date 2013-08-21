@@ -15,10 +15,11 @@ CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -I$(CDBINC) -DDEBUG
 
 all: auth-plug.so np pwdb.cdb
 
-auth-plug.so : auth-plug.c redis.o base64.o pbkdf2-check.o $(CDBLIB)
-	$(CC) ${CFLAGS} -fPIC -shared $^ -o $@  $(OSSLIBS) -L$(CDBDIR) -lcdb -lhiredis
+auth-plug.so : auth-plug.c redis.o sqlite.o base64.o pbkdf2-check.o $(CDBLIB)
+	$(CC) ${CFLAGS} -fPIC -shared $^ -o $@  $(OSSLIBS) -L$(CDBDIR) -lcdb -lhiredis -lsqlite3
 
 redis.o: redis.c redis.h Makefile
+sqlite.o: sqlite.c sqlite.h Makefile
 base64.o: base64.c base64.h Makefile
 pbkdf2-check.o: pbkdf2-check.c base64.h Makefile
 

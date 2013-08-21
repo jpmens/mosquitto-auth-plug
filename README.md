@@ -82,17 +82,17 @@ auth_opt_redis_port 6379
 # with an authorized user's username (sans username_prefix). So,
 # user 'jjolie' may PUB/SUB to "/location/jjolie" and her password
 # is at Redis key "users:jjolie"
-auth_opt_redis_topic_prefix /location/%
+auth_opt_topic_prefix /location/%
 
 # Usernames with this fnmatch(3) (a.k.a glob(3))  pattern are exempt from the
 # module's ACL checking
-auth_opt_redis_superusers S*
+auth_opt_superusers S*
 ```
 
 ## ACL
 
 The plugin has support for checking topics allowed to a user. By default,
-a topic_prefix is assumed, configured as `auth_opt_redis_topic_prefix`.
+a topic_prefix is assumed, configured as `auth_opt_topic_prefix`.
 Any number of `%` characters in this prefix are replaced by the username.
 
 In the example above, a user "n2" would be allowed to access the
@@ -100,7 +100,7 @@ topic `"/location/n2"`, whereas a user "jjolie" would be allowed access
 to the topic branch `"/location/jjolie"`.
 
 Users can be given "superuser" status (i.e. they may access any topic)
-if their username matches the _glob_ specified in `auth_opt_redis_superusers`.
+if their username matches the _glob_ specified in `auth_opt_superusers`.
 
 In our example above, any user with a username beginning with a capital `"S"`
 is exempt from ACL-checking.
@@ -109,7 +109,7 @@ Wildcards are also supported. In the following example, the `%` will be replaced
 by a username, and the `#` is an MQTT wild card.
 
 ```
-auth_opt_redis_topic_prefix /location/%/#
+auth_opt_topic_prefix /location/%/#
 ```
 
 ## PUB/SUB
