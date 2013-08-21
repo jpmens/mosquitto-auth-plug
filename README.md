@@ -1,7 +1,27 @@
-# mosquitto-redis-auth
+# mosquitto-auth-plug
 
-This is a plugin to authenticate and authorize [Mosquitto] users from a [Redis]
-key/value store.
+This is a plugin to authenticate and authorize [Mosquitto] users from one
+of several distinct back-ends:
+
+* [Redis] key/value store
+* CDB
+* SQLite3 database
+
+## Building the plugin
+
+In order to compile the plugin you'll require a copy of the [Mosquitto] source
+code together with the libraries required for the back-end you want to use in
+the plugin. OpenSSL is also required.
+
+Edit the `Makefile` and modify the definitions at the top to suit your building
+environment, in particular, you have to configure which back-end you want to
+provide as well as the path to the [Mosquitto] source.
+
+After a `make` you should have a shared object called `auth-plug.so`
+which you will reference in your `mosquitto.conf`.
+
+
+## Passwords
 
 Usernames in Redis can have a prefix (e.g. `users:`) which is applied to
 all users attempting to authenticate to this plugin. A user's password

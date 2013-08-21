@@ -13,9 +13,9 @@ OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto -lmosquitto
 
 CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -I$(CDBINC) -DDEBUG
 
-all: redis-auth.so np pwdb.cdb
+all: auth-plug.so np pwdb.cdb
 
-redis-auth.so : redis-auth.c redis.o base64.o pbkdf2-check.o $(CDBLIB)
+auth-plug.so : auth-plug.c redis.o base64.o pbkdf2-check.o $(CDBLIB)
 	$(CC) ${CFLAGS} -fPIC -shared $^ -o $@  $(OSSLIBS) -L$(CDBDIR) -lcdb -lhiredis
 
 redis.o: redis.c redis.h Makefile
