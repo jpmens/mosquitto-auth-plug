@@ -25,7 +25,7 @@ which you will reference in your `mosquitto.conf`.
 
 Usernames in Redis can have a prefix (e.g. `users:`) which is applied to
 all users attempting to authenticate to this plugin. A user's password
-is stored as a [PBKDF2] hash in Redis. An example "password" is a 
+is stored as a [PBKDF2] hash in the back-end. An example "password" is a 
 string with five pieces in it, delimited by `$`, inspired by [this][1].
 
 ```
