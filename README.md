@@ -46,6 +46,74 @@ rows for a particular user, each returning EXACTLY one column containing a
 topic (wildcards are supported). A single `'%s`' in the query string is
 replaced by the username attempting to access the broker.
 
+Configuration for the `mysql` back-end:
+
+```
+auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
+auth_opt_host localhost
+auth_opt_port 3306
+auth_opt_dbname test
+#auth_opt_user jjj
+#auth_opt_pass kkk
+auth_opt_userquery SELECT pw FROM users WHERE username = '%s'
+auth_opt_superquery SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1
+auth_opt_aclquery SELECT topic FROM acls WHERE username = '%s'
+```
+
+Assuming the following database tables:
+
+```
+mysql> SELECT * FROM users;
++----+----------+---------------------------------------------------------------------+-------+
+| id | username | pw                                                                  | super |
++----+----------+---------------------------------------------------------------------+-------+
+|  1 | jjolie   | PBKDF2$sha256$901$x8mf3JIFTUFU9C23$Mid2xcgTrKBfBdye6W/4hE3GKeksu00+ |     0 |
+|  2 | a        | PBKDF2$sha256$901$XPkOwNbd05p5XsUn$1uPtR6hMKBedWE44nqdVg+2NPKvyGst8 |     0 |
+|  3 | su1      | PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp |     1 |
++----+----------+---------------------------------------------------------------------+-------+
+
+mysql> SELECT * FROM acls;
++----+----------+-------------------+----+
+| id | username | topic             | rw |
++----+----------+-------------------+----+
+|  1 | jjolie   | loc/jjolie        |  1 |
+|  2 | jjolie   | $SYS/something    |  1 |
+|  3 | a        | loc/test/#        |  1 |
+|  4 | a        | $SYS/broker/log/+ |  1 |
+|  5 | su1      | mega/secret       |  1 |
+|  6 | nop      | mega/secret       |  1 |
++----+----------+-------------------+----+
+```
+
+the above SQL queries would enable the following combinations (note the `*` at
+the beginning of the line indicating a _superuser_)
+
+```
+  jjolie     PBKDF2$sha256$901$x8mf3JIFTUFU9C23$Mid2xcgTrKBfBdye6W/4hE3GKeksu00+
+	loc/a                                    DENY
+	loc/jjolie                               PERMIT
+	mega/secret                              DENY
+	loc/test                                 DENY
+	$SYS/broker/log/N                        DENY
+  nop        <nil>
+	loc/a                                    DENY
+	loc/jjolie                               DENY
+	mega/secret                              PERMIT
+	loc/test                                 DENY
+	$SYS/broker/log/N                        DENY
+  a          PBKDF2$sha256$901$XPkOwNbd05p5XsUn$1uPtR6hMKBedWE44nqdVg+2NPKvyGst8
+	loc/a                                    DENY
+	loc/jjolie                               DENY
+	mega/secret                              DENY
+	loc/test                                 PERMIT
+	$SYS/broker/log/N                        PERMIT
+* su1        PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp
+	loc/a                                    PERMIT
+	loc/jjolie                               PERMIT
+	mega/secret                              PERMIT
+	loc/test                                 PERMIT
+	$SYS/broker/log/N                        PERMIT
+```
 
 
 ## Passwords

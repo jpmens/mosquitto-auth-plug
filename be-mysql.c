@@ -279,7 +279,7 @@ int main()
 	char *p;
 	int match;
 	static char **tu, *testusers[] = {
-		"jjolie", "nop", "a", "S1", NULL };
+		"jjolie", "nop", "a", "su1", NULL };
 
 	static char **top, *topics[] = {
 		"loc/a",
