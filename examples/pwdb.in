@@ -1,0 +1,8 @@
+a PBKDF2$sha256$901$iPZzKkn9we7tr9bg$5cqBnNglCiRwmHv+07rp3/JTKdWKqF/v
+n1 PBKDF2$sha256$901$CjrYxa2Ks5hctIRf$XZnQ68/NAvyZ2HFg/L883j0xPokSDdBL
+jjolie	PBKDF2$sha256$901$JTw47tGotzkP73OO$tj5AMlSitt3fzWpSCWgpEN4AcxmoRvUh
+# ACLs
+# Key is string "acl:" + username. Value is topic (wildcards allowed)
+acl:jjolie	Devices/#
+acl:jjolie	/location/a
+acl:a		/location/+/#
