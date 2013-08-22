@@ -3,9 +3,24 @@
 This is a plugin to authenticate and authorize [Mosquitto] users from one
 of several distinct back-ends:
 
-* [Redis] key/value store
+* MySQL
 * CDB
+* [Redis] key/value store
 * SQLite3 database
+
+## Introduction
+
+This plugin can perform authentication (check username / password) 
+and authorization (ACL). Currently not all back-ends have the same capabilities
+(the the section on the back-end you're interested in).
+
+Passwords are obtained from the back-end as a PBKF2 string (see section
+on Passwords below). Even if you try and store a clear-text password,
+it simply won't work.
+
+The plugin supports so-called _superusers_. These are usernames exempt
+from ACL checking. In other words, if a user is a _superuser_, that user
+doesn't require ACLs.
 
 ## Building the plugin
 
@@ -15,7 +30,7 @@ the plugin. OpenSSL is also required.
 
 Edit the `Makefile` and modify the definitions at the top to suit your building
 environment, in particular, you have to configure which back-end you want to
-provide as well as the path to the [Mosquitto] source.
+provide as well as the path to the [Mosquitto] source and its library.
 
 After a `make` you should have a shared object called `auth-plug.so`
 which you will reference in your `mosquitto.conf`.
@@ -26,18 +41,31 @@ The `mysql` back-end is currently the most feature-complete: it supports
 obtaining passwords, checking for _superusers_, and verifying ACLs by
 configuring up to three distinct SQL queries used to obtain those results.
 
+You configure the SQL queries in order to adapt to whichever schema
+you currently have. 
+
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
 "user not found"), and it MUST return a single column only with the PBKF2
-password hash. ). A single `'%s`' in the query string is replaced by the
+password hash. A single `'%s'` in the query string is replaced by the
 username attempting to access the broker.
+
+```sql
+SELECT pw FROM users WHERE username = '%s' LIMIT 1
+```
 
 The SQL query for checking whether a user is a _superuser_ - and thus
 circumventing ACL checks - is optional. If it is specified, the query MUST
 return a single row with a single value: 0 is false and 1 is true. We recommend
 using a `SELECT IFNULL(COUNT(*),0) FROM ...` for this query as it satisfies
 both conditions. ). A single `'%s`' in the query string is replaced by the
-username attempting to access the broker.
+username attempting to access the broker. The following example uses the
+same `users` table, but it could just as well reference a distinct table
+or view.
+
+```sql
+SELECT IFNULL(COUNT(*), 0) FROM users WHERE username = '%s' AND super = 1
+```
 
 The SQL query for checking ACLs is optional, but if it is specified, the
 `mysql` back-end can try to limit access to particular topics or topic branches
@@ -46,7 +74,11 @@ rows for a particular user, each returning EXACTLY one column containing a
 topic (wildcards are supported). A single `'%s`' in the query string is
 replaced by the username attempting to access the broker.
 
-Configuration for the `mysql` back-end:
+```sql
+SELECT topic FROM acls WHERE username = '%s'
+```
+
+Mosquitto configuration for the `mysql` back-end:
 
 ```
 auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
@@ -115,13 +147,21 @@ the beginning of the line indicating a _superuser_)
 	$SYS/broker/log/N                        PERMIT
 ```
 
+### CDB
+
+### SQLITE
+
+### Redis
+
+Usernames in Redis can have a prefix (e.g. `users:`) which is applied to
+all users attempting to authenticate to this plugin.
+
 
 ## Passwords
 
-Usernames in Redis can have a prefix (e.g. `users:`) which is applied to
-all users attempting to authenticate to this plugin. A user's password
-is stored as a [PBKDF2] hash in the back-end. An example "password" is a 
-string with five pieces in it, delimited by `$`, inspired by [this][1].
+A user's password is stored as a [PBKDF2] hash in the back-end. An example
+"password" is a string with five pieces in it, delimited by `$`, inspired by
+[this][1].
 
 ```
 PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
@@ -136,7 +176,8 @@ PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
 
 ## Creating a user
 
-A trivial utility to generate hashes is included as `np`.
+A trivial utility to generate hashes is included as `np`. Copy and paste the
+whole string generated into the respective back-end.
 
 ```bash
 $ np
@@ -145,7 +186,7 @@ Re-enter same password:
 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
 ```
 
-Copy and paste the "PBKDF2" string and add it to [Redis]:
+For example, in [Redis]:
 
 ```
 $ redis-cli
@@ -167,7 +208,7 @@ $ redis-cli
 ```
 listener 1883
 
-auth_plugin /path/to/redis-auth.so
+auth_plugin /path/to/auth-plug.so
 # Optional: prefix users with the following string
 auth_opt_redis_username_prefix users:
 auth_opt_redis_host 127.0.0.1
@@ -185,6 +226,9 @@ auth_opt_superusers S*
 ```
 
 ## ACL
+
+In addition to ACL checking which is possibly performed by a back-end,
+there's a more "static" checking which can be configured in `mosquitto.conf`.
 
 The plugin has support for checking topics allowed to a user. By default,
 a topic_prefix is assumed, configured as `auth_opt_topic_prefix`.
@@ -221,6 +265,8 @@ mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
 * OpenSSL (tested with 1.0.0c, but should work with earlier versions)
 * A [Mosquitto] broker
 * A [Redis] server
+* MySQL
+* [TinyCDB](http://www.corpit.ru/mjt/tinycdb.html) by Michael Tokarev (included in `contrib/`).
 
 ## Credits
 

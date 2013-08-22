@@ -2,30 +2,29 @@
 #	mysql
 #	cdb
 
-BACKEND=mysql
-BE_CFLAGS=`mysql_config --cflags` -DBE_MYSQL=1
-BE_LDFLAGS=`mysql_config --libs`
-BE_DEPS=
+#BACKEND=mysql
+#BE_CFLAGS=`mysql_config --cflags` -DBE_MYSQL=1
+#BE_LDFLAGS=`mysql_config --libs`
+#BE_DEPS=
 
-#BACKEND=cdb
-#CDBDIR=contrib/tinycdb-0.78
-#CDB=$(CDBDIR)/cdb
-#CDBINC=$(CDBDIR)/
-#CDBLIB=$(CDBDIR)/libcdb.a
-#BE_CFLAGS=-I$(CDBINC)/ -DBE_CDB=1
-#BE_LDFLAGS=-L$(CDBDIR) -lcdb
-#BE_DEPS=$(CDBLIB)
+BACKEND=cdb
+CDBDIR=contrib/tinycdb-0.78
+CDB=$(CDBDIR)/cdb
+CDBINC=$(CDBDIR)/
+CDBLIB=$(CDBDIR)/libcdb.a
+BE_CFLAGS=-I$(CDBINC)/ -DBE_CDB=1
+BE_LDFLAGS=-L$(CDBDIR) -lcdb
+BE_DEPS=$(CDBLIB)
 
 #MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
-#OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
-#OSSLINC=-I$(OPENSSLDIR)/include
-#OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
-OSSLIBS=-lcrypto
+OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
+OSSLINC=-I$(OPENSSLDIR)/include
+OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
 
 MOSQ=/home/jpm/src/mosquitto-1.2/
 
-CFLAGS=-fPIC -Wall -Werror -DBACKEND=$(BACKEND) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1
-LDFLAGS=$(BE_LDFLAGS) -L$(MOSQ)/lib/ -lmosquitto
+CFLAGS=-fPIC -Wall -Werror -DBACKEND=$(BACKEND) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+LDFLAGS=$(BE_LDFLAGS) -L$(MOSQ)/lib/ -lmosquitto $(OSSLIBS)
 
 OBJS=auth-plug.o base64.o pbkdf2-check.o be-$(BACKEND).o
 
