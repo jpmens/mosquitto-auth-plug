@@ -29,11 +29,11 @@
 
 #include <sqlite3.h>
 
-struct _be_conn {
+struct backend {
 	sqlite3 *sq;
 	sqlite3_stmt *stmt;
 };
 
-struct _be_conn *sqlite_init(char *dbpath, char *userquery);
-void sqlite_destroy(struct _be_conn *bec);
-char *sqlite_getuser(struct _be_conn *bec, const char *username);
+struct backend *be_sqlite_init(char *dbpath, char *userquery);
+void be_sqlite_destroy(struct backend *be);
+char *be_sqlite_getuser(struct backend *be, const char *username);

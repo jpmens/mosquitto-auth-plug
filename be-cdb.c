@@ -137,7 +137,7 @@ int be_cdb_access(struct backend *be, const char *username, char *topic)
 	return (found > 0);
 }
 
-#if TEST
+#if TESTING
 int main(int argc, char **argv)
 {
 	char *p;

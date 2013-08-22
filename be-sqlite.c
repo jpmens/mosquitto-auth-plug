@@ -30,74 +30,69 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sqlite3.h>
+#include "be-sqlite.h"
 
-struct _be_conn {
-	sqlite3 *sq;
-	sqlite3_stmt *stmt;
-};
-
-struct _be_conn *sqlite_init(char *dbpath, char *userquery)
+struct backend *be_sqlite_init(char *dbpath, char *userquery)
 {
 	int res;
 	int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE;
 
-	struct _be_conn *bec;
+	struct backend *be;
 
-	bec = malloc(sizeof(struct _be_conn));
+	be = malloc(sizeof(struct backend));
 
-	if (sqlite3_open_v2(dbpath, &bec->sq, flags, NULL) != SQLITE_OK) {
-		perror("jp.db");
-		free(bec);
+	if (sqlite3_open_v2(dbpath, &be->sq, flags, NULL) != SQLITE_OK) {
+		perror(dbpath);
+		free(be);
 		return (NULL);
 	}
 
-	if ((res = sqlite3_prepare(bec->sq, userquery, strlen(userquery), &bec->stmt, NULL)) != SQLITE_OK) {
-		fprintf(stderr, "Can't prepare: %s\n", sqlite3_errmsg(bec->sq));
-		sqlite3_close(bec->sq);
-		free(bec);
+	if ((res = sqlite3_prepare(be->sq, userquery, strlen(userquery), &be->stmt, NULL)) != SQLITE_OK) {
+		fprintf(stderr, "Can't prepare: %s\n", sqlite3_errmsg(be->sq));
+		sqlite3_close(be->sq);
+		free(be);
 		return (NULL);
 	}
 
-	return (bec);
+	return (be);
 }
 
-void sqlite_destroy(struct _be_conn *bec)
+void be_sqlite_destroy(struct backend *be)
 {
-	if (bec) {
-		sqlite3_finalize(bec->stmt);
-		sqlite3_close(bec->sq);
-		free(bec);
+	if (be) {
+		sqlite3_finalize(be->stmt);
+		sqlite3_close(be->sq);
+		free(be);
 	}
 }
 
-char *sqlite_getuser(struct _be_conn *bec, const char *username)
+char *be_sqlite_getuser(struct backend *be, const char *username)
 {
 	int res;
 	char *value = NULL, *v;
 
-	if (!bec)
+	if (!be)
 		return (NULL);
 
-	sqlite3_reset(bec->stmt);
-	sqlite3_clear_bindings(bec->stmt);
+	sqlite3_reset(be->stmt);
+	sqlite3_clear_bindings(be->stmt);
 
-	res = sqlite3_bind_text(bec->stmt, 1, username, -1, SQLITE_STATIC);
+	res = sqlite3_bind_text(be->stmt, 1, username, -1, SQLITE_STATIC);
 	if (res != SQLITE_OK) {
 		puts("Can't bind");
 		goto out;
 	}
 
-	res = sqlite3_step(bec->stmt);
+	res = sqlite3_step(be->stmt);
 
 	if (res == SQLITE_ROW) {
-		v = (char *)sqlite3_column_text(bec->stmt, 0);
+		v = (char *)sqlite3_column_text(be->stmt, 0);
 		if (v)
 			value = strdup(v);
 	}
 
     out:
-	sqlite3_reset(bec->stmt);
+	sqlite3_reset(be->stmt);
 
 	return (value);
 }

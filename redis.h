@@ -31,4 +31,4 @@
 
 redisContext *redis_init(char *host, int port);
 void redis_destroy(redisContext *redis);
-char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username, int *io);
+char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username);

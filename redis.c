@@ -55,17 +55,11 @@ void redis_destroy(redisContext *redis)
 	}
 }
 
-/* 
- * Set *io to 1 on Redis error, 0 otherwise
- */
-
-char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username, int *io)
+char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username)
 {
 	redisReply *r;
 	char *pwhash = NULL;
 	char *up = usernameprefix;
-
-	*io = 0;
 
 	if (redis == NULL || username == NULL)
 		return (NULL);
@@ -75,7 +69,7 @@ char *redis_getuser(redisContext *redis, char *usernameprefix, const char *usern
 
 	r = redisCommand(redis, "GET %s%b", up, username, strlen(username));
 	if (r == NULL || redis->err != REDIS_OK) {
-		*io = 1;
+		/* FIXME: reconnect */
 		return (NULL);
 	}
 

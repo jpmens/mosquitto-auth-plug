@@ -20,6 +20,33 @@ provide as well as the path to the [Mosquitto] source.
 After a `make` you should have a shared object called `auth-plug.so`
 which you will reference in your `mosquitto.conf`.
 
+### MySQL
+
+The `mysql` back-end is currently the most feature-complete: it supports
+obtaining passwords, checking for _superusers_, and verifying ACLs by
+configuring up to three distinct SQL queries used to obtain those results.
+
+The SQL query for looking up a user's password hash is mandatory. The query
+MUST return a single row only (any other number of rows is considered to be
+"user not found"), and it MUST return a single column only with the PBKF2
+password hash. ). A single `'%s`' in the query string is replaced by the
+username attempting to access the broker.
+
+The SQL query for checking whether a user is a _superuser_ - and thus
+circumventing ACL checks - is optional. If it is specified, the query MUST
+return a single row with a single value: 0 is false and 1 is true. We recommend
+using a `SELECT IFNULL(COUNT(*),0) FROM ...` for this query as it satisfies
+both conditions. ). A single `'%s`' in the query string is replaced by the
+username attempting to access the broker.
+
+The SQL query for checking ACLs is optional, but if it is specified, the
+`mysql` back-end can try to limit access to particular topics or topic branches
+depending on the value of a database table. The query MAY return zero or more
+rows for a particular user, each returning EXACTLY one column containing a
+topic (wildcards are supported). A single `'%s`' in the query string is
+replaced by the username attempting to access the broker.
+
+
 
 ## Passwords
 

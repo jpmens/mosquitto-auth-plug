@@ -33,15 +33,29 @@
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
 #include <fnmatch.h>
-#include "redis.h"
-#include "sqlite.h"
 
-#define BE_REDIS	(1)
-#define BE_SQLITE	(2)
+// FIXME
+#include "redis.h"
+
+#ifndef BACKEND
+# error "You must define a supported backend"
+#endif
+
+#ifdef BE_CDB
+# include "be-cdb.h"
+#endif
+#ifdef BE_MYSQL
+# include "be-mysql.h"
+#endif
+#ifdef BE_SQLITE
+# include "be-sqlite.h"
+#endif
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 struct userdata {
-	int be;				/* back-end: redis|sqlite|cdb|... */
-	struct _be_conn *bec;		/* back-end "connection" */
+	struct backend *be;		/* Connection to back-end */
 	redisContext *redis;
 	char *host;
 	int port;
@@ -57,6 +71,7 @@ int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
+	fprintf(stderr, "*** auth-plug: backend=%s\n", TOSTRING(BACKEND));
 	return MOSQ_AUTH_PLUGIN_VERSION;
 }
 
@@ -66,6 +81,9 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	struct mosquitto_auth_opt *o;
 	struct userdata *ud;
 	int ret = MOSQ_ERR_SUCCESS;
+#ifdef BE_CDB
+	char *cdbpath = NULL;
+#endif /* CDB */
 
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
@@ -89,31 +107,26 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 #ifdef DEBUG
 		fprintf(stderr, "AuthOptions: key=%s, val=%s\n", o->key, o->value);
 #endif
-		if (!strcmp(o->key, "backend")) {
-			if (!strcmp(o->value, "redis"))
-				ud->be = BE_REDIS;
-			else if (!strcmp(o->value, "sqlite"))
-				ud->be = BE_SQLITE;
-			else {
-				fprintf(stderr, "Unknown back-end for auth-plug.\n");
-				ret = MOSQ_ERR_UNKNOWN;
-				goto out;
-			}
-		}
 		if (!strcmp(o->key, "superusers"))
 			ud->superusers = strdup(o->value);
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);
 
-		/* Redis options */
+#ifdef BE_CDB
+		if (!strcmp(o->key, "cdbpath"))
+			cdbpath = strdup(o->value);
+#endif /* CDB */
+
+#ifdef BE_REDIS
 		if (!strcmp(o->key, "redis_username_prefix"))
 			ud->usernameprefix = strdup(o->value);
 		if (!strcmp(o->key, "redis_host"))
 			ud->host = strdup(o->value);
 		if (!strcmp(o->key, "redis_port"))
 			ud->port = atoi(o->value);
+#endif /* REDIS */
 
-		/* SQLite3 options */
+#ifdef BE_SQLITE
 		if (!strcmp(o->key, "sqlite_dbpath"))
 			ud->dbpath = strdup(o->value);
 		if (!strcmp(o->key, "sqlite_userquery"))
@@ -121,62 +134,53 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		/* FIXME: I think not */
 		if (!strcmp(o->key, "sqlite_aclquery"))
 			ud->sql_aclquery = strdup(o->value);
+#endif /* SQLITE */
 
 	}
 
 
-	if (ud->be == 0) {
-		fprintf(stderr, "No back-end specified!\n");
+#ifdef BE_CDB
+	if (cdbpath == NULL) {
+		fprintf(stderr, "No cdbpath specified for CDB back-end\n");
+		return (MOSQ_ERR_UNKNOWN);
+	}
+	ud->be = be_cdb_init(cdbpath);
+#endif
+
+#ifdef BE_SQLITE
+	if (dbpath == NULL) {
+		fprintf(stderr, "No dbpath specified for sqlite back-end\n");
 		return (MOSQ_ERR_UNKNOWN);
 	}
 
-	if (ud->be == BE_SQLITE) {
-		if (ud->dbpath == NULL) {
-			fprintf(stderr, "No dbpath specified for sqlite back-end\n");
-			return (MOSQ_ERR_UNKNOWN);
-		}
-		if (ud->sql_userquery == NULL) {
-			fprintf(stderr, "No SQL query specified for sqlite back-end\n");
-			return (MOSQ_ERR_UNKNOWN);
-		}
-
-		ud->bec = sqlite_init(ud->dbpath, ud->sql_userquery);
-		goto out;
+	if (ud->sql_userquery == NULL) {
+		fprintf(stderr, "No SQL query specified for sqlite back-end\n");
+		return (MOSQ_ERR_UNKNOWN);
 	}
 
-	if (ud->be == BE_REDIS) {
-		if (ud->host == NULL)
-			ud->host = strdup("localhost");
+	ud->be = be_sqlite_init(ud->dbpath, ud->sql_userquery);
+	goto out;
+#endif /* SQLITE */
 
-		ud->redis = redis_init(ud->host, ud->port);
-		if (ud->redis == NULL) {
-			fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
-			ret = MOSQ_ERR_UNKNOWN;
-		}
-		goto out;
+#ifdef BE_REDIS
+	if (ud->host == NULL)
+		ud->host = strdup("localhost");
+
+	ud->redis = redis_init(ud->host, ud->port);
+	if (ud->redis == NULL) {
+		fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
+		ret = MOSQ_ERR_UNKNOWN;
 	}
+	goto out;
+#endif /* REDIS */
 
-   out:
 	return (ret);
 }
 
 int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *auth_opts, int auth_opt_count)
 {
-	struct userdata *ud = (struct userdata *)userdata;
-
-	if (ud) {
-		if (ud->redis) {
-			redis_destroy(ud->redis);
-		}
-		if (ud->usernameprefix)
-			free(ud->usernameprefix);
-		if (ud->topicprefix)
-			free(ud->topicprefix);
-		if (ud->superusers)
-			free(ud->superusers);
-		if (ud->host)
-			free(ud->host);
-	}
+	// struct userdata *ud = (struct userdata *)userdata;
+	// struct backend *be = ud->be;
 
 	/* FIXME: fee other elements */
 
@@ -193,6 +197,51 @@ int mosquitto_auth_security_cleanup(void *userdata, struct mosquitto_auth_opt *a
 	return MOSQ_ERR_SUCCESS;
 }
 
+
+
+int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char *password)
+{
+	struct userdata *ud = (struct userdata *)userdata;
+	char *phash = NULL;
+	int match;
+
+#ifdef DEBUG
+	fprintf(stderr, "auth_unpwd_check u=%s, p=%s\n",
+		(username) ? username : "NIL",
+		(password) ? password : "NIL");
+#endif
+
+
+	if (!username || !*username || !password || !*password)
+		return MOSQ_ERR_AUTH;
+
+#ifdef BE_CDB
+	phash = be_cdb_getuser(ud->be, username);
+#endif
+
+#ifdef BE_SQLITE
+	phash = be_sqlite_getuser(ud->be, username);
+#endif
+
+#ifdef BE_REDIS
+	phash = redis_getuser(ud->redis, ud->usernameprefix, username);
+#endif /* REDIS */
+
+	if (phash == NULL) {
+		return MOSQ_ERR_AUTH;
+	}
+
+	match = pbkdf2_check((char *)password, phash);
+
+#ifdef DEBUG
+	fprintf(stderr, "unpwd_check: for user=%s, got: %s\n", username, phash);
+	fprintf(stderr, "unpwd_check: PBKDF2 match == %d\n", match);
+#endif
+
+	free(phash);
+	return (match == 1) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
+}
+
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
 {
 	struct userdata *ud = (struct userdata *)userdata;
@@ -200,16 +249,13 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	int tlen, match = 0;
 
 #ifdef DEBUG
-	fprintf(stderr, "acl_check u=%s, t=%s, a=%d\n",
+	fprintf(stderr, "!!!! acl_check u=%s, t=%s, a=%d\n",
 		(username) ? username : "NIL",
 		(topic) ? topic : "NIL",
 		access);
 #endif
 
 	if (!username || !*username)
-		return MOSQ_ERR_ACL_DENIED;
-
-	if (ud->be == 0)
 		return MOSQ_ERR_ACL_DENIED;
 
 	/* Check for usernames exempt from ACL checking, first */
@@ -222,6 +268,14 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 			return MOSQ_ERR_SUCCESS;
 		}
 	}
+
+#ifdef BE_CDB
+	match = be_cdb_access(ud->be, username, (char *)topic);
+#endif
+
+	fprintf(stderr, "** !!! %s PERMITTED for %s\n", username, topic);
+	if (match)
+		return (match);
 
 	if (ud->topicprefix) {
 		char *s, *t;
@@ -285,61 +339,6 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	return MOSQ_ERR_ACL_DENIED;
 }
 
-int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char *password)
-{
-	struct userdata *ud = (struct userdata *)userdata;
-	char *phash;
-	int match, io;
-
-#ifdef DEBUG
-	fprintf(stderr, "auth_unpwd_check u=%s, p=%s\n",
-		(username) ? username : "NIL",
-		(password) ? password : "NIL");
-#endif
-
-
-	if (!username || !*username || !password || !*password)
-		return MOSQ_ERR_AUTH;
-
-	if (ud->be == 0)
-		return MOSQ_ERR_AUTH;
-
-	if (ud->be == BE_SQLITE) {
-		phash = sqlite_getuser(ud->bec, username);
-	}
-	if (ud->be == BE_REDIS) {
-
-		phash = redis_getuser(ud->redis, ud->usernameprefix, username, &io);
-		if (io != 0) {
-			fprintf(stderr, "Redis IO error. Attempt to reconnect...\n");
-			redis_destroy(ud->redis);
-
-			ud->redis = redis_init(ud->host, ud->port);
-			if (ud->redis == NULL) {
-				fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
-			}
-
-			/* FIXME: reconnected? now what? */
-		}
-	}
-
-	if (phash == NULL) {
-#ifdef DEBUG
-		fprintf(stderr, "User %s not found in Redis\n", username);
-#endif
-		return MOSQ_ERR_AUTH;
-	}
-
-	match = pbkdf2_check((char *)password, phash);
-
-#ifdef DEBUG
-	fprintf(stderr, "unpwd_check: for user=%s, got: %s\n", username, phash);
-	fprintf(stderr, "unpwd_check: PBKDF2 match == %d\n", match);
-#endif
-
-	free(phash);
-	return (match == 1) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
-}
 
 int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *identity, char *key, int max_key_len)
 {

@@ -1,27 +1,48 @@
+# Choose a back-end. Allowed values are
+#	mysql
+#	cdb
 
-CDBDIR=tinycdb-0.78
+#BACKEND=mysql
+#BE_CFLAGS=`mysql_config --cflags` -DBE_MYSQL=1
+#BE_LDLAGS=`mysql_config --libs`
+#BE_DEPS=
+
+BACKEND=cdb
+CDBDIR=contrib/tinycdb-0.78
 CDB=$(CDBDIR)/cdb
-
-CDBLIB=$(CDBDIR)/libcdb.a
 CDBINC=$(CDBDIR)/
+CDBLIB=$(CDBDIR)/libcdb.a
+BE_CFLAGS=-I$(CDBINC)/ -DBE_CDB=1
+BE_LDFLAGS=-L$(CDBDIR) -lcdb
+BE_DEPS=$(CDBLIB)
 
-MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
-OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
+#MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
+#OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
+#OSSLINC=-I$(OPENSSLDIR)/include
+#OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
+OSSLIBS=-lcrypto
 
-OSSLINC=-I$(OPENSSLDIR)/include
-OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto -lmosquitto
+# CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -I$(CDBINC) -DDEBUG
 
-CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -I$(CDBINC) -DDEBUG
+MOSQ=/home/jpm/src/mosquitto-1.2/
 
-all: auth-plug.so np pwdb.cdb
+CFLAGS=-fPIC -Wall -Werror -DBACKEND=$(BACKEND) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1
+LDFLAGS=$(BE_LDFLAGS) -L$(MOSQ)/lib/ -lmosquitto
 
-auth-plug.so : auth-plug.c redis.o sqlite.o base64.o pbkdf2-check.o $(CDBLIB)
-	$(CC) ${CFLAGS} -fPIC -shared $^ -o $@  $(OSSLIBS) -L$(CDBDIR) -lcdb -lhiredis -lsqlite3
+OBJS=auth-plug.o base64.o pbkdf2-check.o be-$(BACKEND).o
+
+all: auth-plug.so np 
+
+auth-plug.so : $(OBJS) $(BE_DEPS)
+	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS)
 
 redis.o: redis.c redis.h Makefile
-sqlite.o: sqlite.c sqlite.h Makefile
-base64.o: base64.c base64.h Makefile
+be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
+auth-plug.o: auth-plug.c be-$(BACKEND).h Makefile
+be-cdb.o: be-cdb.c be-cdb.h Makefile
+be-mysql.o: be-mysql.c be-mysql.h Makefile
 pbkdf2-check.o: pbkdf2-check.c base64.h Makefile
+base64.o: base64.c base64.h Makefile
 
 np: np.c base64.o
 	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)
@@ -33,4 +54,4 @@ pwdb.cdb: pwdb.in
 	$(CDB) -c -m  pwdb.cdb pwdb.in
 clean :
 	rm -f *.o *.so 
-	(cd $(CDBDIR); make realclean )
+	(cd contrib/tinycdb-0.78; make realclean )
