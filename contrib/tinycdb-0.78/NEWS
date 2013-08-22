@@ -1,0 +1,87 @@
+User-visible news.  Latest at the top.
+
+tinycdb-0.78 2012-05-11
+
+ - bugfix release:
+  o fixed >2Gb file size prob on 32bit platform
+  o fixed handling of files >=4Gb
+  o fixed a few compiler warnings
+
+ - introduce $(LD) and $(LDFLAGS), and also $(CDEFS) in Makefile
+
+tinycdb-0.77
+
+ - bugfix release: manpage typos, portability fixes and the like
+
+ - bugfix: improper logic in EINTR handling in _cdb_make_full_write
+   routine which may lead to corruped .cdb file.
+
+tinycdb-0.76
+
+ - new cdb utility option: -p permissions, to specify permission
+   bits for the newly created database file.
+
+ - cdb utility, when creating the database, does unlink() of the
+   (temp) db file and when opens it with O_CREAT|O_EXCL, instead
+   of previous O_CREAT|O_TRUNC w/o unlink() behaviour, and uses
+   O_NOFOLLOW flag if available.  This avoids any possible symlink
+   race conditions, but is somewhat incompatible with previous
+   versions, where it was possible to create temp file beforehand
+   with proper permissions.  Together with new -p option (above),
+   this isn't that big change.
+
+ - cdb utility now allows to omit temp file usage (with final rename())
+   when creating the database, by specifying -t- (`-' as temp file name)
+   (or -t the_same_name_as_the_db_file).  Useful if the utility is called
+   from a script which does its own rename afterwards.
+
+ - alot of minor code changes to make modern compilers happy (mostly
+   signed char vs unsigned char "fixes").  Including additions of
+   `unsigned' into common structure definitions in cdb.h - the API
+   stays compatible still.
+
+ - several (spelling and other) fixes for manpages.
+
+ - tinycdb is, once again, maintained as a native Debian package.
+   Debian package has been split into 4 parts: libcdb1, libcdb-dev,
+   tinycdb (the utility) and libnss_cdb.  RPM .spec file now builds
+   two packages as well: tinycdb (includes shared library, the utility,
+   and nss_cdb module) and tinycdb-devel (development files).
+
+tinycdb-0.75 (2005-04-11)
+
+ - make cdb_make_put(CDB_PUT_REPLACE) to actually *remove*
+   all (was only first previously) matching records, by
+   rewriting the file.
+
+ - new mode CDB_PUT_REPLACE0, which zeroes out old duplicate
+   records
+
+ - fixed fputs() == NULL condition in cdb.c, finally
+   (should be < 0, not == NULL)
+
+tinycdb-0.74 (2003-11-04)
+
+ - reworked cdb utility, see manpage for details.  cdb -q now
+   prints all matching records by default (incompat change),
+   use cdb -q -n XX to return only XXth record if any.
+   -m works with -q.
+
+ - there are several new routines (and macros) in library.
+   - cdb_seqinit() and cdb_seqstart() to fetch all records
+   - cdb_get() to get a pointer to data in internal buffer
+   - cdb_{get,read}{data,key}()
+
+ - cdbi_t gone (but still defined).  Use unsigned instead.
+
+ - cdb_findnext() changed
+
+ - fixed a bug in cdb_seek() (EIO instead of getting valid record)
+
+ - added nss_cdb (for passwd, group and shadow databases only)
+
+ - Makefile targets to build PIC code (libcdb_pic.a, required for
+   nss_cdb) and shared library (probably not a good idea)
+
+ - Modifications to allow tinycdb to compile under win32,
+   by Victor Porton (porton at ex-code.com).

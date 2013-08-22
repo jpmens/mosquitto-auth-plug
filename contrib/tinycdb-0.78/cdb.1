@@ -1,0 +1,197 @@
+.\" cdb.1: cdb command tool manpage
+.\"
+.\" This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+.\" Public domain.
+.\"
+.TH cdb 1 "Jan 2009"
+.SH NAME
+cdb \- Constant DataBase manipulation tool
+.SH SYNOPSYS
+\fBcdb\fR \-q [\-m] [\-n \fInum\fR] \fIdbname\fR \fIkey\fR
+.br
+\fBcdb\fR \-d [\-m] [\fIdbname\fR|\-]
+.br
+\fBcdb\fR \-l [\-m] [\fIdbname\fR|\-]
+.br
+\fBcdb\fR \-s [\fIdbname\fR|\-]
+.br
+\fBcdb\fR \-c [\-m] [\-t \fItmpname\fR|\-] [\-p \fIperms\fR] [\-weru0] \fIdbname\fR [\fIinfile\fR...]
+
+.SH DESCRIPTION
+
+\fBcdb\fR used to query, dump, list, analyze or create CDB (Constant
+DataBase) files.  Format of cdb described in \fIcdb\fR(5) manpage.
+This manual page corresponds to version \fB0.78\fR of \fBtinycdb\fR
+package.
+
+.SS Query
+
+\fBcdb \-q\fR finds given \fIkey\fR in a given \fIdbname\fR
+cdb file, and writes associated value to standard output if found (and
+exits with zero), or exits with non\-zero if not found.  \fIdbname\fR must
+be seekable file, and stdin can not be used as input.
+By default, \fBcdb\fR will print \fIall\fR records found.
+Options recognized in query mode:
+
+.IP \fB\-n\fInum\fR
+causes \fBcdb\fR to find and write a record with a given number \fInum\fR
+starting with 1 \(em when there are many records with a given key.
+
+.IP \fB\-m\fR
+newline will be added after every value printed.  By default, multiple
+values will be written without any delimiter.
+
+.SS "Dump/List"
+
+\fBcdb \-d\fR dumps contents, and \fBcdb \-l\fR lists keys
+of \fIcdbfile\fR (or standard input if not specified) to standard
+output, in format controlled by presence of \fB\-m\fR option.
+See subsection "Formats" below.  Output from \fBcdb \-d\fR
+can be used as an input for \fBcdb \-c\fR.
+
+.SS Create
+
+Cdb database created in two stages: temporary database is created,
+and after it is complete, it gets atomically renamed to permanent
+place.  This avoids requirements for locking between readers and
+writers (or creaters).  \fBcdb \-c\fR will attempt to create
+cdb in file \fItmpname\fR (or \fIdbname\fR with ".tmp" appended
+if no \-t option given) and then rename it to \fIdbname\fR.  It
+will read supplied \fIinfile\fRs (or standard input if none specified).
+Options recognized in create mode:
+
+.IP "\fB\-t \fItmpname\fR"
+use given \fItmpname\fR as temporary file.  Defaults to
+\fIdbname\fR.tmp (i.e. with output file with .tmp added).
+Note \fItmpname\fR must be in the same filesystem as output file, as
+.B cdb
+uses
+.IR rename (2)
+to finalize the database creation procedure.
+If \fItmpname\fR is a single dash (\-), no temp file will be created,
+database will be built in\-place.  This mode is useful when the final
+renaming is done by the caller.
+
+.IP "\fB\-p \fIperms\fR"
+permissions for the newly created file (usually an octal number, like 0644).
+By default the permissions are 0666 (with current process umask applied).
+If this option is specified, current umask value has no effect.
+
+.IP \fB\-w\fR
+warn about duplicate keys.
+
+.IP \fB\-e\fR
+abort on duplicate keys (implies \-w).
+
+.IP \fB\-r\fR
+replace existing key with new one in case of duplicate.
+This may require database file rewrite to remove old
+records, and can be slow.
+
+.IP \fB\-0\fR
+zero-fill existing records when duplicate records are
+added.  This is faster than \fB\-r\fR, but leaves extra
+zeros in the database file in case of duplicates.
+
+.IP \fB\-u\fR
+do not add duplicate records.
+
+.IP \fB\-m\fR
+interpret input as a sequence of lines, one record per line,
+with value separated from a key by space or tab characters,
+instead of native cdb format (see "Input/Output Format" below).
+
+.PP
+Note that using any option that requires duplicate checking will
+slow creation process \fIsignificantly\fR, especially for large
+databases.
+
+.SS Statistics
+
+\fBcdb \-s\fR will analyze \fIdbfile\fR and print summary to
+standard output.  Statistics include: total number of rows in
+a file, minimum, average and maximum key and value lengths,
+hash tables (max 256) and entries used, number of hash collisions
+(that is, more than one key point to the same hash table entry),
+minimum, average and maximum hash table size (of non-empty tables),
+and number of keys that sits at 10 different distances from
+it's calculated hash table index \(em keys in distance 0 requires
+only one hash table lookup, 1 \(em two and so on; more keys at
+greater distance means slower database search.
+
+.SS "Input/Output Format"
+
+By default, \fBcdb\fR expects (for create operation) or writes
+(for dump/list) native cdb format data.  Cdb native format is
+a sequence of records in a form:
+.br
+    +\fIklen\fR,\fIvlen\fR:\fIkey\fR\->\fIval\fR\\n
+.br
+where "+", ",", ":", "\-", ">" and "\\n" (newline) are literal characters,
+\fIklen\fR and \fIvlen\fR are length of key and value as decimal numbers,
+and \fIkey\fR and \fIval\fR are key and value themselves.  Series of
+records terminated by an empty line.  This is the only format where
+key and value may contain any character including newline, zero (\\0)
+and so on.
+
+When \fB\-l\fR option requested (list keys mode), \fBcdb\fR will produce
+slightly modified output in a form:
+.br
+    +\fIklen\fR:\fIkey\fR\\n
+.br
+(note \fIvlen\fR and \fIval\fR are omitted, together with surrounding
+delimiters).
+
+If \fB\-m\fR option is given, \fBcdb\fR will expect or produce one line
+for every record (newline is a record delimiter), and every line should
+contain optional whitespace, key, whitespace and value up to end of line.
+Lines started with hash character (#) and empty lines are ignored.
+This is the same format as \fBmkmap\fR(1) utility expects.
+
+.SH "OPTIONS SUMMARY"
+
+Here is a short summary of all options accepted by \fBcdb\fR utility:
+
+.IP \fB\-0\fR
+zero-fill duplicate records in create (\fB\-c\fR) mode.
+.IP \fB\-c\fR
+create mode.
+.IP \fB\-d\fR
+dump mode.
+.IP \fB\-e\fR
+abort (error) on duplicate key in create (\fB\-c\fR) mode.
+.IP \fB\-h\fR
+print short help and exit.
+.IP \fB\-l\fR
+list mode.
+.IP \fB\-m\fR
+input or output is in "map" format, not in native cdb format.  In query
+mode, add a newline after every value written.
+.IP \fB\-n\fInum\fR
+find and print \fInum\fRth record in query (\fB\-q\fR) mode.
+.IP \fB\-q\fR
+query mode.
+.IP \fB\-r\fR
+replace duplicate keys in create (\fB\-c\fR) mode.
+.IP \fB\-s\fR
+statistics mode.
+.IP "\fB\-t\fR \fItempfile\fR"
+specify temporary file when creating (\fB\-c\fR) cdb file (use single dash
+(\-) as \fItempfile\fR to stop using temp file).
+.IP \fB\-u\fR
+do not insert duplicate keys (unique) in create (\fB\-c\fR) mode.
+.IP \fB\-w\fR
+warn about duplicate keys in create (\fB\-c\fR) mode.
+
+.SH AUTHOR
+
+The \fBtinycdb\fR package written by Michael Tokarev <mjt@corpit.ru>,
+based on ideas and shares file format with original cdb library by
+Dan Bernstein.
+
+.SH "SEE ALSO"
+cdb(5), cdb(3).
+
+.SH LICENCE
+Public domain.
+

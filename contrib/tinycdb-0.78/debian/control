@@ -1,0 +1,45 @@
+Source: tinycdb
+Section: utils
+Priority: optional
+Maintainer: Michael Tokarev <mjt@tls.msk.ru>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.8.0
+
+Package: tinycdb
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: an utility to manipulate constant databases (cdb)
+ tinycdb is a small, fast and reliable utility and subroutine
+ library for creating and reading constant databases. The database
+ structure is tuned for fast reading.
+ .
+ This package contains a command-line utility to create, analyze, dump
+ and query cdb files.
+
+Package: libcdb1
+Architecture: any
+Section: libs
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends} ${misc:Depends}
+Multi-Arch: same
+Description: shared library for constant databases (cdb)
+ tinycdb is a small, fast and reliable utility and subroutine
+ library for creating and reading constant databases. The database
+ structure is tuned for fast reading.
+ .
+ This package provides a shared library needed to run
+ programs using it.
+
+Package: libcdb-dev
+Architecture: any
+Section: libdevel
+Depends: libcdb1 (= ${binary:Version})
+Recommends: tinycdb
+Replaces: tinycdb (<< 0.75)
+Description: development files for constant databases (cdb)
+ tinycdb is a small, fast and reliable utility and subroutine
+ library for creating and reading constant databases. The database
+ structure is tuned for fast reading.
+ .
+ This package provides development files needed
+ to build programs using cdb library.

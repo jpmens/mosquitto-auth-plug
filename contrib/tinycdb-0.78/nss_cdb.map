@@ -1,0 +1,20 @@
+# nss_cdb.map: libnss_cdb symbol map file for GNU LD
+{
+  global:
+   _nss_cdb_endpwent;
+   _nss_cdb_getpwnam_r;
+   _nss_cdb_endspent;
+   _nss_cdb_getspent_r;
+   _nss_cdb_getpwent_r;
+   _nss_cdb_getgrgid_r;
+   _nss_cdb_endgrent;
+   _nss_cdb_getgrent_r;
+   _nss_cdb_setspent;
+   _nss_cdb_setpwent;
+   _nss_cdb_getpwuid_r;
+   _nss_cdb_getspnam_r;
+   _nss_cdb_setgrent;
+   _nss_cdb_getgrnam_r;
+  local:
+    *;
+};

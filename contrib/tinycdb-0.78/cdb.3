@@ -1,0 +1,594 @@
+.\" cdb.3: cdb library manpage
+.\"
+.\" This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+.\" Public domain.
+.\"
+.TH cdb 3 "Jun 2006"
+
+.SH NAME
+cdb \- Constant DataBase library
+
+.SH SYNOPSYS
+
+.nf
+.ft B
+ #include <cdb.h>
+ cc ... \-lcdb
+.ft R
+.fi
+
+.SH DESCRIPTION
+
+.B cdb
+is a library to create and access Constant DataBase files.
+File stores (key,value) pairs and used to quickly find a
+value based on a given key.  Cdb files are create-once files,
+that is, once created, file cannot be updated but recreated
+from scratch -- this is why database is called \fIconstant\fR.
+Cdb file is optimized for quick access.  Format of such file
+described in \fIcdb\fR(5) manpage.  This manual page corresponds
+to version \fB0.78\fR of \fBtinycdb\fR package.
+
+Library defines two non-interlaced interfaces: for querying
+existing cdb file data (read-only mode) and for creating
+such a file (almost write-only).  Strictly speaking, those
+modes allows very limited set of opposite operation as well
+(i.e. in query mode, it is possible to update key's value).
+
+All routines in this library are thread-safe as no global
+data used, except of \fIerrno\fR variable for error indication.
+
+.B cdb
+datafiles may be moved between systems safely, since format
+does not depend on architecture.
+
+.SH "QUERY MODE"
+
+There are two query modes available.  First uses a structure
+that represents a cdb database, just like \fBFILE\fR structure
+in stdio library, and another works with plain filedescriptor.
+First mode is more sophisticated and flexible, and usually somewhat
+faster.  It uses \fBmmap\fR(2) internally.  This mode may look
+more "natural" or object-oriented compared to second one.
+
+The following routines works with any mode:
+
+.nf
+unsigned \fBcdb_unpack\fR(\fIbuf\fR)
+   const unsigned char \fIbuf\fR[4];
+.fi
+.RS
+helper routine to convert 32-bit integer from internal representation
+to machine format.  May be used to handle application integers in
+a portable way.  There is no error return.
+.RE
+
+.SS "Query Mode 1"
+
+All query operations in first more deals with common data
+structure, \fBstruct cdb\fR, associated with an open file
+descriptor.  This structure is opaque to application.
+
+The following routines exists for accessing \fBcdb\fR
+database:
+
+.nf
+int \fBcdb_init\fR(\fIcdbp\fR, \fIfd\fR)
+   struct cdb *\fIcdbp\fR;
+   int \fIfd\fR;
+.fi
+.RS
+initializes structure given by \fIcdbp\fR pointer and associates
+it with opened file descriptor \fIfd\fR.  Memory allocation for
+structure itself if needed and file open operation should be done
+by application.  File \fIfd\fR should be opened at least read-only,
+and should be seekable.  Routine returns 0 on success or negative
+value on error.
+.RE
+
+.nf
+void \fBcdb_free\fR(\fIcdbp\fR)
+   struct cdb *\fIcdbp\fR;
+.fi
+.RS
+frees internal resources held by structure.  Note that this
+routine does \fInot\fR closes a file.
+.RE
+
+.nf
+int \fBcdb_fileno\fR(\fIcdbp\fR)
+  const struct cdb *\fIcdbp\fR;
+.fi
+.RS
+returns filedescriptor associated with cdb (as was passed to
+\fBcdb_init\fR()).
+.RE
+
+.nf
+int \fBcdb_read\fR(\fIcdbp\fR, \fIbuf\fR, \fIlen\fR, \fIpos\fR)
+int \fBcdb_readdata\fR(\fIcdbp\fR, \fIbuf\fR, \fIlen\fR, \fIpos\fR)
+int \fBcdb_readkey\fR(\fIcdbp\fR, \fIbuf\fR, \fIlen\fR, \fIpos\fR)
+   const struct cdb *\fIcdbp\fR;
+   void *\fIbuf\fR;
+   unsigned \fIlen\fR;
+   unsigned \fIpos\fR;
+.fi
+.RS
+reads a data from cdb file, starting at position \fIpos\fR of length
+\fIlen\fR, placing result to \fIbuf\fR.  This routine may be used
+to get actual value found by \fBcdb_find\fR() or other routines
+that returns position and length of a data.  Returns 0 on success
+or negative value on error.
+Routines \fBcdb_readdata\fR() and \fBcdb_readkey\fR() are shorthands
+to read current (after e.g. \fBcdb_find\fR()) data and key
+respectively, using \fBcdb_read\fR().
+.RE
+
+.nf
+const void *\fBcdb_get\fR(\fIcdbp\fR, \fIlen\fR, \fIpos\fR)
+const void *\fBcdb_getdata\fR(\fIcdbp\fR)
+const void *\fBcdb_getkey\fR(\fIcdbp\fR)
+   const struct cdb *\fIcdbp\fR;
+   unsigned \fIlen\fR;
+   unsigned \fIpos\fR;
+.fi
+.RS
+Internally, cdb library uses memory-mmaped region to access the on-disk
+database.  \fBcdb_get\fR() allows to access internal memory in a way
+similar to \fBcdb_read\fR() but without extra copying and buffer
+allocation.  Returns pointer to actual data on success or NULL on
+error (position points to outside of the database).
+Routines \fBcdb_getdata\fR() and \fBcdb_getkey\fR() are shorthands
+to access current (after e.g. \fBcdb_find\fR()) data and key
+respectively, using \fBcdb_get\fR().
+.RE
+
+.nf
+int \fBcdb_find\fR(\fIcdbp\fR, \fIkey\fR, \fIklen\fR)
+unsigned \fBcdb_datapos\fR(\fIcdbp\fR)
+unsigned \fBcdb_datalen\fR(\fIcdbp\fR)
+unsigned \fBcdb_keypos\fR(\fIcdbp\fR)
+unsigned \fBcdb_keylen\fR(\fIcdbp\fR)
+   struct cdb *\fIcdbp\fR;
+   const void *\fIkey\fR;
+   unsigned \fIklen\fR;
+.fi
+.RS
+attempts to find a key given by (\fIkey\fR,\fIklen\fR) parameters.
+If key exists in database, routine returns 1 and places position
+and length of value associated with this key to internal fields
+inside \fIcdbp\fR structure, to be accessible by \fBcdb_datapos\fR(\fIcdbp\fR)
+and \fBcdb_datalen\fR(\fIcdbp\fR) routines.  If key is not in database,
+\fBcdb_find\fR() returns 0.  On error, negative value is returned.
+Data pointers (available via \fBcdb_datapos\fR() and \fBcdb_datalen\fR())
+gets updated only in case of successful search.  Note that using
+\fBcdb_find\fR() it is possible to lookup only \fIfirst\fR record
+with a given key.
+.RE
+
+.nf
+int \fBcdb_findinit(\fIcdbfp\fR, \fIcdbp\fR, \fIkey\fR, \fIklen\fR)
+int \fBcdb_findnext\fR(\fIcdbfp\fR)
+  struct cdb_find *\fIcdbfp\fR;
+  const struct cdb *\fIcdbp\fR;
+  const void *\fIkey\fR;
+  unsigned \fIklen\fR;
+.fi
+.RS
+sequential-find routines that used separate structure.  It is
+possible to have more than one record with the same key in a
+database, and these routines allows to enumerate all them.
+\fBcdb_findinit\fR() initializes search structure pointed to
+by \fIcdbfp\fR.  It will return negative value on error or
+non-negative value on success.  \fBcdb_findnext\fR() attempts
+to find next (first when called right after \fBcdb_findinit\fR())
+matching key, setting value position and length in \fIcdbfp\fR
+structure.  It will return positive value if given key was
+found, 0 if there is no more such key(s), or negative value
+on error.  To access value position and length after successful
+call to \fBcdb_findnext\fR() (when it returned positive result),
+use \fBcdb_datapos\fR(\fIcdbp\fR) and \fBcdb_datalen\fR(\fIcdbp\fR)
+routines.  It is error to continue using \fBcdb_findnext\fR() after
+it returned 0 or error condition (\fBcdb_findinit\fR() should be
+called again).  Current data pointers (available via \fBcdb_datapos\fR()
+and \fBcdb_datalen\fR()) gets updated only on successful search.
+.RE
+
+.nf
+void \fBcdb_seqinit\fR(\fIcptr\fR, \fIcdbp\fR)
+int \fBcdb_seqnext\fR(\fIcptr\fR, \fIcdbp\fR)
+  unsigned *\fIcptr\fR;
+  struct cdb *\fIcdbp\fR;
+.fi
+.RS
+sequential enumeration of all records stored in cdb file.
+\fBcdb_seqinit\fR() initializes access current data pointer \fIcptr\fR
+to point before first record in a cdb file. \fBcdb_seqnext\fR() updates
+data pointers in \fIcdbp\fR to point to the next record and updates
+\fIcptr\fR, returning positive value on success, 0 on end of data condition
+and negative value on error.  Current record will be available after
+successful operation using \fBcdb_datapos\fR(\fIcdbp\fR) and
+\fBcdb_datalen\fR(\fIcdbp\fR) (for the data) and \fBcdb_keypos\fR(\fIcdbp\fR)
+and \fBcdb_keylen\fR(\fIcdbp\fR) (for the key of the record).
+Data pointers gets updated only in case of successful operation.
+.RE
+
+.SS "Query Mode 2"
+
+In this mode, one need to open a \fBcdb\fR file using one of
+standard system calls (such as \fBopen\fR(2)) to obtain a
+filedescriptor, and then pass that filedescriptor to cdb routines.
+Available methods to query a cdb database using only a filedescriptor
+include:
+
+.nf
+int \fBcdb_seek\fR(\fIfd\fR, \fIkey\fR, \fIklen\fR, \fIdlenp\fR)
+  int \fIfd\fR;
+  const void *\fIkey\fR;
+  unsigned \fIklen\fR;
+  unsigned *\fIdlenp\fR;
+.fi
+.RS
+searches a cdb database (as pointed to by \fIfd\fR filedescriptor)
+for a key given by (\fIkey\fR, \fIklen\fR), and positions file pointer
+to start of data associated with that key if found, so that next read
+operation from this filedescriptor will read that value, and places
+length of value, in bytes, to variable pointed to by \fIdlenp\fR.
+Returns positive value if operation was successful, 0 if key was not
+found, or negative value on error.  To read the data from a cdb file,
+\fBcdb_bread\fR() routine below can be used.
+.RE
+
+.nf
+int \fBcdb_bread\fR(\fIfd\fR, \fIbuf\fR, \fIlen\fR)
+  int \fIfd\fR;
+  void *\fIbuf\fR;
+  int \fIlen\fR;
+.fi
+.RS
+reads data from a file (as pointed to by \fIfd\fR filedescriptor) and
+places \fIlen\fR bytes from this file to a buffer pointed to by \fIbuf\fR.
+Returns 0 if exactly \fIlen\fR bytes was read, or a negative value in
+case of error or end-of-file.  This routine ignores interrupt errors (EINTR).
+Sets errno variable to \fBEIO\fR in case of end-of-file condition (when
+there is less than \fIlen\fR bytes available to read).
+.RE
+
+.SS Notes
+
+Note that \fIvalue\fR of any given key may be updated in place
+by another value of the same size, by writing to file at position
+found by \fBcdb_find\fR() or \fBcdb_seek\fR().  However one should
+be very careful when doing so, since write operation may not succeed
+in case of e.g. power failure, thus leaving corrupted data.  When
+database is (re)created, one can guarantee that no incorrect data
+will be written to database, but not with inplace update.  Note
+also that it is not possible to update any key or to change length
+of value.
+
+.SS
+
+.SH "CREATING MODE"
+
+.B cdb
+database file should usually be created in two steps: first, temporary
+file created and written to disk, and second, that temporary file
+is renamed to permanent place.  Unix rename(2) call is atomic operation,
+it removes destination file if any AND renaes another file in one
+step.  This way it is guaranteed that readers will not see incomplete
+database.  To prevent multiple simultaneous updates, locking may
+also be used.
+
+All routines used to create \fBcdb\fR database works with
+\fBstruct cdb_make\fR object that is opaque to application.
+Application may assume that \fBstruct cdb_make\fR has at least
+the same member(s) as published in \fBstruct cdb\fR above.
+
+.nf
+int \fBcdb_make_start\fR(\fIcdbmp\fR, \fIfd\fR)
+   struct cdb_make *\fIcdbmp\fR;
+   int \fIfd\fR;
+.fi
+.RS
+initializes structure to create a database.  File \fIfd\fR should be
+opened read-write and should be seekable.  Returns 0 on success
+or negative value on error.
+.RE
+
+.nf
+int \fBcdb_make_add\fR(\fIcdbmp\fR, \fIkey\fR, \fIklen\fR, \fIval\fR, \fIvlen\fR)
+   struct cdb_make *\fIcdbmp\fR;
+   const void *\fIkey\fR, *\fIval\fR;
+   unsigned \fIklen\fR, \fIvlen\fR;
+.fi
+.RS
+adds record with key (\fIkey\fR,\fIklen\fR) and value (\fIval\fR,\fIvlen\fR)
+to a database.  Returns 0 on success or negative value on error.  Note that
+this routine does not checks if given key already exists, but \fBcdb_find\fR()
+will not see second record with the same key.  It is not possible to continue
+building a database if \fBcdb_make_add\fR() returned error indicator.
+.RE
+
+.nf
+int \fBcdb_make_finish\fR(\fIcdbmp\fR)
+   struct cdb_make *\fIcdbmp\fR;
+.fi
+.RS
+finalizes database file, constructing all needed indexes, and frees
+memory structures.  It does \fInot\fR closes filedescriptor.
+Returns 0 on success or negative value on error.
+.RE
+
+.nf
+int \fBcdb_make_exists\fR(\fIcdbmp\fR, \fIkey\fR, \fIklen\fR)
+   struct cdb_make *\fIcdbmp\fR;
+   const void *\fIkey\fR;
+   unsigned \fIklen\fR;
+.fi
+.RS
+This routine attempts to find given by (\fIkey\fR,\fIklen\fR) key in
+a not-yet-complete database.  It may significantly slow down the
+whole process, and currently it flushes internal buffer to disk on
+every call with key those hash value already exists in db.  Returns
+0 if such key doesn't exists, 1 if it is, or negative value on error.
+Note that database file should be opened read-write (not write-only)
+to use this routine.  If \fBcdb_make_exists\fR() returned error, it
+may be not possible to continue constructing database.
+.RE
+
+.nf
+int \fBcdb_make_find\fR(\fIcdbmp\fR, \fIkey\fR, \fIklen\fR, \fImode\fR)
+   struct cdb_make *\fIcdbmp\fR;
+   const void *\fIkey\fR;
+   unsigned \fIklen\fR;
+   int \fImode\fR;
+.fi
+.RS
+This routine attempts to find given by (\fIkey\fR,\fIklen\fR) key in
+the database being created.  If the given key is already exists, it
+an action specified by \fImode\fR will be performed:
+.IP \fBCDB_FIND\fR
+checks whenever the given record is already in the database.
+.IP \fBCDB_FIND_REMOVE\fR
+removes all matching records by re-writing the database file accordingly.
+.IP \fBCDB_FIND_FILL0\fR
+fills all matching records with zeros and removes them from index so that
+the records in question will not be findable with \fBcdb_find\fR().  This
+is faster than CDB_FIND_REMOVE, but leaves zero "gaps" in the database.
+Lastly inserted records, if matched, are always removed.
+.PP
+If no matching keys was found, routine returns 0.  In case at least one
+record has been found/removed, positive value will be returned.  On
+error, negative value will be returned and \fBerrno\fR will be set
+appropriately.  When \fBcdb_make_find\fR() returned negative value in
+case of error, it is not possible to continue constructing the database.
+.PP
+\fBcdb_make_exists\fR() is the same as calling \fBcdb_make_find\fR() with
+\fImode\fR set to CDB_FIND.
+.RE
+
+.nf
+int \fBcdb_make_put\fR(\fIcdbmp\fR, \fIkey\fR, \fIklen\fR, \fIval\fR, \fIvlen\fR, \fImode\fR)
+   struct cdb_make *\fIcdbmp\fR;
+   const void *\fIkey\fR, *\fIval\fR;
+   unsigned \fIklen\fR, \fIvlen\fR;
+   int \fImode\fR;
+.fi
+.RS
+This is a somewhat combined \fBcdb_make_exists\fR() and
+\fBcdb_make_add\fR() routines.  \fImode\fR argument controls how
+repeated (already existing) keys will be treated:
+.IP \fBCDB_PUT_ADD\fR
+no duplicate checking will be performed.  This mode is the same as
+\fBcdb_make_add\fR() routine does.
+.IP \fBCDB_PUT_REPLACE\fR
+If the key already exists, it will be removed from the database
+before adding new key,value pair.  This requires moving data in
+the file, and can be quite slow if the file is large.
+All matching old records will be removed this way.  This is the
+same as calling \fBcdb_make_find\fR() with CDB_FIND_REMOVE
+\fImode\fR argument followed by calling \fBcdb_make_add\fR().
+.IP \fBCDB_PUT_REPLACE0\fR
+If the key already exists and it isn't the last record in the file,
+old record will be zeroed out before adding new key,value pair.
+This is alot faster than CDB_PUT_REPLACE, but some extra data will
+still be present in the file.  The data -- old record -- will not
+be accessible by normal searches, but will appear in sequential
+database traversal.  This is the same as calling \fBcdb_make_find\fR()
+with CDB_FIND_FILL0 \fImode\fR argument followed by \fBcdb_make_add\fR().
+.IP \fBCDB_PUT_INSERT\fR
+add key,value pair only if such key does not exists in a database.
+Note that since query (see query mode above) will find first added
+record, this mode is somewhat useless (but allows to reduce database
+size in case of repeated keys).  This is the same as calling
+\fBcdb_make_exists\fR(), followed by \fBcdb_make_add\fR() if
+the key was not found.
+.IP \fBCDB_PUT_WARN\fR
+add key,value pair unconditionally, but also check if this key
+already exists.  This is equivalent of \fBcdb_make_exists\fR()
+to check existence of the given key, unconditionally followed
+by \fBcdb_make_add\fR().
+.PP
+If any error occurred during operations, the routine will return
+negative integer and will set global variable \fBerrno\fR to
+indicate reason of failure.  In case of successful operation
+and no duplicates found, routine will return 0.  If any duplicates
+has been found or removed (which, in case of CDB_PUT_INSERT mode,
+indicates that the new record was not added), routine will return
+positive value.  If an error occurred and \fBcdb_make_put\fR() returned
+negative error, it is not possible to continue database construction
+process.
+.PP
+As with \fBcdb_make_exists\fR() and \fBcdb_make_find\fR(), usage
+of this routine with any but CDB_PUT_ADD mode can significantly
+slow down database creation process, especially when \fImode\fR
+is equal to CDB_PUT_REPLACE0.
+
+.RE
+.nf
+void \fBcdb_pack\fR(\fInum\fR, \fIbuf\fR)
+   unsigned \fInum\fR;
+   unsigned char \fIbuf\fR[4];
+.fi
+.RS
+helper routine that used internally to convert machine integer \fIn\fR
+to internal form to be stored in datafile.  32-bit integer is stored in
+4 bytes in network byte order.  May be used to handle application data.
+There is no error return.
+.RE
+
+.nf
+unsigned \fBcdb_hash\fR(\fIbuf\fR, \fIlen\fR)
+   const void *\fIbuf\fR;
+   unsigned \fIlen\fR;
+.fi
+.RS
+helper routine that calculates cdb hash value of given bytes.
+CDB hash function is
+.br
+  hash[n] = (hash[n\-1] + (hash[n\-1] << 5)) ^ buf[n]
+.br
+starting with
+.br
+  hash[\-1] = 5381
+.br
+.RE
+
+.SH ERRORS
+
+.B cdb
+library may set \fBerrno\fR to following on error:
+
+.IP EPROTO
+database file is corrupted in some way
+.IP EINVAL
+the same as EPROTO above if system lacks EPROTO constant
+.IP EINVAL
+\fIflag\fR argument for \fBcdb_make_put\fR() is invalid
+.IP EEXIST
+\fIflag\fR argument for \fBcdb_make_put\fR() is CDB_PUT_INSERT,
+and key already exists
+.IP ENOMEM
+not enough memory to complete operation (\fBcdb_make_finish\fR and
+\fBcdb_make_add\fR)
+.IP EIO
+set by \fBcdb_bread\fR and \fBcdb_seek\fR if a cdb file is shorter
+than expected or corrupted in some other way.
+
+.SH EXAMPLES
+
+.PP
+Note: in all examples below, error checking is not shown for brewity.
+
+.SS "Query Mode"
+
+.nf
+ int fd;
+ struct cdb cdb;
+ char *key, *data;
+ unsigned keylen, datalen;
+
+ /* opening the database */
+ fd = open(filename, O_RDONLY);
+ cdb_init(&cdb, fd);
+ /* initialize key and keylen here */
+
+ /* single\-record search. */
+ if (cdb_find(&cdb, key, keylen) > 0) {
+   datalen = cdb_datalen(&cdb);
+   data = malloc(datalen + 1);
+   cdb_read(&cdb, data, datalen, cdb_datapos(&cdb));
+   data[datalen] = '\\0';
+   printf("key=%s data=%s\\n", key, data);
+   free(data);
+ }
+ else
+   printf("key=%s not found\\n", key);
+
+ /* multiple record search */
+ struct cdb_find cdbf;
+ int n;
+ cdb_findinit(&cdbf, &cdb, key, keylen);
+ n = 0;
+ while(cdb_findnext(&cdbf) > 0) {
+   datalen = cdb_datalen(&cdb);
+   data = malloc(datalen + 1);
+   cdb_read(&cdb, data, datalen, cdb_datapos(&cdb));
+   data[datalen] = '\\0';
+   printf("key=%s data=%s\\n", key, data);
+   free(data);
+   ++n;
+ }
+ printf("key=%s %d records found\\n", n);
+
+ /* sequential database access */
+ unsigned pos;
+ int n;
+ cdb_seqinit(&pos, &cdb);
+ n = 0;
+ while(cdb_seqnext(&pos, &cdb) > 0) {
+   keylen = cdb_keylen(&cdb);
+   key = malloc(keylen + 1);
+   cdb_read(&cdb, key, keylen, cdb_keypos(&cdb));
+   key[keylen] = '\\0';
+   datalen = cdb_datalen(&cdb);
+   data = malloc(datalen + 1);
+   cdb_read(&cdb, data, datalen, cdb_datapos(&cdb));
+   data[datalen] = '\\0';
+   ++n;
+   printf("record %n: key=%s data=%s\\n", n, key, data);
+   free(data); free(key);
+ }
+ printf("total records found: %d\\n", n);
+
+ /* close the database */
+ cdb_free(&cdb);
+ close(fd);
+
+ /* simplistic query mode */
+ fd = open(filename, O_RDONLY);
+ if (cdb_seek(fd, key, keylen, &datalen) > 0) {
+   data = malloc(datalen + 1);
+   cdb_bread(fd, data, datalen);
+   data[datalen] = '\\0';
+   printf("key=%s data=%s\\n", key, data);
+ }
+ else
+   printf("key=%s not found\\n", key);
+ close(fd);
+.fi
+
+.SS "Create Mode"
+
+.nf
+ int fd;
+ struct cdb_make cdbm;
+ char *key, *data;
+ unsigned keylen, datalen;
+
+ /* initialize the database */
+ fd = open(filename, O_RDWR|O_CREAT|O_TRUNC, 0644);
+ cdb_make_start(&cdbm, fd);
+
+ while(have_more_data()) {
+   /* initialize key and data */
+   if (cdb_make_exists(&cdbm, key, keylen) == 0)
+     cdb_make_add(&cdbm, key, keylen, data, datalen);
+   /* or use cdb_make_put() with appropriate flags */
+ }
+
+ /* finalize and close the database */
+ cdb_make_finish(&cdbm);
+ close(fd);
+.fi
+
+.SH "SEE ALSO"
+cdb(5), cdb(1), dbm(3), db(3), open(2).
+
+.SH AUTHOR
+The \fBtinycdb\fR package written by Michael Tokarev <mjt@corpit.ru>,
+based on ideas and shares file format with original cdb library by
+Dan Bernstein.
+
+.SH LICENSE
+Public domain.

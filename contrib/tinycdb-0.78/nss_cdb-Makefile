@@ -1,0 +1,47 @@
+# nss_cdb-Makefile: Makefile to create cdb-indexed files
+# for nss_cdb module from /etc/group, /etc/passwd, /etc/shadow.
+#
+# This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+# Public domain.
+
+AWK = awk
+SRC = .
+DST = .
+
+all: $(DST)/passwd.cdb $(DST)/group.cdb $(DST)/shadow.cdb
+
+$(DST)/passwd.cdb: $(SRC)/passwd
+	umask 022; $(AWK) -F: '\
+/^#/ { next } \
+NF == 7 { print $$1" "$$0; print ":"$$3" "$$1 } \
+' $(SRC)/passwd > $@.in
+	cdb -c -m $@ $@.in
+	rm -f $@.in
+
+$(DST)/group.cdb: $(SRC)/group
+	umask 022; $(AWK) -F: '\
+/^#/ { next } \
+NF == 4 { print $$1" "$$0; print ":"$$3" "$$1 } \
+' $(SRC)/group > $@.in
+	cdb -c -m $@ $@.in
+	rm -f $@.in
+
+# for shadow, we first create all files with mode 0600,
+# and only when everything's done, right before final
+# rename (which is done explicitly), we change permissions
+# and ownership to the right values.  Assuming parent dirs
+# have proper permissions (so no symlink attacks etc are
+# possible)
+$(DST)/shadow.cdb: $(SRC)/shadow
+	set -e; \
+	umask 077; \
+	rm -f $@.in; \
+	$(AWK) -F: '\
+/^#/ { next } \
+NF == 9 { print $$1" "$$0 } \
+' $(SRC)/shadow > $@.in
+	cdb -c -m -t $@.tmp -p 0600 $@.tmp2 $@.in
+	rm -f $@.in
+	chown --reference=$(SRC)/shadow $@.tmp2
+	chmod --reference=$(SRC)/shadow $@.tmp2
+	mv -f $@.tmp2 $@
