@@ -47,6 +47,6 @@ struct backend *be_mysql_init(char *host, int port, char *user, char *passwd,
 			char *dbname,
 			char *userquery, char *superquery, char *aclquery);
 void be_mysql_destroy(struct backend *be);
-char *be_mysql_userpw(struct backend *be, char *username);
-int be_mysql_superuser(struct backend *be, char *username);
-int be_mysql_aclcheck(struct backend *be, char *username, char *topic, int acc);
+char *be_mysql_getuser(struct backend *be, const char *username);
+int be_mysql_superuser(struct backend *be, const char *username);
+int be_mysql_aclcheck(struct backend *be, const char *username, const char *topic, int acc);

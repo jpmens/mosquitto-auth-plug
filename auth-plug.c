@@ -85,6 +85,17 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	char *cdbpath = NULL;
 #endif /* CDB */
 
+#ifdef BE_MYSQL
+	char *host = NULL;
+	int port  = 0;
+	char *dbname = NULL;
+	char *user = NULL;
+	char *pass = NULL;
+	char *userquery = NULL;
+	char *superquery = NULL;
+	char *aclquery = NULL;
+#endif
+
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
 		perror("allocting userdata");
@@ -117,6 +128,25 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			cdbpath = strdup(o->value);
 #endif /* CDB */
 
+#ifdef BE_MYSQL
+		if (!strcmp(o->key, "host"))
+			host = strdup(o->value);
+		if (!strcmp(o->key, "port"))
+			port = atoi(o->value);
+		if (!strcmp(o->key, "dbname"))
+			dbname = strdup(o->value);
+		if (!strcmp(o->key, "user"))
+			user = strdup(o->value);
+		if (!strcmp(o->key, "pass"))
+			pass = strdup(o->value);
+		if (!strcmp(o->key, "userquery"))
+			userquery = strdup(o->value);
+		if (!strcmp(o->key, "superquery"))
+			superquery = strdup(o->value);
+		if (!strcmp(o->key, "aclquery"))
+			aclquery = strdup(o->value);
+#endif
+
 #ifdef BE_REDIS
 		if (!strcmp(o->key, "redis_username_prefix"))
 			ud->usernameprefix = strdup(o->value);
@@ -145,6 +175,19 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		return (MOSQ_ERR_UNKNOWN);
 	}
 	ud->be = be_cdb_init(cdbpath);
+#endif
+
+#ifdef BE_MYSQL
+	if (host == NULL)
+		host = strdup("localhost");
+
+	if (userquery == NULL) {
+		fprintf(stderr, "Userquery is mandatory for back-end MySQL\n");
+		return (MOSQ_ERR_UNKNOWN);
+	}
+
+	ud->be = be_mysql_init(host, port, user, pass, dbname,
+				userquery, superquery, aclquery); 
 #endif
 
 #ifdef BE_SQLITE
@@ -218,6 +261,9 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 #ifdef BE_CDB
 	phash = be_cdb_getuser(ud->be, username);
 #endif
+#ifdef BE_MYSQL
+	phash = be_mysql_getuser(ud->be, username);
+#endif
 
 #ifdef BE_SQLITE
 	phash = be_sqlite_getuser(ud->be, username);
@@ -273,6 +319,10 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	match = be_cdb_access(ud->be, username, (char *)topic);
 #endif
 
+#ifdef BE_MYSQL
+	match = be_mysql_superuser(ud->be, username) ||
+		be_mysql_aclcheck(ud->be, username, topic, access);
+#endif
 	fprintf(stderr, "** !!! %s PERMITTED for %s\n", username, topic);
 	if (match)
 		return (match);

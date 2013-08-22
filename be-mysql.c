@@ -80,7 +80,7 @@ void be_mysql_destroy(struct backend *be)
 	}
 }
 
-static char *escape(struct backend *be, char *value, long *vlen)
+static char *escape(struct backend *be, const char *value, long *vlen)
 {
 	char *v;
 
@@ -92,14 +92,14 @@ static char *escape(struct backend *be, char *value, long *vlen)
 	return (v);
 }
 
-char *be_mysql_userpw(struct backend *be, char *username)
+char *be_mysql_getuser(struct backend *be, const char *username)
 {
 	char *query = NULL, *u = NULL, *value = NULL, *v;
 	long nrows, ulen;
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be)
+	if (!be || !be->userquery)
 		return (NULL);
 
 	if ((u = escape(be, username, &ulen)) == NULL)
@@ -150,7 +150,7 @@ char *be_mysql_userpw(struct backend *be, char *username)
  * Return T/F if user is superuser
  */
 
-int be_mysql_superuser(struct backend *be, char *username)
+int be_mysql_superuser(struct backend *be, const char *username)
 {
 	char *query = NULL, *u = NULL;
 	long nrows, ulen;
@@ -158,7 +158,7 @@ int be_mysql_superuser(struct backend *be, char *username)
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be)
+	if (!be || !be->superquery)
 		return (FALSE);
 
 	if ((u = escape(be, username, &ulen)) == NULL)
@@ -216,7 +216,7 @@ int be_mysql_superuser(struct backend *be, char *username)
  * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
  */
 
-int be_mysql_aclcheck(struct backend *be, char *username, char *topic, int acc)
+int be_mysql_aclcheck(struct backend *be, const char *username, const char *topic, int acc)
 {
 	char *query = NULL, *u = NULL, *v;
 	long ulen;
@@ -225,7 +225,7 @@ int be_mysql_aclcheck(struct backend *be, char *username, char *topic, int acc)
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be)
+	if (!be || !be->aclquery)
 		return (FALSE);
 
 	if ((u = escape(be, username, &ulen)) == NULL)
@@ -306,7 +306,7 @@ int main()
 	for (tu = testusers; tu && *tu; tu++) {
 		int superuser = FALSE;
 
-		p = be_mysql_userpw(be, *tu);
+		p = be_mysql_getuser(be, *tu);
 
 		superuser = be_mysql_superuser(be, *tu);
 

@@ -2,27 +2,25 @@
 #	mysql
 #	cdb
 
-#BACKEND=mysql
-#BE_CFLAGS=`mysql_config --cflags` -DBE_MYSQL=1
-#BE_LDLAGS=`mysql_config --libs`
-#BE_DEPS=
+BACKEND=mysql
+BE_CFLAGS=`mysql_config --cflags` -DBE_MYSQL=1
+BE_LDFLAGS=`mysql_config --libs`
+BE_DEPS=
 
-BACKEND=cdb
-CDBDIR=contrib/tinycdb-0.78
-CDB=$(CDBDIR)/cdb
-CDBINC=$(CDBDIR)/
-CDBLIB=$(CDBDIR)/libcdb.a
-BE_CFLAGS=-I$(CDBINC)/ -DBE_CDB=1
-BE_LDFLAGS=-L$(CDBDIR) -lcdb
-BE_DEPS=$(CDBLIB)
+#BACKEND=cdb
+#CDBDIR=contrib/tinycdb-0.78
+#CDB=$(CDBDIR)/cdb
+#CDBINC=$(CDBDIR)/
+#CDBLIB=$(CDBDIR)/libcdb.a
+#BE_CFLAGS=-I$(CDBINC)/ -DBE_CDB=1
+#BE_LDFLAGS=-L$(CDBDIR) -lcdb
+#BE_DEPS=$(CDBLIB)
 
 #MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
 #OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 #OSSLINC=-I$(OPENSSLDIR)/include
 #OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
 OSSLIBS=-lcrypto
-
-# CFLAGS=-fPIC -I$(MOSQUITTOSRC) -Wall -Werror $(OSSLINC) -I$(CDBINC) -DDEBUG
 
 MOSQ=/home/jpm/src/mosquitto-1.2/
 
