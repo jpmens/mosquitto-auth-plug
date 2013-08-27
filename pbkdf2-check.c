@@ -91,7 +91,7 @@ int pbkdf2_check(char *password, char *hash)
         if (detoken(hash, &sha, &iterations, &salt, &h_pw) != 0)
 		return match;
 
-#ifdef DEBUG
+#ifdef PWDEBUG
 	fprintf(stderr, "sha        =[%s]\n", sha);
 	fprintf(stderr, "iterations =%d\n", iterations);
 	fprintf(stderr, "salt       =[%s]\n", salt);
@@ -115,7 +115,7 @@ int pbkdf2_check(char *password, char *hash)
 	blen = base64_encode(key, KEY_LENGTH, &b64);
 	if (blen > 0) {
 		int i, diff = 0, hlen = strlen(h_pw);
-#ifdef DEBUG
+#ifdef PWDEBUG
 		fprintf(stderr, "HMAC b64   =[%s]\n", b64);
 #endif
 		

@@ -63,21 +63,8 @@ struct backend_p {
 };
 
 struct userdata {
-	struct backend *be;		/* Connection to back-end */
-
 	struct backend_p **be_list;
-
-
-
-	// redisContext *redis;
-	char *host;
-	int port;
-	char *usernameprefix;		/* e.g. "u:" */
-	char *topicprefix;
-	char *superusers;		/* fnmatch-style glob */
-	char *dbpath;
-	char *sql_userquery;
-	char *sql_aclquery;
+	char *superusers;		/* Statis glob list */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -97,20 +84,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	int ret = MOSQ_ERR_SUCCESS;
 	int nord;
 	struct backend_p **bep;
-#ifdef BE_CDB
-	char *cdbpath = NULL;
-#endif /* CDB */
-
-#ifdef BE_MYSQL
-	char *host = NULL;
-	int port  = 0;
-	char *dbname = NULL;
-	char *user = NULL;
-	char *pass = NULL;
-	char *userquery = NULL;
-	char *superquery = NULL;
-	char *aclquery = NULL;
-#endif
 
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
@@ -119,15 +92,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	}
 
 	ud = *userdata;
-	ud->be			= 0;
-	ud->dbpath		= NULL;  /* path name for SQLite & CDB */
-	ud->sql_userquery	= NULL;
-	ud->sql_aclquery	= NULL;
-	ud->usernameprefix	= NULL;
-	ud->topicprefix		= NULL;
-	ud->superusers		= NULL;
-	ud->host		= NULL;
-	ud->port		= 6379;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -142,8 +106,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 		if (!strcmp(o->key, "superusers"))
 			ud->superusers = strdup(o->value);
+#if 0
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);
+#endif
 	}
 
 	/*
@@ -165,9 +131,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	bep = ud->be_list;
         for (nord = 0, q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
                 int found = 0;
-
+#if BE_MYSQL
 		if (!strcmp(q, "mysql")) {
-			puts("---> MYSQL");
 			be_add("mysql");
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
 			memset(*bep, 0, sizeof(struct backend_p));
@@ -182,9 +147,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->aclcheck =  be_mysql_aclcheck;
 			found = 1;
 		}
+#endif
 
+#if BE_CDB
 		if (!strcmp(q, "cdb")) {
-			puts("---> CDB");
 			be_add("cdb");
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
 			memset(*bep, 0, sizeof(struct backend_p));
@@ -199,6 +165,25 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->aclcheck =  be_cdb_aclcheck;
 			found = 1;
 		}
+#endif
+
+#if BE_SQLITE
+		if (!strcmp(q, "sqlite")) {
+			be_add("cdb");
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("sqlite");
+			(*bep)->conf = be_sqlite_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_sqlite_destroy;
+			(*bep)->getuser =  be_sqlite_getuser;
+			(*bep)->superuser =  be_sqlite_superuser;
+			(*bep)->aclcheck =  be_sqlite_aclcheck;
+			found = 1;
+		}
+#endif
 
                 if (!found) {
                         _fatal("ERROR: configured back-end `%s' doesn't exist", q);
@@ -210,66 +195,14 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
         free(p);
 
-	be_dump();
-
-
-#ifdef BE_CDB
-	if (cdbpath == NULL) {
-		fprintf(stderr, "No cdbpath specified for CDB back-end\n");
-		return (MOSQ_ERR_UNKNOWN);
-	}
-	// ud->be = be_cdb_init(cdbpath);
-#endif
-
-#ifdef BE_MYSQL
-	if (host == NULL)
-		host = strdup("localhost");
-
-	if (userquery == NULL) {
-		fprintf(stderr, "Userquery is mandatory for back-end MySQL\n");
-		return (MOSQ_ERR_UNKNOWN);
-	}
-
-	ud->be = be_mysql_init(host, port, user, pass, dbname,
-				userquery, superquery, aclquery); 
-#endif
-
-#ifdef BE_SQLITE
-	if (dbpath == NULL) {
-		fprintf(stderr, "No dbpath specified for sqlite back-end\n");
-		return (MOSQ_ERR_UNKNOWN);
-	}
-
-	if (ud->sql_userquery == NULL) {
-		fprintf(stderr, "No SQL query specified for sqlite back-end\n");
-		return (MOSQ_ERR_UNKNOWN);
-	}
-
-	ud->be = be_sqlite_init(ud->dbpath, ud->sql_userquery);
-	goto out;
-#endif /* SQLITE */
-
-#ifdef BE_REDIS
-	if (ud->host == NULL)
-		ud->host = strdup("localhost");
-
-	//ud->redis = redis_init(ud->host, ud->port);
-	//if (ud->redis == NULL) {
-		//fprintf(stderr, "Cannot connect to Redis on %s:%d\n", ud->host, ud->port);
-		//ret = MOSQ_ERR_UNKNOWN;
-	//}
-	goto out;
-#endif /* REDIS */
-
 	return (ret);
 }
 
 int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *auth_opts, int auth_opt_count)
 {
 	// struct userdata *ud = (struct userdata *)userdata;
-	// struct backend *be = ud->be;
 
-	/* FIXME: fee other elements */
+	/* FIXME: free other elements */
 
 	return MOSQ_ERR_SUCCESS;
 }
@@ -301,13 +234,13 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 		struct backend_p *b = *bep;
 
 
-		_log(DEBUG, "... %s: getuser(%s, %s)", b->name, username, password);
+		_log(DEBUG, "%s: getuser(%s, %s)", b->name, username, password);
 
 		phash = b->getuser(b->conf, username);
 		if (phash != NULL) {
 			match = pbkdf2_check((char *)password, phash);
-			_log(LOG_DEBUG, "%s: unpwd_check: for user=%s, got: %s", b->name, username, phash);
-			_log(LOG_DEBUG, "%s: unpwd_check: PBKDF2 match == %d", b->name, match);
+			_log(LOG_DEBUG, "%s: unpwd_check: user=%s MATCH=%d with %s",
+				b->name, username, match, phash);
 			if (match == 1) {
 				authorized = TRUE;
 				break;
@@ -326,8 +259,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
 {
 	struct userdata *ud = (struct userdata *)userdata;
-	char *tname;
-	int tlen, match = 0;
+	int match = 0;
 
 	_log(LOG_DEBUG, "!!!! acl_check u=%s, t=%s, a=%d",
 		(username) ? username : "NIL",
@@ -346,11 +278,11 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		}
 	}
 
-#ifdef BE_CDB
+#ifdef OLDBE_CDB
 	// match = be_cdb_access(ud->be, username, (char *)topic);
 #endif
 
-#ifdef BE_MYSQL
+#ifdef OLDBE_MYSQL
 	match = be_mysql_superuser(ud->be, username) ||
 		be_mysql_aclcheck(ud->be, username, topic, access);
 #endif
@@ -358,6 +290,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	if (match)
 		return (match);
 
+#if OLD
 	if (ud->topicprefix) {
 		char *s, *t;
 		int n;
@@ -398,6 +331,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 		free(tname);
 	}
+#endif /* OLD */
 
 	_log(LOG_NOTICE, "** ACL match == %d", match);
 

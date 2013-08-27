@@ -31,68 +31,94 @@
 #include <stdlib.h>
 #include <string.h>
 #include "be-sqlite.h"
+#include "hash.h"
+#include "log.h"
 
-struct backend *be_sqlite_init(char *dbpath, char *userquery)
+void *be_sqlite_init()
 {
+	struct sqlite_backend *conf;
 	int res;
 	int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE;
+	char *dbpath, *userquery;
 
-	struct backend *be;
+	if ((dbpath = p_stab("dbpath")) == NULL) {
+		_fatal("Mandatory parameter `dbpath' missing");
+		return (NULL);
+	}
 
-	be = malloc(sizeof(struct backend));
+	if ((userquery = p_stab("sqliteuserquery")) == NULL) {
+		_fatal("Mandatory parameter `sqliteuserquery' missing");
+		return (NULL);
+	}
 
-	if (sqlite3_open_v2(dbpath, &be->sq, flags, NULL) != SQLITE_OK) {
+	conf = (struct sqlite_backend *)malloc(sizeof(struct sqlite_backend));
+
+	if (sqlite3_open_v2(dbpath, &conf->sq, flags, NULL) != SQLITE_OK) {
 		perror(dbpath);
-		free(be);
+		free(conf);
 		return (NULL);
 	}
 
-	if ((res = sqlite3_prepare(be->sq, userquery, strlen(userquery), &be->stmt, NULL)) != SQLITE_OK) {
-		fprintf(stderr, "Can't prepare: %s\n", sqlite3_errmsg(be->sq));
-		sqlite3_close(be->sq);
-		free(be);
+	if ((res = sqlite3_prepare(conf->sq, userquery, strlen(userquery), &conf->stmt, NULL)) != SQLITE_OK) {
+		fprintf(stderr, "Can't prepare: %s\n", sqlite3_errmsg(conf->sq));
+		sqlite3_close(conf->sq);
+		free(conf);
 		return (NULL);
 	}
 
-	return (be);
+	return (conf);
 }
 
-void be_sqlite_destroy(struct backend *be)
+void be_sqlite_destroy(void *handle)
 {
-	if (be) {
-		sqlite3_finalize(be->stmt);
-		sqlite3_close(be->sq);
-		free(be);
+	struct sqlite_backend *conf = (struct sqlite_backend *)handle;
+
+	if (conf) {
+		sqlite3_finalize(conf->stmt);
+		sqlite3_close(conf->sq);
+		free(conf);
 	}
 }
 
-char *be_sqlite_getuser(struct backend *be, const char *username)
+char *be_sqlite_getuser(void *handle, const char *username)
 {
+	struct sqlite_backend *conf = (struct sqlite_backend *)handle;
 	int res;
 	char *value = NULL, *v;
 
-	if (!be)
+	if (!conf)
 		return (NULL);
 
-	sqlite3_reset(be->stmt);
-	sqlite3_clear_bindings(be->stmt);
+	sqlite3_reset(conf->stmt);
+	sqlite3_clear_bindings(conf->stmt);
 
-	res = sqlite3_bind_text(be->stmt, 1, username, -1, SQLITE_STATIC);
+	res = sqlite3_bind_text(conf->stmt, 1, username, -1, SQLITE_STATIC);
 	if (res != SQLITE_OK) {
 		puts("Can't bind");
 		goto out;
 	}
 
-	res = sqlite3_step(be->stmt);
+	res = sqlite3_step(conf->stmt);
 
 	if (res == SQLITE_ROW) {
-		v = (char *)sqlite3_column_text(be->stmt, 0);
+		v = (char *)sqlite3_column_text(conf->stmt, 0);
 		if (v)
 			value = strdup(v);
 	}
 
     out:
-	sqlite3_reset(be->stmt);
+	sqlite3_reset(conf->stmt);
 
 	return (value);
 }
+
+int be_sqlite_superuser(void *handle, const char *username)
+{
+	return 0;
+}
+
+int be_sqlite_aclcheck(void *handle, const char *username, const char *topic, int acc)
+{
+	return 0;
+}
+
