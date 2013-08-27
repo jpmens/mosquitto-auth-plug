@@ -35,61 +35,70 @@
 #include <cdb.h>
 #include <mosquitto.h>
 #include "be-cdb.h"
+#include "log.h"
+#include "hash.h"
 
-struct backend *be_cdb_init(char *cdbname)
+void *be_cdb_init()
 {
-	struct backend *be;
+	struct cdb_backend *conf;
+	char *cdbname;
 	int fd;
+
+	if ((cdbname = p_stab("cdbname")) == NULL)
+		_fatal("Mandatory parameter `cdbname' missing");
 
 	if ((fd = open(cdbname, O_RDONLY)) == -1) {
 		perror(cdbname);
 		return (NULL);
 	}
 
-	be = malloc(sizeof(struct backend));
-	if (be == NULL) {
+	conf = malloc(sizeof(struct cdb_backend));
+	if (conf == NULL) {
 		return (NULL);
 	}
 
-	be->cdbname	= strdup(cdbname);
-	be->cdb		= (struct cdb *)malloc(sizeof(struct cdb));
+	conf->cdbname	= strdup(cdbname);
+	conf->cdb	= (struct cdb *)malloc(sizeof(struct cdb));
 
-	if (be->cdb == NULL) {
-		free(be->cdbname);
-		free(be);
+	if (conf->cdb == NULL) {
+		free(conf->cdbname);
+		free(conf);
 		return (NULL);
 	}
 
-	cdb_init(be->cdb, fd);
+	cdb_init(conf->cdb, fd);
 
-	return (be);
+	return (conf);
 }
 
-void be_cdb_destroy(struct backend *be)
+void be_cdb_destroy(void *handle)
 {
-	if (be) {
-		cdb_free(be->cdb);
-		free(be->cdbname);
+	struct cdb_backend *conf = (struct cdb_backend *)handle;
+
+	if (conf) {
+		cdb_free(conf->cdb);
+		free(conf->cdbname);
 	}
 }
 
-char *be_cdb_getuser(struct backend *be, const char *username)
+char *be_cdb_getuser(void *handle, const char *username)
 {
+	struct cdb_backend *conf = (struct cdb_backend *)handle;
 	char *k, *v = NULL;
 	unsigned klen;
 
-	if (!be || !username || !*username)
+	if (!conf || !username || !*username)
 		return (NULL);
 
 	k = (char *)username;
 	klen = strlen(k);
 
-	if (cdb_find(be->cdb, k, klen) > 0) {
-		int vpos = cdb_datapos(be->cdb);
-		int vlen = cdb_datalen(be->cdb);
+	if (cdb_find(conf->cdb, k, klen) > 0) {
+		int vpos = cdb_datapos(conf->cdb);
+		int vlen = cdb_datalen(conf->cdb);
 
 		if ((v = malloc(vlen)) != NULL) {
-			cdb_read(be->cdb, v, vlen, vpos);
+			cdb_read(conf->cdb, v, vlen, vpos);
 		}
 	}
 
@@ -101,15 +110,16 @@ char *be_cdb_getuser(struct backend *be, const char *username)
  * and use mosquitto_topic_matches_sub() to validate the topic.
  */
 
-int be_cdb_access(struct backend *be, const char *username, char *topic)
+int be_cdb_access(void *handle, const char *username, char *topic)
 {
+	struct cdb_backend *conf = (struct cdb_backend *)handle;
 	char *k;
 	unsigned klen;
 	int found = 0;
 	struct cdb_find cdbf;
 	bool bf;
 
-	if (!be || !username || !topic)
+	if (!conf || !username || !topic)
 		return (0);
 
 	if ((k = malloc(strlen(username) + strlen("acl:") + 2)) == NULL)
@@ -117,14 +127,14 @@ int be_cdb_access(struct backend *be, const char *username, char *topic)
 	sprintf(k, "acl:%s", username);
 	klen = strlen(k);
 
-	cdb_findinit(&cdbf, be->cdb, k, klen);
+	cdb_findinit(&cdbf, conf->cdb, k, klen);
 	while ((cdb_findnext(&cdbf) > 0) && (!found)) {
-		unsigned vpos = cdb_datapos(be->cdb);
-		unsigned vlen = cdb_datalen(be->cdb);
+		unsigned vpos = cdb_datapos(conf->cdb);
+		unsigned vlen = cdb_datalen(conf->cdb);
 		char *val;
 
 		val = malloc(vlen);
-		cdb_read(be->cdb, val, vlen, vpos);
+		cdb_read(conf->cdb, val, vlen, vpos);
 
 		mosquitto_topic_matches_sub(val, topic, &bf);
 		found |= bf;
@@ -137,7 +147,17 @@ int be_cdb_access(struct backend *be, const char *username, char *topic)
 	return (found > 0);
 }
 
-#if TESTING
+int be_cdb_superuser(void *handle, const char *username)
+{
+	return 0;
+}
+
+int be_cdb_aclcheck(void *handle, const char *username, const char *topic, int acc)
+{
+	return 0;
+}
+
+#if TESTINGBROKEN
 int main(int argc, char **argv)
 {
 	char *p;

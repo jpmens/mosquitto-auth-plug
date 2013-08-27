@@ -36,17 +36,8 @@
 # define TRUE (1)
 #endif
 
-struct backend {
-	MYSQL *mysql;
-	char *userquery;	// MUST return 1 row, 1 column
-	char *superquery;	// MUST return 1 row, 1 column, [0, 1]
-	char *aclquery;		// MAY return n rows, 1 column, string
-};
-
-struct backend *be_mysql_init(char *host, int port, char *user, char *passwd,
-			char *dbname,
-			char *userquery, char *superquery, char *aclquery);
-void be_mysql_destroy(struct backend *be);
-char *be_mysql_getuser(struct backend *be, const char *username);
-int be_mysql_superuser(struct backend *be, const char *username);
-int be_mysql_aclcheck(struct backend *be, const char *username, const char *topic, int acc);
+void *be_mysql_init();
+void be_mysql_destroy(void *conf);
+char *be_mysql_getuser(void *conf, const char *username);
+int be_mysql_superuser(void *conf, const char *username);
+int be_mysql_aclcheck(void *conf, const char *username, const char *topic, int acc);

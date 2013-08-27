@@ -30,96 +30,128 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "be-mysql.h"
 #include <mosquitto.h>
+#include "be-mysql.h"
+#include "log.h"
+#include "hash.h"
 
-struct backend *be_mysql_init(char *host, int port, char *user, char *passwd,
-			char *dbname,
-			char *userquery, char *superquery, char *aclquery)
+struct mysql_backend {
+        MYSQL *mysql;
+	char *host;
+	int port;
+	char *dbname;
+	char *user;
+	char *pass;
+        char *userquery;        // MUST return 1 row, 1 column
+        char *superquery;       // MUST return 1 row, 1 column, [0, 1]
+        char *aclquery;         // MAY return n rows, 1 column, string
+};
+
+void *be_mysql_init()
 {
-	struct backend *be;
+	struct mysql_backend *conf;
+	char *host, *user, *pass, *dbname, *p;
+	char *userquery;
+	int port;
 
-	if (!userquery)
-		return (NULL);
+	_log(LOG_DEBUG, "}}}} MYSQL");
 
-	if ((be = malloc(sizeof(struct backend))) == NULL)
-		return (NULL);
+	host		= p_stab("host");
+	p		= p_stab("port");
+	user		= p_stab("user");
+	pass		= p_stab("pass");
+	dbname		= p_stab("dbname");
 
-	be->mysql = mysql_init(NULL);
-	be->userquery	= NULL;
-	be->superquery	= NULL;
-	be->aclquery	= NULL;
+	host = (host) ? host : strdup("localhost");
+	port = (!p) ? 3306 : atoi(p);
 
-	if (!mysql_real_connect(be->mysql, host, user, passwd, dbname, port, NULL, 0)) {
-		fprintf(stderr, "%s\n", mysql_error(be->mysql));
-		free(be);
-		mysql_close(be->mysql);
+	userquery = p_stab("userquery");
+
+	if (!userquery) {
+		_fatal("Mandatory option 'userquery' is missing");
 		return (NULL);
 	}
 
-	be->userquery = strdup(userquery);
-	if (superquery)
-		be->superquery = strdup(superquery);
-	if (aclquery)
-		be->aclquery = strdup(aclquery);
+	if ((conf = (struct mysql_backend *)malloc(sizeof(struct mysql_backend))) == NULL)
+		return (NULL);
 
-	return (be);
+	conf->mysql		= mysql_init(NULL);
+	conf->host		= host;
+	conf->port		= port;
+	conf->user		= user;
+	conf->pass		= pass;
+	conf->dbname		= dbname;
+	conf->userquery		= userquery;
+	conf->superquery	= p_stab("superquery");
+	conf->aclquery		= p_stab("aclquery");
+
+	if (!mysql_real_connect(conf->mysql, host, user, pass, dbname, port, NULL, 0)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		free(conf);
+		mysql_close(conf->mysql);
+		return (NULL);
+	}
+
+	return ((void *)conf);
 }
 
-void be_mysql_destroy(struct backend *be)
+void be_mysql_destroy(void *handle)
 {
-	if (be) {
-		mysql_close(be->mysql);
-		if (be->userquery)
-			free(be->userquery);
-		if (be->superquery)
-			free(be->superquery);
-		if (be->aclquery)
-			free(be->aclquery);
-		free(be);
+	struct mysql_backend *conf = (struct mysql_backend *)handle;
+
+	if (conf) {
+		mysql_close(conf->mysql);
+		if (conf->userquery)
+			free(conf->userquery);
+		if (conf->superquery)
+			free(conf->superquery);
+		if (conf->aclquery)
+			free(conf->aclquery);
+		free(conf);
 	}
 }
 
-static char *escape(struct backend *be, const char *value, long *vlen)
+static char *escape(void *handle, const char *value, long *vlen)
 {
+	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *v;
-
 
 	*vlen = strlen(value) * 2 + 1;
 	if ((v = malloc(*vlen)) == NULL)
 		return (NULL);
-	mysql_real_escape_string(be->mysql, v, value, strlen(value));
+	mysql_real_escape_string(conf->mysql, v, value, strlen(value));
 	return (v);
 }
 
-char *be_mysql_getuser(struct backend *be, const char *username)
+char *be_mysql_getuser(void *handle, const char *username)
 {
+	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *value = NULL, *v;
 	long nrows, ulen;
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be || !be->userquery)
+	if (!conf || !conf->userquery)
 		return (NULL);
 
-	if ((u = escape(be, username, &ulen)) == NULL)
+	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (NULL);
 
-	if ((query = malloc(strlen(be->userquery) + ulen + 128)) == NULL) {
+	if ((query = malloc(strlen(conf->userquery) + ulen + 128)) == NULL) {
 		free(u);
 		return (NULL);
 	}
-	sprintf(query, be->userquery, u);
+	sprintf(query, conf->userquery, u);
 	free(u);
 
 	// DEBUG puts(query);
 
-	if (mysql_query(be->mysql, query)) {
-		fprintf(stderr, "%s\n", mysql_error(be->mysql));
+	if (mysql_query(conf->mysql, query)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		goto out;
 	}
 
-	res = mysql_store_result(be->mysql);
+	res = mysql_store_result(conf->mysql);
 	if ((nrows = mysql_num_rows(res)) != 1) {
 		// DEBUG fprintf(stderr, "rowcount = %ld; not ok\n", nrows);
 		goto out;
@@ -150,35 +182,37 @@ char *be_mysql_getuser(struct backend *be, const char *username)
  * Return T/F if user is superuser
  */
 
-int be_mysql_superuser(struct backend *be, const char *username)
+int be_mysql_superuser(void *handle, const char *username)
 {
+	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL;
 	long nrows, ulen;
 	int issuper = FALSE;
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be || !be->superquery)
+
+	if (!conf || !conf->superquery)
 		return (FALSE);
 
-	if ((u = escape(be, username, &ulen)) == NULL)
+	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (FALSE);
 
-	if ((query = malloc(strlen(be->superquery) + ulen + 128)) == NULL) {
+	if ((query = malloc(strlen(conf->superquery) + ulen + 128)) == NULL) {
 		free(u);
 		return (FALSE);
 	}
-	sprintf(query, be->superquery, u);
+	sprintf(query, conf->superquery, u);
 	free(u);
 
 	// puts(query);
 
-	if (mysql_query(be->mysql, query)) {
-		fprintf(stderr, "%s\n", mysql_error(be->mysql));
+	if (mysql_query(conf->mysql, query)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		goto out;
 	}
 
-	res = mysql_store_result(be->mysql);
+	res = mysql_store_result(conf->mysql);
 	if ((nrows = mysql_num_rows(res)) != 1) {
 		goto out;
 	}
@@ -216,8 +250,9 @@ int be_mysql_superuser(struct backend *be, const char *username)
  * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
  */
 
-int be_mysql_aclcheck(struct backend *be, const char *username, const char *topic, int acc)
+int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int acc)
 {
+	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *v;
 	long ulen;
 	int match = 0;
@@ -225,27 +260,28 @@ int be_mysql_aclcheck(struct backend *be, const char *username, const char *topi
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!be || !be->aclquery)
+
+	if (!conf || !conf->aclquery)
 		return (FALSE);
 
-	if ((u = escape(be, username, &ulen)) == NULL)
+	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (FALSE);
 
-	if ((query = malloc(strlen(be->aclquery) + ulen + 128)) == NULL) {
+	if ((query = malloc(strlen(conf->aclquery) + ulen + 128)) == NULL) {
 		free(u);
 		return (FALSE);
 	}
-	sprintf(query, be->aclquery, u, acc);
+	sprintf(query, conf->aclquery, u, acc);
 	free(u);
 
 	// puts(query);
 
-	if (mysql_query(be->mysql, query)) {
-		fprintf(stderr, "%s\n", mysql_error(be->mysql));
+	if (mysql_query(conf->mysql, query)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		goto out;
 	}
 
-	res = mysql_store_result(be->mysql);
+	res = mysql_store_result(conf->mysql);
 	if (mysql_num_fields(res) != 1) {
 		fprintf(stderr, "numfields not ok\n");
 		goto out;
@@ -271,7 +307,7 @@ int be_mysql_aclcheck(struct backend *be, const char *username, const char *topi
 	return (match);
 }
 
-#ifdef TESTING
+#ifdef TESTINGBROKEN
 
 int main()
 {

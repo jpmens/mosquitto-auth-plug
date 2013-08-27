@@ -26,7 +26,7 @@ CREATE TABLE acls (
 	rw INTEGER(1) NOT NULL DEFAULT 1,	-- FIXME: unused atm
 	PRIMARY KEY (id)
 	);
-CREATE UNIQUE INDEX acls_user_topic ON acls (username, topic);
+CREATE UNIQUE INDEX acls_user_topic ON acls (username, topic(228));
 
 INSERT INTO acls (username, topic) VALUES ('jjolie', 'loc/jjolie');
 INSERT INTO acls (username, topic) VALUES ('jjolie', '$SYS/something');
