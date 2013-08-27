@@ -230,6 +230,11 @@ auth_opt_superusers S*
 In addition to ACL checking which is possibly performed by a back-end,
 there's a more "static" checking which can be configured in `mosquitto.conf`.
 
+Note that if ACLs are being verified by the plugin, this also applies to 
+Will topics (_last will and testament_). Failing to correctly set up
+an ACL for these, will cause a broker to silently fail with a 'not 
+authorized' message.
+
 The plugin has support for checking topics allowed to a user. By default,
 a topic_prefix is assumed, configured as `auth_opt_topic_prefix`.
 Any number of `%` characters in this prefix are replaced by the username.
