@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include "base64.h"
@@ -39,6 +40,7 @@
 #define SEPARATOR       "$"
 #define SALTLEN 12
 
+#define USAGE() fprintf(stderr, "Usage: %s [-i iterations]\n", progname)
 
 int main(int argc, char **argv)
 {
@@ -47,10 +49,24 @@ int main(int argc, char **argv)
 	char *salt, *b64;
 	unsigned char key[128];
 	char *pw1, *pw2, *password;
+	char *progname = argv[0];
+	int c;
+
+	while ((c = getopt(argc, argv, "i:")) != EOF) {
+		switch (c) {
+			case 'i':
+				iterations = atoi(optarg);
+				break;
+			default:
+				exit(USAGE());
+		}
+	}
+
+	argc -= optind - 1;
+	argv += optind - 1;
 
 	if (argc != 1) {
-		fprintf(stderr, "Usage: %s\n", *argv);
-		return (1);
+		exit(USAGE());
 	}
 
 	pw1 = strdup(getpass("Enter password: "));
