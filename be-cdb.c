@@ -97,8 +97,9 @@ char *be_cdb_getuser(void *handle, const char *username)
 		int vpos = cdb_datapos(conf->cdb);
 		int vlen = cdb_datalen(conf->cdb);
 
-		if ((v = malloc(vlen)) != NULL) {
+		if ((v = malloc(vlen + 1)) != NULL) {
 			cdb_read(conf->cdb, v, vlen, vpos);
+			v[vlen] = 0;
 		}
 	}
 
