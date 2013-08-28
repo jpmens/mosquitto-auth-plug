@@ -72,6 +72,7 @@ int pbkdf2_check(char *password, char *hash);
 int mosquitto_auth_plugin_version(void)
 {
 	fprintf(stderr, "*** auth-plug: backend=%s\n", TOSTRING(BACKEND));
+
 	return MOSQ_AUTH_PLUGIN_VERSION;
 }
 
@@ -84,6 +85,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	int ret = MOSQ_ERR_SUCCESS;
 	int nord;
 	struct backend_p **bep;
+
+
 
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
@@ -133,7 +136,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
                 int found = 0;
 #if BE_MYSQL
 		if (!strcmp(q, "mysql")) {
-			be_add("mysql");
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
 			memset(*bep, 0, sizeof(struct backend_p));
 			(*bep)->name = strdup("mysql");
@@ -151,7 +153,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 #if BE_CDB
 		if (!strcmp(q, "cdb")) {
-			be_add("cdb");
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
 			memset(*bep, 0, sizeof(struct backend_p));
 			(*bep)->name = strdup("cdb");
@@ -169,7 +170,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 #if BE_SQLITE
 		if (!strcmp(q, "sqlite")) {
-			be_add("cdb");
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
 			memset(*bep, 0, sizeof(struct backend_p));
 			(*bep)->name = strdup("sqlite");
@@ -223,8 +223,8 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 {
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
-	char *phash = NULL;
-	int match, authorized = FALSE;
+	char *phash = NULL, *backend_name = NULL;
+	int match, authenticated = FALSE;
 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_ERR_AUTH;
@@ -234,26 +234,28 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 		struct backend_p *b = *bep;
 
 
-		_log(DEBUG, "%s: getuser(%s, %s)", b->name, username, password);
 
 		phash = b->getuser(b->conf, username);
 		if (phash != NULL) {
 			match = pbkdf2_check((char *)password, phash);
-			_log(LOG_DEBUG, "%s: unpwd_check: user=%s MATCH=%d with %s",
-				b->name, username, match, phash);
 			if (match == 1) {
-				authorized = TRUE;
+				authenticated = TRUE;
 				break;
 			}
 		}
 	}
+
+	/* Set name of back-end which authenticated */
+	backend_name = (authenticated) ? (*bep)->name : "none";
 	
-	if (phash == NULL) {
-		return MOSQ_ERR_AUTH;
+	_log(DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
+		username, authenticated, backend_name); 
+
+	if (phash != NULL) {
+		free(phash);
 	}
 
-	free(phash);
-	return (authorized) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
+	return (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
 }
 
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
