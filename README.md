@@ -15,7 +15,7 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
 | Capability                 | mysql | redis | cdb   | sqlite |
-|                            | :---: | :---: | :---: | :---:  |
+| -------------------------- | :---: | :---: | :---: | :---:  |
 | authentication             |   Y   |   Y   |   Y   |   Y    |
 | superusers                 |   Y   |       |       |        |
 | acl checking               |   Y   |   1   |   1   |   1    |
