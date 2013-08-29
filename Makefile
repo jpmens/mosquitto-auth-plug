@@ -16,25 +16,29 @@ BE_CFLAGS += -I$(CDBINC)/
 BE_LDFLAGS += -L$(CDBDIR) -lcdb
 BE_DEPS += $(CDBLIB)
 
-BE_CFLAGS += ""
+#BE_CFLAGS += ""
 BE_LDFLAGS += -lsqlite3
 
-#MOSQUITTOSRC=../../../../pubgit/MQTT/mosquitto/src
 OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 OSSLINC=-I$(OPENSSLDIR)/include
 OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
 
-MOSQ=/home/jpm/src/mosquitto-1.2/
 
-CFLAGS=-fPIC -Wall -Werror $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
-LDFLAGS=$(BE_LDFLAGS) -L$(MOSQ)/lib/ -lmosquitto $(OSSLIBS)
+
+CFLAGS = -I../../../../pubgit/MQTT/mosquitto/src/
+CFLAGS += -I../../../../pubgit/MQTT/mosquitto/lib/
+CFLAGS += -fPIC -Wall -Werror $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+LDFLAGS=$(BE_LDFLAGS) -lmosquitto $(OSSLIBS)
+LDFLAGS += -L../../../../pubgit/MQTT/mosquitto/lib
+# LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
+# LDFLAGS += -export-dynamic
 
 OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o backends.o be-cdb.o be-mysql.o be-sqlite.o
 
 all: auth-plug.so np 
 
 auth-plug.so : $(OBJS) $(BE_DEPS)
-	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS)
+	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS) 
 
 redis.o: redis.c redis.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
