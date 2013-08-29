@@ -119,6 +119,6 @@ int be_sqlite_superuser(void *handle, const char *username)
 
 int be_sqlite_aclcheck(void *handle, const char *username, const char *topic, int acc)
 {
-	return 0;
+	return 1;
 }
 
