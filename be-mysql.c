@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_MYSQL
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +36,7 @@
 #include "be-mysql.h"
 #include "log.h"
 #include "hash.h"
+#include "backends.h"
 
 struct mysql_backend {
         MYSQL *mysql;
@@ -307,4 +310,4 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 
 	return (match);
 }
-
+#endif /* BE_MYSQL */

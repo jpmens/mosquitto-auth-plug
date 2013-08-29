@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_CDB
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -159,3 +161,4 @@ int be_cdb_aclcheck(void *handle, const char *username, const char *topic, int a
 
 	return 1;
 }
+#endif /* BE_CDB */

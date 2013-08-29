@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_SQLITE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -121,4 +123,4 @@ int be_sqlite_aclcheck(void *handle, const char *username, const char *topic, in
 {
 	return 1;
 }
-
+#endif /* BE_SQLITE */

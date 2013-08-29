@@ -27,8 +27,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_REDIS
+
 void *be_redis_init();
 void be_redis_destroy(void *conf);
 char *be_redis_getuser(void *conf, const char *username);
 int be_redis_superuser(void *conf, const char *username);
 int be_redis_aclcheck(void *conf, const char *username, const char *topic, int acc);
+#endif /* BE_REDIS */

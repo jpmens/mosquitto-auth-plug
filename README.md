@@ -291,6 +291,7 @@ mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
 
 * Uses `base64.[ch]` (and yes, I know OpenSSL has base64 routines, but no thanks). These files are
 >  Copyright (c) 1995, 1996, 1997 Kungliga Tekniska Hgskolan (Royal Institute of Technology, Stockholm, Sweden).
+* Uses [uthash][2] by Troy D. Hanson.
 
 
  [Mosquitto]: http://mosquitto.org
@@ -298,3 +299,4 @@ mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
  [pbkdf2]: http://en.wikipedia.org/wiki/PBKDF2
  [1]: https://exyr.org/2011/hashing-passwords/
  [hiredis]: https://github.com/redis/hiredis
+ [uthash]: http://troydhanson.github.io/uthash/

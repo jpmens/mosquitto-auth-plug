@@ -1,6 +1,8 @@
-# Choose a back-end. Allowed values are
-#	mysql
-#	cdb
+# Choose one or more back-ends Allowed values are
+#	BE_CDB
+#	BE_MYSQL
+#	BE_SQLITE
+#	BE_REDIS
 
 BACKENDS=-DBE_CDB -DBE_MYSQL -DBE_SQLITE -DBE_REDIS
 
@@ -35,14 +37,14 @@ LDFLAGS += -L../../../../pubgit/MQTT/mosquitto/lib
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
 
-OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o backends.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o
+OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o
 
 all: auth-plug.so np 
 
 auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS) 
 
-be_redis.o: be_redis.c be_redis.h log.h hash.h Makefile
+be-redis.o: be-redis.c be-redis.h log.h hash.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile
 be-cdb.o: be-cdb.c be-cdb.h Makefile
@@ -52,7 +54,6 @@ pbkdf2-check.o: pbkdf2-check.c base64.h Makefile
 base64.o: base64.c base64.h Makefile
 log.o: log.c log.h Makefile
 hash.o: hash.c hash.h uthash.h Makefile
-backends.o: backends.c backends.h uthash.h Makefile
 
 np: np.c base64.o
 	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)

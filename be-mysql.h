@@ -27,17 +27,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <mysql.h>
+#ifdef BE_MYSQL
 
-#ifndef FALSE
-# define FALSE (0)
-#endif
-#ifndef TRUE
-# define TRUE (1)
-#endif
+#include <mysql.h>
 
 void *be_mysql_init();
 void be_mysql_destroy(void *conf);
 char *be_mysql_getuser(void *conf, const char *username);
 int be_mysql_superuser(void *conf, const char *username);
 int be_mysql_aclcheck(void *conf, const char *username, const char *topic, int acc);
+#endif /* BE_MYSQL */

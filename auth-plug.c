@@ -197,7 +197,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		}
 #endif
                 if (!found) {
-                        _fatal("ERROR: configured back-end `%s' doesn't exist", q);
+                        _fatal("ERROR: configured back-end `%s' is not compiled in this plugin", q);
                 }
 
 		ud->be_list[++nord] = NULL;

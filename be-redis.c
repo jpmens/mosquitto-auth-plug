@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_REDIS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,3 +118,4 @@ int be_redis_aclcheck(void *conf, const char *username, const char *topic, int a
 
 	return 1;
 }
+#endif /* BE_REDIS */

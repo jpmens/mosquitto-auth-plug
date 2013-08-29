@@ -27,14 +27,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if 0
-void be_add(char *name);
-void be_freeall();
-void *be_stab(char *key);
-void be_dump();
+#ifndef TRUE
+# define TRUE (1)
+#endif
+#ifndef FALSE
+# define FALSE (0)
 #endif
 
-// typedef char *(*f_init)(void);
 typedef void (f_kill)(void *conf);
 typedef char *(f_getuser)(void *conf, const char *username);
 typedef int (f_superuser)(void *conf, const char *username);

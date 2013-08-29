@@ -27,6 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_CDB
 
 struct cdb_backend {
 	char *cdbname;
@@ -39,3 +40,4 @@ char *be_cdb_getuser(void *handle, const char *username);
 int be_cdb_access(void *handle, const char *username, char *topic);
 int be_cdb_superuser(void *handle, const char *username);
 int be_cdb_aclcheck(void *handle, const char *username, const char *topic, int acc);
+#endif /* BE_CDB */
