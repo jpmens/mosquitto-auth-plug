@@ -277,7 +277,7 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	// puts(query);
 
 	if (mysql_query(conf->mysql, query)) {
-		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));
 		goto out;
 	}
 
@@ -289,13 +289,14 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 
 	while (match == 0 && (rowdata = mysql_fetch_row(res)) != NULL) {
 		if ((v = rowdata[0]) != NULL) {
-			// printf("--> %s\n", v);
 
 			/* Check mosquitto_match_topic. If true,
 			 * if true, set match and break out of loop. */
 
 			mosquitto_topic_matches_sub(v, topic, &bf);
 			match |= bf;
+			_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
+				topic, v, bf);
 		}
 	}
 
@@ -307,64 +308,3 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	return (match);
 }
 
-#ifdef TESTINGBROKEN
-
-int main()
-{
-	struct backend *be = NULL;
-	char *p;
-	int match;
-	static char **tu, *testusers[] = {
-		"jjolie", "nop", "a", "su1", NULL };
-
-	static char **top, *topics[] = {
-		"loc/a",
-		"loc/jjolie",
-		"mega/secret",
-		"loc/test",
-		"$SYS/broker/log/N",
-		NULL };
-
-	char *user = NULL;
-	char *pass = NULL;
-	char *dbname = "test";
-
-	be = be_mysql_init("localhost", 3306, user, pass, dbname,
-			"SELECT pw FROM users WHERE username = '%s'",
-			"SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1",
-			"SELECT topic FROM acls WHERE username = '%s'");
-		
-	if (be == NULL) {
-		fprintf(stderr, "Cannot init\n");
-		exit(1);
-	}
-
-	for (tu = testusers; tu && *tu; tu++) {
-		int superuser = FALSE;
-
-		p = be_mysql_getuser(be, *tu);
-
-		superuser = be_mysql_superuser(be, *tu);
-
-		printf("%c %-10s %s\n",
-			(superuser) ? '*' : ' ',
-			*tu,
-			p ? p : "<nil>");
-		if (p)
-			free(p);
-
-		for (top = topics; top && *top; top++) {
-				/* FIXME: read/write ??? */
-				match = be_mysql_aclcheck(be, *tu, *top, 1);
-
-				match |= superuser;
-				printf("\t%-40s %s\n",
-					*top,
-					(match) ? "PERMIT" : "DENY");
-		}
-	}
-
-	be_mysql_destroy(be);
-	return (0);
-}
-#endif

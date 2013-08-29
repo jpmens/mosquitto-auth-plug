@@ -155,37 +155,7 @@ int be_cdb_superuser(void *handle, const char *username)
 
 int be_cdb_aclcheck(void *handle, const char *username, const char *topic, int acc)
 {
-	return 0;
+	/* FIXME: implement. Currently TRUE */
+
+	return 1;
 }
-
-#if TESTINGBROKEN
-int main(int argc, char **argv)
-{
-	char *p;
-	static struct backend *be = NULL;
-	char *username = argv[1];
-	static char **topic, *topiclist[] = {
-		"/location/a",
-		"/location/uno/anton",
-		"Devices/arduino/1",
-		NULL };
-
-	be = be_cdb_init("pwdb.cdb");
-
-	if ((p = be_cdb_getuser(be, username)) != NULL) {
-		printf("%s\n", p);
-		free(p);
-	}
-
-	for (topic = topiclist; topic && *topic; topic++) {
-		if (be_cdb_access(be, username, *topic) == 1) {
-			printf("ALLOW  %s\n", *topic);
-		} else {
-			printf("DENIED %s\n", *topic);
-		}
-	}
-
-	be_cdb_destroy(be);
-	return (0);
-}
-#endif

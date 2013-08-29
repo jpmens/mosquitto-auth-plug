@@ -37,15 +37,10 @@
 #include "hash.h"
 #include "backends.h"
 
-#ifdef BE_CDB
-# include "be-cdb.h"
-#endif
-#ifdef BE_MYSQL
-# include "be-mysql.h"
-#endif
-#ifdef BE_SQLITE
-# include "be-sqlite.h"
-#endif
+#include "be-cdb.h"
+#include "be-mysql.h"
+#include "be-sqlite.h"
+#include "be-redis.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -185,6 +180,22 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		}
 #endif
 
+#if BE_REDIS
+		if (!strcmp(q, "redis")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("redis");
+			(*bep)->conf = be_redis_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_redis_destroy;
+			(*bep)->getuser =  be_redis_getuser;
+			(*bep)->superuser =  be_redis_superuser;
+			(*bep)->aclcheck =  be_redis_aclcheck;
+			found = 1;
+		}
+#endif
                 if (!found) {
                         _fatal("ERROR: configured back-end `%s' doesn't exist", q);
                 }
@@ -233,7 +244,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
 
-
+		// _log(LOG_DEBUG, "** checking backend %s", b->name);
 
 		phash = b->getuser(b->conf, username);
 		if (phash != NULL) {
@@ -261,86 +272,64 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
 {
 	struct userdata *ud = (struct userdata *)userdata;
-	int match = 0;
+	struct backend_p **bep;
+	char *backend_name = NULL;
+	int match = 0, authorized = FALSE;
 
-	_log(LOG_DEBUG, "!!!! acl_check u=%s, t=%s, a=%d",
-		(username) ? username : "NIL",
-		(topic) ? topic : "NIL",
-		access);
-
-	if (!username || !*username)
+	if (!username || !*username || !topic || !*topic)
 		return MOSQ_ERR_ACL_DENIED;
 
 	/* Check for usernames exempt from ACL checking, first */
 
 	if (ud->superusers) {
 		if (fnmatch(ud->superusers, username, 0) == 0) {
-			_log(LOG_DEBUG, "** !!! %s is superuser", username);
+			_log(DEBUG, "aclcheck(%s, %s, %d) GLOBAL SUPERUSER=Y",
+				username, topic, access);
 			return MOSQ_ERR_SUCCESS;
 		}
 	}
 
-#ifdef OLDBE_CDB
-	// match = be_cdb_access(ud->be, username, (char *)topic);
-#endif
+	/*
+	 * Run through the back-ends, checking if user is superuser
+	 */
 
-#ifdef OLDBE_MYSQL
-	match = be_mysql_superuser(ud->be, username) ||
-		be_mysql_aclcheck(ud->be, username, topic, access);
-#endif
-	fprintf(stderr, "** !!! %s PERMITTED for %s\n", username, topic);
-	if (match)
-		return (match);
+	for (bep = ud->be_list; bep && *bep; bep++) {
+		struct backend_p *b = *bep;
 
-#if OLD
-	if (ud->topicprefix) {
-		char *s, *t;
-		int n;
-		bool bf;
-
-		/* Count number of '%' in topicprefix */
-		for (n = 0, s = ud->topicprefix; s && *s; s++) {
-			if (*s == '%')
-				++n;
+		match = b->superuser(b->conf, username);
+		if (match == 1) {
+			_log(DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
+				username, topic, access, backend_name);
+			return MOSQ_ERR_SUCCESS;
 		}
-
-		tlen = strlen(ud->topicprefix) + (strlen(username) * n) + 1;
-		tname = malloc(tlen);
-
-		/* Create new topic in tname with all '%' replaced by username */
-		*tname = 0;
-		for (t = tname, s = ud->topicprefix; s && *s; ) {
-			if (*s != '%') {
-				*t++ = *s++;
-				*t = 0;
-			} else {
-				strcat(tname, username);
-				t = tname + strlen(tname);
-				s++;
-			}
-		}
-
-		if (strcmp(topic, tname) == 0)
-			match = 1;
-
-		/*
-		 * Check for MQTT wildcard matches in the newly constructed
-		 * topic name, and OR that into matches, allowing if allowed.
-		 */
-
-		mosquitto_topic_matches_sub(tname, topic, &bf);
-		match |= bf;
-
-		free(tname);
 	}
-#endif /* OLD */
 
-	_log(LOG_NOTICE, "** ACL match == %d", match);
+	/* 
+	 * Run through the backends, checking ACLs.
+	 * FIXME: the way this is implemented is that ANY back-end
+	 * can authorize, even though a different back-end authenticated
+	 */
 
-	if (match == 1) {
-		return MOSQ_ERR_SUCCESS;
-	} 
-	return MOSQ_ERR_ACL_DENIED;
+	for (bep = ud->be_list; bep && *bep; bep++) {
+		struct backend_p *b = *bep;
+
+		// _log(LOG_DEBUG, "** aclcheck: checking backend %s", b->name);
+
+		/* FIXME: access (readwrite) NOTIMPL */
+		match = b->aclcheck(b->conf, username, topic, 1);
+		if (match == 1) {
+			authorized = TRUE;
+			break;
+		}
+	}
+
+	/* Set name of back-end which authenticated */
+	backend_name = (authorized) ? (*bep)->name : "none";
+
+	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
+		username, topic, access, authorized, backend_name);
+
+	return (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_ERR_ACL_DENIED;
 }
 
 

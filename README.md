@@ -5,8 +5,8 @@ of several distinct back-ends:
 
 * MySQL
 * CDB
-* [Redis] key/value store
 * SQLite3 database
+* [Redis] key/value store
 
 ## Introduction
 
@@ -29,7 +29,7 @@ code together with the libraries required for the back-end you want to use in
 the plugin. OpenSSL is also required.
 
 Edit the `Makefile` and modify the definitions at the top to suit your building
-environment, in particular, you have to configure which back-end you want to
+environment, in particular, you have to configure which back-ends you want to
 provide as well as the path to the [Mosquitto] source and its library.
 
 After a `make` you should have a shared object called `auth-plug.so`
@@ -43,6 +43,19 @@ configuring up to three distinct SQL queries used to obtain those results.
 
 You configure the SQL queries in order to adapt to whichever schema
 you currently have. 
+
+The following `auth_opt_` options are supported by the mysql back-end:
+
+| Option         | default           |  Mandatory  | Meaning               |
+| -------------- | ----------------- | :---------: | --------------------- |
+| host           | localhost         |             | hostname/address
+| port           | 3306              |             | TCP port
+| user           |                   |             | username
+| pass           |                   |             | password
+| dbname         |                   |     Y       | database name
+| userquery      |                   |     Y       | SQL for users
+| superquery     |                   |             | SQL for superusers
+| aclquery       |                   |             | SQL for ACLs
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
@@ -85,8 +98,8 @@ auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
 auth_opt_host localhost
 auth_opt_port 3306
 auth_opt_dbname test
-#auth_opt_user jjj
-#auth_opt_pass kkk
+auth_opt_user jjj
+auth_opt_pass supersecret
 auth_opt_userquery SELECT pw FROM users WHERE username = '%s'
 auth_opt_superquery SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE username = '%s'
@@ -149,9 +162,23 @@ the beginning of the line indicating a _superuser_)
 
 ### CDB
 
+| Option         | default           |  Mandatory  | Meaning     |
+| -------------- | ----------------- | :---------: | ----------  |
+| cdbname        |                   |     Y       | path to .cdb |
+
 ### SQLITE
 
+| Option          | default           |  Mandatory  | Meaning     |
+| --------------- | ----------------- | :---------: | ----------  |
+| dbpath          |                   |     Y       | path to database |
+| sqliteuserquery |                   |     Y       | SQL for users |
+
 ### Redis
+
+| Option         | default           |  Mandatory  | Meaning     |
+| -------------- | ----------------- | :---------: | ----------  |
+| redis_host     | localhost         |             | hostname / IP address
+| redis_port     | 6379              |             | TCP port number |
 
 
 ## Passwords

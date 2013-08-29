@@ -16,6 +16,10 @@ INSERT INTO users (username, pw, super)
 	VALUES ('su1',
 	'PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp',
 	1);
+INSERT INTO users (username, pw, super)
+	VALUES ('S1',
+	'PBKDF2$sha256$1024$Z+7GNLHpZ/XTQQkU$BfUbDyugQoZIW2UQlRwcaZ++WWW1rXrp',
+	1);
 
 DROP TABLE IF EXISTS acls;
 
@@ -35,3 +39,4 @@ INSERT INTO acls (username, topic) VALUES ('a', '$SYS/broker/log/+');
 INSERT INTO acls (username, topic) VALUES ('su1', 'mega/secret');
 INSERT INTO acls (username, topic) VALUES ('nop', 'mega/secret');
 
+INSERT INTO acls (username, topic) VALUES ('jog', 'loc/#');

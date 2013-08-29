@@ -31,15 +31,21 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include "log.h"
 
 
 void _log(int priority, const char *fmt, ...)
 {
 	va_list va;
+	time_t now;
+
+
+	/* FIXME: use new log function when @ralight is ready */
+	time(&now);
 
 	va_start(va, fmt);
-	fprintf(stderr, "|-- ");
+	fprintf(stderr, "%ld: |-- ", now);
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	va_end(va);

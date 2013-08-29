@@ -30,45 +30,69 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "log.h"
+#include "hash.h"
 #include <hiredis/hiredis.h>
 
-redisContext *redis_init(char *host, int port)
-{
-	redisContext *c;
-	struct timeval timeout = { 2, 500000 }; // 2.5 seconds
+struct redis_backend {
+	redisContext *redis;
+	char *host;
+	int port;
+};
 
-	c = redisConnectWithTimeout(host, port, timeout);
-	if (c->err) {
-		fprintf(stderr, "Connection error: %s\n", c->errstr);
+void *be_redis_init()
+{
+	struct redis_backend *conf;
+	struct timeval timeout = { 2, 500000 }; // 2.5 seconds
+	char *host, *p;
+
+	_log(LOG_DEBUG, "}}}} Redis");
+
+	if ((host = p_stab("redis_host")) == NULL)
+		host = "localhost";
+	if ((p = p_stab("redis_port")) == NULL)
+		p = "6379";
+
+	conf = (struct redis_backend *)malloc(sizeof(struct redis_backend));
+	if (conf == NULL)
+		_fatal("Out of memory");
+
+	conf->host = strdup(host);
+	conf->port = atoi(p);
+
+	conf->redis = redisConnectWithTimeout(conf->host, conf->port, timeout);
+	if (conf->redis->err) {
+		_log(LOG_NOTICE, "Redis connection error: %s for %s:%d\n",
+			conf->redis->errstr, conf->host, conf->port);
+		free(conf->host);
+		free(conf);
 		return (NULL);
 	}
 
-	return (c);
+	return (conf);
 }
 
-void redis_destroy(redisContext *redis)
+void be_redis_destroy(void *handle)
 {
-	if (redis != NULL) {
-		redisFree(redis);
-		redis = NULL;
+	struct redis_backend *conf = (struct redis_backend *)handle;
+
+	if (conf != NULL) {
+		redisFree(conf->redis);
+		conf->redis = NULL;
 	}
 }
 
-char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username)
+char *be_redis_getuser(void *handle, const char *username)
 {
+	struct redis_backend *conf = (struct redis_backend *)handle;
 	redisReply *r;
 	char *pwhash = NULL;
-	char *up = usernameprefix;
 
-	if (redis == NULL || username == NULL)
+	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return (NULL);
 
-	if (!up || !*up)
-		up = "";
-
-	r = redisCommand(redis, "GET %s%b", up, username, strlen(username));
-	if (r == NULL || redis->err != REDIS_OK) {
+	r = redisCommand(conf->redis, "GET %b", username, strlen(username));
+	if (r == NULL || conf->redis->err != REDIS_OK) {
 		/* FIXME: reconnect */
 		return (NULL);
 	}
@@ -81,19 +105,14 @@ char *redis_getuser(redisContext *redis, char *usernameprefix, const char *usern
 	return (pwhash);
 }
 
-#if TEST
-int main(int argc, char **argv)
+int be_redis_superuser(void *conf, const char *username)
 {
-	char *p;
-	static redisContext *redis = NULL;
-
-	redis = redis_init("localhost", 6379);
-
-	if ((p = redis_getuser(redis, argv[1])) != NULL) {
-		printf("%s\n", p);
-		free(p);
-	}
-
-	redis_destroy(redis);
+	return 0;
 }
-#endif
+
+int be_redis_aclcheck(void *conf, const char *username, const char *topic, int acc)
+{
+	/* FIXME: implement. Currently TRUE */
+
+	return 1;
+}

@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <hiredis/hiredis.h>
-
-redisContext *redis_init(char *host, int port);
-void redis_destroy(redisContext *redis);
-char *redis_getuser(redisContext *redis, char *usernameprefix, const char *username);
+void *be_redis_init();
+void be_redis_destroy(void *conf);
+char *be_redis_getuser(void *conf, const char *username);
+int be_redis_superuser(void *conf, const char *username);
+int be_redis_aclcheck(void *conf, const char *username, const char *topic, int acc);

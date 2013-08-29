@@ -2,7 +2,7 @@
 #	mysql
 #	cdb
 
-BACKENDS=-DBE_CDB=1 -DBE_MYSQL=2 -DBE_SQLITE # -DBE_REDIS=3
+BACKENDS=-DBE_CDB -DBE_MYSQL -DBE_SQLITE -DBE_REDIS
 
 BE_CFLAGS=`mysql_config --cflags` 
 BE_LDFLAGS=`mysql_config --libs`
@@ -16,8 +16,10 @@ BE_CFLAGS += -I$(CDBINC)/
 BE_LDFLAGS += -L$(CDBDIR) -lcdb
 BE_DEPS += $(CDBLIB)
 
-#BE_CFLAGS += ""
 BE_LDFLAGS += -lsqlite3
+
+BE_CFLAGS += -I/usr/local/include/hiredis
+BE_LDFLAGS += -L/usr/local/lib -lhiredis
 
 OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 OSSLINC=-I$(OPENSSLDIR)/include
@@ -33,14 +35,14 @@ LDFLAGS += -L../../../../pubgit/MQTT/mosquitto/lib
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
 
-OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o backends.o be-cdb.o be-mysql.o be-sqlite.o
+OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o backends.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o
 
 all: auth-plug.so np 
 
 auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS) 
 
-redis.o: redis.c redis.h Makefile
+be_redis.o: be_redis.c be_redis.h log.h hash.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile
 be-cdb.o: be-cdb.c be-cdb.h Makefile
