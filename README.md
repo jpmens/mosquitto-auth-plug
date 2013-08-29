@@ -23,6 +23,19 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 
  1. Currently not implemented; back-end returns TRUE
 
+
+
+Multiple back-ends can be configured simultaneously and they're attempted in
+the order you specify.  I'm not sure
+yet whether bug or feature, but you can even have authentication in one
+back-end (mysql, say) and authorization in a different back-end (redis for example).
+The configuration option is called `auth_opt_backends` and it takes a 
+comma-separated list of back-end names which are checked in exactly that order.
+
+```
+auth_opt_backends cdb,sqlite,mysql,redis
+```
+
 Passwords are obtained from the back-end as a PBKF2 string (see section
 on Passwords below). Even if you try and store a clear-text password,
 it simply won't work.
