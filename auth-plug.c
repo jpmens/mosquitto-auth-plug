@@ -59,7 +59,8 @@ struct backend_p {
 
 struct userdata {
 	struct backend_p **be_list;
-	char *superusers;		/* Statis glob list */
+	char *superusers;		/* Static glob list */
+	int authentication_be;		/* Back-end number user was authenticated in */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -235,13 +236,14 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *phash = NULL, *backend_name = NULL;
-	int match, authenticated = FALSE;
+	int match, authenticated = FALSE, nord;
 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_ERR_AUTH;
 
+	ud->authentication_be = -1;
 
-	for (bep = ud->be_list; bep && *bep; bep++) {
+	for (nord = 0, bep = ud->be_list; bep && *bep; bep++, nord++) {
 		struct backend_p *b = *bep;
 
 		// _log(LOG_DEBUG, "** checking backend %s", b->name);
@@ -251,6 +253,10 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 			match = pbkdf2_check((char *)password, phash);
 			if (match == 1) {
 				authenticated = TRUE;
+				/* Mark backend index in userdata so we can check
+				 * authorization in this back-end only.
+				 */
+				ud->authentication_be = nord;
 				break;
 			}
 		}
@@ -274,7 +280,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *backend_name = NULL;
-	int match = 0, authorized = FALSE;
+	int match = 0, authorized = FALSE, nord;
 
 	if (!username || !*username || !topic || !*topic)
 		return MOSQ_ERR_ACL_DENIED;
@@ -289,9 +295,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		}
 	}
 
-	/*
-	 * Run through the back-ends, checking if user is superuser
-	 */
+
 
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
@@ -299,32 +303,31 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		match = b->superuser(b->conf, username);
 		if (match == 1) {
 			_log(DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
-				username, topic, access, backend_name);
+				username, topic, access, b->name);
 			return MOSQ_ERR_SUCCESS;
 		}
 	}
 
-	/* 
-	 * Run through the backends, checking ACLs.
-	 * FIXME: the way this is implemented is that ANY back-end
-	 * can authorize, even though a different back-end authenticated
+	/*
+	 * Check authorization in the back-end used to authenticate the user.
 	 */
 
-	for (bep = ud->be_list; bep && *bep; bep++) {
-		struct backend_p *b = *bep;
+	nord = ud->authentication_be;
+	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
 
-		// _log(LOG_DEBUG, "** aclcheck: checking backend %s", b->name);
+	_log(LOG_NOTICE, "user %s was authenticated in back-end %d (%s)",
+		username, nord, backend_name);
 
-		/* FIXME: access (readwrite) NOTIMPL */
-		match = b->aclcheck(b->conf, username, topic, 1);
-		if (match == 1) {
-			authorized = TRUE;
-			break;
-		}
+	bep = &ud->be_list[nord];
+	if (nord == -1 || !bep)
+		return (MOSQ_ERR_ACL_DENIED);
+
+
+	/* FIXME: access (readwrite) NOTIMPL */
+	match = (*bep)->aclcheck((*bep)->conf, username, topic, 1);
+	if (match == 1) {
+		authorized = TRUE;
 	}
-
-	/* Set name of back-end which authenticated */
-	backend_name = (authorized) ? (*bep)->name : "none";
 
 	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
 		username, topic, access, authorized, backend_name);

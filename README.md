@@ -25,10 +25,9 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 
 
 
-Multiple back-ends can be configured simultaneously and they're attempted in
-the order you specify.  I'm not sure
-yet whether bug or feature, but you can even have authentication in one
-back-end (mysql, say) and authorization in a different back-end (redis for example).
+Multiple back-ends can be configured simultaneously for authentication, and they're attempted in
+the order you specify. Once a user has been authenticated, the _same_ back-end is used to
+check authorization (ACLs). Superusers are checked for in all back-ends.
 The configuration option is called `auth_opt_backends` and it takes a 
 comma-separated list of back-end names which are checked in exactly that order.
 
