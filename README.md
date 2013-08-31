@@ -56,6 +56,26 @@ provide as well as the path to the [Mosquitto] source and its library.
 After a `make` you should have a shared object called `auth-plug.so`
 which you will reference in your `mosquitto.conf`.
 
+## Configuration
+
+The plugin is configured in [Mosquitto]'s configuration file (typically `mosquitto.conf`),
+and it is loaded into Mosquitto auth the ```auth_plugin``` option.
+
+
+```
+auth_plugin /path/to/auth-plug.so
+```
+
+Options therein with a leading ```auth_opt_``` are handed to the plugin. The following
+"global" ```auth_opt_*``` plugin options exist:
+
+| Option         | default    |  Mandatory  | Meaning               |
+| -------------- | ---------- | :---------: | --------------------- |
+| backends       |            |     Y       | comma-separated list of back-ends to load |
+| superusers     |            |             | fnmatch(3) case-sensitive string
+
+Individual back-ends have their options described in the sections below.
+
 ### MySQL
 
 The `mysql` back-end is currently the most feature-complete: it supports
