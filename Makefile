@@ -4,7 +4,7 @@
 #	BE_SQLITE
 #	BE_REDIS
 
-BACKENDS=-DBE_CDB -DBE_MYSQL -DBE_SQLITE -DBE_REDIS
+BACKENDS=-DBE_PSK -DBE_CDB -DBE_MYSQL -DBE_SQLITE -DBE_REDIS
 
 BE_CFLAGS=`mysql_config --cflags` 
 BE_LDFLAGS=`mysql_config --libs`
@@ -37,7 +37,7 @@ LDFLAGS += -L../../../../pubgit/MQTT/mosquitto/lib
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
 
-OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o
+OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o
 
 all: auth-plug.so np 
 
@@ -47,6 +47,7 @@ auth-plug.so : $(OBJS) $(BE_DEPS)
 be-redis.o: be-redis.c be-redis.h log.h hash.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile
+be-psk.o: be-psk.c be-psk.h Makefile
 be-cdb.o: be-cdb.c be-cdb.h Makefile
 be-mysql.o: be-mysql.c be-mysql.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile

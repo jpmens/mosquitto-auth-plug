@@ -14,15 +14,15 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite |
-| -------------------------- | :---: | :---: | :---: | :---:  |
-| authentication             |   Y   |   Y   |   Y   |   Y    |
-| superusers                 |   Y   |       |       |        |
-| acl checking               |   Y   |   1   |   1   |   1    |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |
+| Capability                 | mysql | redis | cdb   | sqlite | psk |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y  |
+| superusers                 |   Y   |       |       |        |  2  |
+| acl checking               |   Y   |   1   |   1   |   1    |  2  |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |  2  |
 
  1. Currently not implemented; back-end returns TRUE
-
+ 2. Dependent on the database used by PSK
 
 
 Multiple back-ends can be configured simultaneously for authentication, and they're attempted in
@@ -296,6 +296,44 @@ At this point you ought to be able to connect to [Mosquitto].
 ```
 mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
 ```
+
+## PSK
+
+If [Mosquitto] has been built with PSK support, and _auth-plug_ has been built
+with `BE_PSK` defined, it supports authenticating PSK connections over TLS, as
+long as Mosquitto is appropriately configured.
+
+The way this works is that the `psk` back-end actually uses one of _auth-plug_'s
+other databases (`mysql`, `sqlite`, `cdb`, etc.) to obtain the pre-shared key
+from the "users" query, and it uses the same database's back-end for performing
+authorization (aka ACL checks).
+
+Consider the following `mosquitto.conf` snippet:
+
+```
+...
+auth_opt_psk_database mysql
+...
+listener 8885
+psk_hint hint1
+tls_version tlsv1
+use_identity_as_username true
+```
+
+TLS PSK is available on port 8885 and is activated with, say,
+
+```
+mosquitto_pub -h localhost -p 8885 -t x -m hi --psk-identity ps2 --psk 020202 
+```
+
+The `use_identity_as_username` option has _auth-plug_ see the name `ps2` as the
+username, and this is given to the database back-end (here: `mysql`) to look up
+the password as defined for the `mysql` back-end. _auth-plug_ uses its `getuser()` query
+to read the clear-text (not PKBDF2) hex key string which it returns to Mosquitto
+for authentication. If authentication passes, the connection is established.
+
+For authorization, _auth_plug_ uses the identity as the username and the topic to
+perform ACL-checking as described earlier.
 
 ## Requirements
 

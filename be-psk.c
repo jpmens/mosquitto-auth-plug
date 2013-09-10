@@ -38,14 +38,24 @@
 #include "log.h"
 #include "hash.h"
 
+#if 0
 void *be_psk_init()
 {
 	struct psk_backend *conf;
+	char *p;
 
 	conf = malloc(sizeof(struct psk_backend));
 	if (conf == NULL) {
 		return (NULL);
 	}
+
+	p = p_stab("psk_database");
+	if (p == NULL) {
+		free(conf);
+		_fatal("psk_database must be set");
+	}
+
+	conf->database = strdup(p);
 
 	return (conf);
 }
@@ -100,4 +110,7 @@ int be_psk_aclcheck(void *handle, const char *username, const char *topic, int a
 
 	return 1;
 }
+
+#endif
+
 #endif /* BE_PSK */

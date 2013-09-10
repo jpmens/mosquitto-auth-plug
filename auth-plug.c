@@ -33,10 +33,12 @@
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
 #include <fnmatch.h>
+
 #include "log.h"
 #include "hash.h"
 #include "backends.h"
 
+#include "be-psk.h"
 #include "be-cdb.h"
 #include "be-mysql.h"
 #include "be-sqlite.h"
@@ -45,8 +47,19 @@
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#define NBACKENDS	(4)
+#define NBACKENDS	(5)
 
+#if BE_PSK
+# define PSKSETUP do { \
+			if (!strcmp(psk_database, q)) { \
+				(*pskbep)->conf =  (*bep)->conf; \
+				(*pskbep)->superuser =  (*bep)->superuser; \
+				(*pskbep)->aclcheck =  (*bep)->aclcheck; \
+			} \
+		   } while (0)
+#else
+# define PSKSETUP
+#endif
 
 struct backend_p {
 	void *conf;			/* Handle to backend */
@@ -81,8 +94,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	int ret = MOSQ_ERR_SUCCESS;
 	int nord;
 	struct backend_p **bep;
-
-
+#ifdef BE_PSK
+	struct backend_p **pskbep;
+	char *psk_database = NULL;
+#endif
 
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
@@ -128,7 +143,29 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->be_list = (struct backend_p **)malloc((sizeof (struct backend_p *)) * (NBACKENDS + 1));
 
 	bep = ud->be_list;
-        for (nord = 0, q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
+
+#if BE_PSK
+	/*
+	 * Force adding PSK back-end, which must be indexed at 0
+	 * The PSK back-end is a little special in that it will use
+	 * a database from another back-end (e.g. mysql or sqlite)
+	 * for authorization.
+	 */
+
+	if ((psk_database = p_stab("psk_database")) == NULL) {
+		_fatal("PSK is configured so psk_database needs to be set");
+	}
+
+	pskbep = bep;
+	*pskbep = (struct backend_p *)malloc(sizeof(struct backend_p));
+	memset(*pskbep, 0, sizeof(struct backend_p));
+	(*pskbep)->name = strdup("psk");
+
+	bep = pskbep;
+	bep++;
+#endif /* BE_PSK */
+
+        for (nord = 1, q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
                 int found = 0;
 #if BE_MYSQL
 		if (!strcmp(q, "mysql")) {
@@ -144,6 +181,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_mysql_superuser;
 			(*bep)->aclcheck =  be_mysql_aclcheck;
 			found = 1;
+			PSKSETUP;
 		}
 #endif
 
@@ -161,6 +199,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_cdb_superuser;
 			(*bep)->aclcheck =  be_cdb_aclcheck;
 			found = 1;
+			PSKSETUP;
 		}
 #endif
 
@@ -178,6 +217,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_sqlite_superuser;
 			(*bep)->aclcheck =  be_sqlite_aclcheck;
 			found = 1;
+			PSKSETUP;
 		}
 #endif
 
@@ -195,6 +235,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_redis_superuser;
 			(*bep)->aclcheck =  be_redis_aclcheck;
 			found = 1;
+			PSKSETUP;
 		}
 #endif
                 if (!found) {
@@ -264,9 +305,9 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 	/* Set name of back-end which authenticated */
 	backend_name = (authenticated) ? (*bep)->name : "none";
-	
+
 	_log(DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
-		username, authenticated, backend_name); 
+		username, authenticated, backend_name);
 
 	if (phash != NULL) {
 		free(phash);
@@ -295,8 +336,6 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		}
 	}
 
-
-
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
 
@@ -316,7 +355,8 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
 
 	_log(LOG_NOTICE, "user %s was authenticated in back-end %d (%s)",
-		username, nord, backend_name);
+		username, nord, (backend_name) ? backend_name : "<nil>");
+
 
 	bep = &ud->be_list[nord];
 	if (nord == -1 || !bep)
@@ -338,6 +378,44 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *identity, char *key, int max_key_len)
 {
+#if BE_PSK
+	struct userdata *ud = (struct userdata *)userdata;
+	struct backend_p **bep;
+	char *database = p_stab("psk_database");
+	char *psk_key = NULL, *username;
+	int psk_found = FALSE;
+
+	// username = malloc(strlen(hint) + strlen(identity) + 12);
+	// sprintf(username, "%s-%s", hint, identity);
+	username = (char *)identity;
+
+	for (bep = ud->be_list; bep && *bep; bep++) {
+		struct backend_p *b = *bep;
+		if (!strcmp(database, b->name)) {
+			psk_key = b->getuser(b->conf, username);
+			break;
+		}
+
+	}
+
+	_log(DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
+		hint, identity, database,
+		psk_key ? 1 : 0);
+
+	if (psk_key != NULL) {
+		strncpy(key, psk_key, max_key_len);
+		free(psk_key);
+		psk_found = TRUE;
+	}
+
+	ud->authentication_be = 0;		/* PSK */
+
+	// free(username);
+
+	return (psk_found) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
+
+#else /* !BE_PSK */
 	return MOSQ_ERR_AUTH;
+#endif /* BE_PSK */
 }
 
