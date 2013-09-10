@@ -296,6 +296,7 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 			/* Check mosquitto_match_topic. If true,
 			 * if true, set match and break out of loop. */
 
+			// FIXME: does this need special work for %c and %u ???
 			mosquitto_topic_matches_sub(v, topic, &bf);
 			match |= bf;
 			_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
