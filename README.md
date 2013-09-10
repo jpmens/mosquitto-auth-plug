@@ -335,6 +335,20 @@ for authentication. If authentication passes, the connection is established.
 For authorization, _auth_plug_ uses the identity as the username and the topic to
 perform ACL-checking as described earlier.
 
+The following log-snippet serves as an illustration:
+
+```
+New connection from ::1 on port 8885.
+|-- psk_key_get(hint1, ps1) from [mysql] finds PSK: 1
+New client connected from ::1 as mosqpub/90759-tiggr.ww. (c1, k60).
+Sending CONNACK to mosqpub/90759-tiggr.ww. (0)
+|-- user ps1 was authenticated in back-end 0 (psk)
+|--   mysql: topic_matches(x, x) == 1
+|-- aclcheck(ps1, x, 2) AUTHORIZED=1 by psk
+Received PUBLISH from mosqpub/90759-tiggr.ww. (d0, q0, r0, m0, 'x', ... (2 bytes))
+Received DISCONNECT from mosqpub/90759-tiggr.ww.
+```
+
 ## Requirements
 
 * [hiredis], the Minimalistic C client for Redis
