@@ -7,6 +7,7 @@ of several distinct back-ends:
 * CDB
 * SQLite3 database
 * [Redis] key/value store
+* TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
 
 ## Introduction
 
