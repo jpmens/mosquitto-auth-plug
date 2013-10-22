@@ -274,10 +274,16 @@ int mosquitto_auth_security_cleanup(void *userdata, struct mosquitto_auth_opt *a
 
 int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char *password)
 {
-	struct userdata *ud = (struct userdata *)userdata;
+	struct userdata *ud;
 	struct backend_p **bep;
 	char *phash = NULL, *backend_name = NULL;
 	int match, authenticated = FALSE, nord;
+
+	if (userdata == NULL) {
+		_fatal("mosquitto_auth_unpwd_check(): userdata is NULL");
+	}
+
+	ud = (struct userdata *)userdata;
 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_ERR_AUTH;
