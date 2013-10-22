@@ -134,7 +134,7 @@ char *be_mysql_getuser(void *handle, const char *username)
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-	if (!conf || !conf->userquery)
+	if (!conf || !conf->userquery || !username || !*username)
 		return (NULL);
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
