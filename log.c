@@ -48,6 +48,7 @@ void _log(int priority, const char *fmt, ...)
 	fprintf(stderr, "%ld: |-- ", now);
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
+	fflush(stderr);
 	va_end(va);
 }	
 
@@ -60,6 +61,7 @@ void _fatal(const char *fmt, ...)
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "|-- *** ABORT.\n");
+	fflush(stderr);
 	va_end(va);
 	exit(1);
 }	
