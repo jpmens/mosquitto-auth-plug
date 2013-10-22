@@ -284,10 +284,12 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 	ud->authentication_be = -1;
 
+	_log(LOG_DEBUG, "auth_unpwd_check(%s)", (username) ? username : "<nil>");
+
 	for (nord = 0, bep = ud->be_list; bep && *bep; bep++, nord++) {
 		struct backend_p *b = *bep;
 
-		// _log(LOG_DEBUG, "** checking backend %s", b->name);
+		_log(LOG_DEBUG, "** checking backend %s", b->name);
 
 		phash = b->getuser(b->conf, username);
 		if (phash != NULL) {
