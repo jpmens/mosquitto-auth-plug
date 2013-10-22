@@ -143,6 +143,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->be_list = (struct backend_p **)malloc((sizeof (struct backend_p *)) * (NBACKENDS + 1));
 
 	bep = ud->be_list;
+	nord = 0;
 
 #if BE_PSK
 	/*
@@ -163,9 +164,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 	bep = pskbep;
 	bep++;
+	nord++;
 #endif /* BE_PSK */
 
-        for (nord = 1, q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
+        for (q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
                 int found = 0;
 #if BE_MYSQL
 		if (!strcmp(q, "mysql")) {
@@ -292,6 +294,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 	_log(LOG_DEBUG, "mosquitto_auth_unpwd_check(%s)", (username) ? username : "<nil>");
 
+	// FIXME: this doesn't end correctly
 	for (nord = 0, bep = ud->be_list; bep && *bep; bep++, nord++) {
 		struct backend_p *b = *bep;
 
