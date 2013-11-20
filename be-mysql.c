@@ -245,11 +245,11 @@ int be_mysql_superuser(void *handle, const char *username)
  * to access
  * topic is the topic user is trying to access (may contain
  * wildcards)
- * acc is desired type of access: read/write		// FIXME 
+ * acc is desired type of access: read/write
  *	for subscriptions (READ) (1)
  *	for publish (WRITE) (2)
  *
- * SELECT topic FROM table WHERE username = '%s' AND acc = %d		// may user SUB or PUB topic?
+ * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)		// may user SUB or PUB topic?
  * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
  */
 
@@ -277,7 +277,7 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	sprintf(query, conf->aclquery, u, acc);
 	free(u);
 
-	// puts(query);
+	_log(LOG_DEBUG, "SQL: %s", query);
 
 	if (mysql_query(conf->mysql, query)) {
 		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));

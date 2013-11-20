@@ -366,8 +366,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		return (MOSQ_ERR_ACL_DENIED);
 
 
-	/* FIXME: access (readwrite) NOTIMPL */
-	match = (*bep)->aclcheck((*bep)->conf, username, topic, 1);
+	match = (*bep)->aclcheck((*bep)->conf, username, topic, access);
 	if (match == 1) {
 		authorized = TRUE;
 	}

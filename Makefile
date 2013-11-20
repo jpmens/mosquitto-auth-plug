@@ -5,6 +5,7 @@
 #	BE_REDIS
 
 BACKENDS=-DBE_PSK -DBE_CDB -DBE_MYSQL -DBE_SQLITE -DBE_REDIS
+BACKENDS=-DBE_MYSQL 
 
 BE_CFLAGS=`mysql_config --cflags` 
 BE_LDFLAGS=`mysql_config --libs`
