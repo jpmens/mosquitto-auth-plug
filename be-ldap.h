@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
+ * Copyright (c) 2014 Jan-Piet Mens <jpmens()gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -27,19 +27,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef BE_SQLITE
+#ifdef BE_LDAP
 
-#include <sqlite3.h>
+#include <lber.h>
+#include <ldap.h>
 
-struct sqlite_backend {
-	sqlite3 *sq;
-	sqlite3_stmt *stmt;
-};
-
-void *be_sqlite_init();
-void be_sqlite_destroy(void *handle);
-char *be_sqlite_getuser(void *handle, const char *username, const char *password, int *authenticated);
-int be_sqlite_access(void *handle, const char *username, char *topic);
-int be_sqlite_superuser(void *handle, const char *username);
-int be_sqlite_aclcheck(void *handle, const char *username, const char *topic, int acc);
-#endif /* BE_SQLITE */
+void *be_ldap_init();
+void be_ldap_destroy(void *conf);
+char *be_ldap_getuser(void *conf, const char *username, const char *password, int *authenticated);
+int be_ldap_superuser(void *conf, const char *username);
+int be_ldap_aclcheck(void *conf, const char *username, const char *topic, int acc);
+#endif /* BE_LDAP */

@@ -73,7 +73,7 @@ void be_psk_destroy(void *handle)
  * Return PSK key string for the username
  */
 
-char *be_psk_getuser(void *handle, const char *username)
+char *be_psk_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct psk_backend *conf = (struct psk_backend *)handle;
 

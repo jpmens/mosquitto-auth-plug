@@ -43,6 +43,7 @@
 #include "be-mysql.h"
 #include "be-sqlite.h"
 #include "be-redis.h"
+#include "be-ldap.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -187,6 +188,24 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		}
 #endif
 
+#if BE_LDAP
+		if (!strcmp(q, "ldap")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("ldap");
+			(*bep)->conf = be_ldap_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_ldap_destroy;
+			(*bep)->getuser =  be_ldap_getuser;
+			(*bep)->superuser =  be_ldap_superuser;
+			(*bep)->aclcheck =  be_ldap_aclcheck;
+			found = 1;
+			PSKSETUP;
+		}
+#endif
+
 #if BE_CDB
 		if (!strcmp(q, "cdb")) {
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
@@ -292,7 +311,17 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 		_log(LOG_DEBUG, "** checking backend %s", b->name);
 
-		phash = b->getuser(b->conf, username);
+		/*
+		 * The ->getuser() routine can decide to authenticate by setting
+		 * either `authenticated = TRUE' or by returning a pointer to
+		 * the user's PBKDF2 password hash
+		 */
+
+		phash = b->getuser(b->conf, username, password, &authenticated);
+		if (authenticated == TRUE) {
+			ud->authentication_be = nord;
+			break;
+		}
 		if (phash != NULL) {
 			match = pbkdf2_check((char *)password, phash);
 			if (match == 1) {

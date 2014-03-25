@@ -35,6 +35,6 @@
 #endif
 
 typedef void (f_kill)(void *conf);
-typedef char *(f_getuser)(void *conf, const char *username);
+typedef char *(f_getuser)(void *conf, const char *username, const char *password, int *authenticated);
 typedef int (f_superuser)(void *conf, const char *username);
 typedef int (f_aclcheck)(void *conf, const char *username, const char *topic, int acc);
