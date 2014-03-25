@@ -15,12 +15,12 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | psk |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y  |
-| superusers                 |   Y   |       |       |        |  2  |
-| acl checking               |   Y   |   1   |   1   |   1    |  2  |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |  2  |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |
+| superusers                 |   Y   |       |       |        |      |  2  |
+| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
