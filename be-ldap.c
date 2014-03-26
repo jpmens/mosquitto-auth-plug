@@ -42,20 +42,20 @@
 
 struct ldap_backend {
 	char *ldap_uri;
+	char *connstr;		/* ldap_initialize() wants scheme://host:port  only */
 	LDAPURLDesc *lud;	
 	LDAP *ld;
-        char *user_uri;        // MUST return 1 row, 1 column
-        char *superquery;       // MUST return 1 row, 1 column, [0, 1]
-        char *aclquery;         // MAY return n rows, 1 column, string
+        char *user_uri;
+        char *superquery;
+        char *aclquery;
 };
 
 void *be_ldap_init()
 {
 	struct ldap_backend *conf;
 	char *uri;
-	char connstr[512];
 	char *binddn, *bindpw;
-	int rc, opt;
+	int rc, opt, len;
 
 	_log(LOG_DEBUG, "}}}} LDAP");
 
@@ -76,18 +76,33 @@ void *be_ldap_init()
 	if ((conf = (struct ldap_backend *)malloc(sizeof(struct ldap_backend))) == NULL)
 		return (NULL);
 
+	conf->ldap_uri	= NULL;
+	conf->connstr	= NULL;
+	conf->lud	= NULL;
+	conf->ld	= NULL;
+	conf->user_uri	= NULL;
+	conf->superquery = NULL;
+	conf->aclquery	= NULL;
+
 	conf->ldap_uri = strdup(uri);
 	if (ldap_url_parse(uri, &conf->lud) != 0) {
 		_fatal("Cannot parse ldap_uri");
 		return (NULL);
 	}
 
-	/* FIXME: _initialize() allows schema://host:port only */
-	sprintf(connstr, "%s://%s:%d", conf->lud->lud_scheme, conf->lud->lud_host, conf->lud->lud_port);
-	printf("INIT TO %s\n", connstr);
+	/* ldap_initialize() allows schema://host:port only; build
+	 * an appropriate string from what we have, to use later also.
+	 */
 
-	if (ldap_initialize(&conf->ld, connstr) != LDAP_SUCCESS) {
+	len = strlen(conf->lud->lud_scheme) + strlen(conf->lud->lud_host) + 15;
+	if ((conf->connstr = malloc(len)) == NULL) {
+		_fatal("Out of memory");
+		return (NULL);
+	}
+	sprintf(conf->connstr, "%s://%s:%d", conf->lud->lud_scheme, conf->lud->lud_host, conf->lud->lud_port);
+	if (ldap_initialize(&conf->ld, conf->connstr) != LDAP_SUCCESS) {
 		ldap_free_urldesc(conf->lud);
+		free(conf->connstr);
 		free(conf->ldap_uri);
 
 		_fatal("Cannot ldap_initialize");
@@ -117,9 +132,41 @@ void be_ldap_destroy(void *handle)
 		ldap_free_urldesc(conf->lud);
 		free(conf->ldap_uri);
 
-		/* FIXME: ldap_close */
+		if (conf->connstr)
+			free(conf->connstr);
+		if (conf->ld)
+			ldap_unbind(conf->ld);
 		free(conf);
 	}
+}
+
+/*
+ * Open a new connection to LDAP so that we don't lose the exising
+ * binddn/pw. Check if the user's `dn' can bind with `password'.
+ * Return T/F. `connstr' is a scheme://host:port thing.
+ */
+
+static int user_bind(char *connstr, char *dn, const char *password)
+{
+	LDAP *ld;
+	int opt, rc;
+
+	if (ldap_initialize(&ld, connstr) != LDAP_SUCCESS) {
+		_log(1, "Cannot ldap_initialize-2");
+		return (FALSE);
+	}
+
+	opt = LDAP_VERSION3;
+	ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &opt);
+
+	if ((rc = ldap_simple_bind_s(ld, dn, password)) != LDAP_SUCCESS) {
+		_log(1, "Cannot bind to LDAP as %s: %s", dn, ldap_err2string(rc));
+		return (FALSE);
+	}
+
+	ldap_unbind(ld);
+	return (TRUE);
+
 }
 
 char *be_ldap_getuser(void *handle, const char *username, const char *password, int *authenticated)
@@ -132,6 +179,10 @@ char *be_ldap_getuser(void *handle, const char *username, const char *password, 
 	printf("+++++++++++ GET %s USERNAME [%s] (%s)\n", conf->ldap_uri, username, password);
 
 	*authenticated = FALSE;
+
+	/*
+	 * Replace '@' in filter with `username'
+	 */
 
 	len = strlen(conf->lud->lud_filter) + strlen(username) + 10;
 	filter = (char *)malloc(len);
@@ -167,19 +218,15 @@ char *be_ldap_getuser(void *handle, const char *username, const char *password, 
 		return (NULL);
 	}
 
-	entry = ldap_first_entry(conf->ld, msg);
-	dn = ldap_get_dn(conf->ld, entry);
+	if ((entry = ldap_first_entry(conf->ld, msg)) != NULL) {
+		dn = ldap_get_dn(conf->ld, entry);
 
-	_log(1, "Attempt to bind as %s\n", dn);
+		_log(1, "Attempt to bind as %s\n", dn);
 
-	if ((rc = ldap_simple_bind_s(conf->ld, dn, password)) != LDAP_SUCCESS) {
-		_log(1, "Cannot bind to LDAP as %s: %s", dn, ldap_err2string(rc));
+		*authenticated = user_bind(conf->connstr, dn, password);
+
 		ldap_memfree(dn);
-		return (NULL);
 	}
-	ldap_memfree(dn);
-
-	*authenticated = TRUE;
 	
 	return (NULL);
 }
@@ -212,6 +259,6 @@ int be_ldap_superuser(void *handle, const char *username)
 
 int be_ldap_aclcheck(void *handle, const char *username, const char *topic, int acc)
 {
-	return (2);
+	return (1);
 }
 #endif /* BE_LDAP */
