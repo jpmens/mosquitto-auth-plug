@@ -12,6 +12,8 @@ BE_CFLAGS=`mysql_config --cflags`
 BE_LDFLAGS=`mysql_config --libs`
 BE_DEPS=
 
+MOSQUITTO_SRC=/Users/jpm/Auto/pubgit/MQTT/mosquitto/131/mosquitto
+
 CDBDIR=contrib/tinycdb-0.78
 CDB=$(CDBDIR)/cdb
 CDBINC=$(CDBDIR)/
@@ -34,11 +36,11 @@ OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto
 
 
 
-CFLAGS = -I../../../../pubgit/MQTT/mosquitto/123/mosquitto-1.2.3/src/
-CFLAGS += -I../../../../pubgit/MQTT/mosquitto/123/mosquitto-1.2.3/lib/
+CFLAGS = -I$(MOSQUITTO_SRC)/mosquitto-1.2.3/src/
+CFLAGS += -I$(MOSQUITTO_SRC)/mosquitto-1.2.3/lib/
 CFLAGS += -fPIC -Wall -Werror $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
 LDFLAGS=$(BE_LDFLAGS) -lmosquitto $(OSSLIBS)
-LDFLAGS += -L../../../../pubgit/MQTT/mosquitto/123/mosquitto-1.2.3/lib/
+LDFLAGS += -L$(MOSQUITTO_SRC)/mosquitto-1.2.3/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
 
