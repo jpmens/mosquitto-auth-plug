@@ -106,7 +106,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		return MOSQ_ERR_UNKNOWN;
 	}
 
+	memset(*userdata, 0, sizeof(struct userdata));
 	ud = *userdata;
+	ud->superusers	= NULL;
+	ud->authentication_be = -1;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -386,6 +389,12 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	nord = ud->authentication_be;
 	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
 
+	if ((nord < 0) || (nord >= NBACKENDS)) {
+		_log(LOG_NOTICE, "nord is %d: unpossible!", nord);
+		return (MOSQ_ERR_ACL_DENIED);
+	}
+
+	/* FIXME: |-- user bridge was authenticated in back-end 16 (<nil>)  */
 	_log(LOG_NOTICE, "user %s was authenticated in back-end %d (%s)",
 		username, nord, (backend_name) ? backend_name : "<nil>");
 
