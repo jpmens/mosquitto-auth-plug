@@ -81,6 +81,7 @@ int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
+	/* FIXME */
 	fprintf(stderr, "*** auth-plug: backend=%s\n", TOSTRING(BACKEND));
 
 	return MOSQ_AUTH_PLUGIN_VERSION;
@@ -357,6 +358,13 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct backend_p **bep;
 	char *backend_name = NULL;
 	int match = 0, authorized = FALSE, nord;
+
+	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %d)",
+		clientid ? clientid : "NULL",
+		username ? username : "NULL",
+		topic ? topic : "NULL",
+		access);
+
 
 	if (!username || !*username || !topic || !*topic)
 		return MOSQ_ERR_ACL_DENIED;
