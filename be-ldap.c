@@ -259,6 +259,6 @@ int be_ldap_superuser(void *handle, const char *username)
 
 int be_ldap_aclcheck(void *handle, const char *username, const char *topic, int acc)
 {
-	return (1);
+	return (TRUE);
 }
 #endif /* BE_LDAP */
