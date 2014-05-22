@@ -208,6 +208,35 @@ the beginning of the line indicating a _superuser_)
 	$SYS/broker/log/N                        PERMIT
 ```
 
+### LDAP
+
+The LDAP plugin currently does authentication only; authenticated users are allowed
+to publish/subscribe at will. 
+
+The user with which Mosquitto connects to the broker is searched in the LDAP directory
+via the `ldap_uri` configuration parameter. This LDAP search MUST return exactly one
+entry. The user's password is then use with the DN of the entry found to bind to the
+directory. If that LDAP bind succeeds, the user is authenticated. In other cases,
+authentication fails.
+
+
+| Option         | default           |  Mandatory  | Meaning     |
+| -------------- | ----------------- | :---------: | ----------  |
+| binddn         |                   |     Y       | the DN of an object which may search users |
+| bindpw         |                   |     Y       | its password                               |
+| ldap_uri       |                   |     Y       | an LDAP uri with filter                    |
+
+Example configuration:
+
+```
+auth_plugin /path/to/auth-plug.so
+auth_opt_backends ldap
+auth_opt_binddn cn=manager,dc=mens,dc=de
+auth_opt_bindpw s3crit
+auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=inetOrgPerson)(uid=@))
+
+```
+
 ### CDB
 
 | Option         | default           |  Mandatory  | Meaning     |
