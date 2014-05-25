@@ -176,7 +176,7 @@ char *be_ldap_getuser(void *handle, const char *username, const char *password, 
 	int rc, len;
 	char *filter, *bp, *fp, *up, *dn;
 
-	printf("+++++++++++ GET %s USERNAME [%s] (%s)\n", conf->ldap_uri, username, password);
+	// printf("+++++++++++ GET %s USERNAME [%s] (%s)\n", conf->ldap_uri, username, password);
 
 	*authenticated = FALSE;
 

@@ -119,7 +119,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	 */
 
 	for (i = 0, o = auth_opts; i < auth_opt_count; i++, o++) {
-		_log(LOG_DEBUG, "AuthOptions: key=%s, val=%s", o->key, o->value);
+		// _log(LOG_DEBUG, "AuthOptions: key=%s, val=%s", o->key, o->value);
 
 		p_add(o->key, o->value);
 
