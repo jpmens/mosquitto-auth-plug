@@ -330,7 +330,7 @@ auth_opt_pass supersecret
 auth_opt_userquery SELECT password FROM account WHERE username = $1 limit 1
 auth_opt_superquery SELECT COALESCE(COUNT(*),0) FROM account WHERE username = $1 AND mosquitto_super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE (username = $1) AND (rw & $2) > 0```
-
+```
 Assuming the following database tables:
 
 ```
