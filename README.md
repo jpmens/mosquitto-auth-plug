@@ -20,7 +20,7 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 | authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |
 | superusers                 |   Y   |       |       |        |      |  2  |    Y     |
 | acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     Y
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
