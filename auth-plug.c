@@ -44,6 +44,7 @@
 #include "be-sqlite.h"
 #include "be-redis.h"
 #include "be-postgres.h"
+#include "be-ldap.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -81,6 +82,7 @@ int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
+	/* FIXME */
 	fprintf(stderr, "*** auth-plug: backend=%s\n", TOSTRING(BACKEND));
 
 	return MOSQ_AUTH_PLUGIN_VERSION;
@@ -106,7 +108,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		return MOSQ_ERR_UNKNOWN;
 	}
 
+	memset(*userdata, 0, sizeof(struct userdata));
 	ud = *userdata;
+	ud->superusers	= NULL;
+	ud->authentication_be = -1;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -115,7 +120,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	 */
 
 	for (i = 0, o = auth_opts; i < auth_opt_count; i++, o++) {
-		_log(LOG_DEBUG, "AuthOptions: key=%s, val=%s", o->key, o->value);
+		// _log(LOG_DEBUG, "AuthOptions: key=%s, val=%s", o->key, o->value);
 
 		p_add(o->key, o->value);
 
@@ -197,10 +202,28 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			if ((*bep)->conf == NULL) {
 				_fatal("%s init returns NULL", q);
 			}
-			(*bep)->kill =  be_pg_destroy;
-			(*bep)->getuser =  be_pg_getuser;
-			(*bep)->superuser =  be_pg_superuser;
-			(*bep)->aclcheck =  be_pg_aclcheck;
+			(*bep)->kill = be_pg_destroy;
+			(*bep)->getuser = be_pg_getuser;
+			(*bep)->superuser = be_pg_superuser;
+			(*bep)->aclcheck = be_pg_aclcheck;
+			found = 1;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_LDAP
+		if (!strcmp(q, "ldap")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("ldap");
+			(*bep)->conf = be_ldap_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_ldap_destroy;
+			(*bep)->getuser =  be_ldap_getuser;
+			(*bep)->superuser =  be_ldap_superuser;
+			(*bep)->aclcheck =  be_ldap_aclcheck;
 			found = 1;
 			PSKSETUP;
 		}
@@ -311,7 +334,17 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 		_log(LOG_DEBUG, "** checking backend %s", b->name);
 
-		phash = b->getuser(b->conf, username);
+		/*
+		 * The ->getuser() routine can decide to authenticate by setting
+		 * either `authenticated = TRUE' or by returning a pointer to
+		 * the user's PBKDF2 password hash
+		 */
+
+		phash = b->getuser(b->conf, username, password, &authenticated);
+		if (authenticated == TRUE) {
+			ud->authentication_be = nord;
+			break;
+		}
 		if (phash != NULL) {
 			match = pbkdf2_check((char *)password, phash);
 			if (match == 1) {
@@ -345,6 +378,13 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	char *backend_name = NULL;
 	int match = 0, authorized = FALSE, nord;
 
+	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %d)",
+		clientid ? clientid : "NULL",
+		username ? username : "NULL",
+		topic ? topic : "NULL",
+		access);
+
+
 	if (!username || !*username || !topic || !*topic)
 		return MOSQ_ERR_ACL_DENIED;
 
@@ -376,6 +416,12 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	nord = ud->authentication_be;
 	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
 
+	if ((nord < 0) || (nord >= NBACKENDS)) {
+		_log(LOG_NOTICE, "nord is %d: unpossible!", nord);
+		return (MOSQ_ERR_ACL_DENIED);
+	}
+
+	/* FIXME: |-- user bridge was authenticated in back-end 16 (<nil>)  */
 	_log(LOG_NOTICE, "user %s was authenticated in back-end %d (%s)",
 		username, nord, (backend_name) ? backend_name : "<nil>");
 

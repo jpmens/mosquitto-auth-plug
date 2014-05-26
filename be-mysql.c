@@ -126,7 +126,7 @@ static char *escape(void *handle, const char *value, long *vlen)
 	return (v);
 }
 
-char *be_mysql_getuser(void *handle, const char *username)
+char *be_mysql_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *value = NULL, *v;

@@ -82,7 +82,7 @@ void be_sqlite_destroy(void *handle)
 	}
 }
 
-char *be_sqlite_getuser(void *handle, const char *username)
+char *be_sqlite_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct sqlite_backend *conf = (struct sqlite_backend *)handle;
 	int res;

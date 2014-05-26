@@ -75,8 +75,8 @@ void *be_pg_init()
 		return (NULL);
 	}
 
-if ((conf = (struct pg_backend *)malloc(sizeof(struct pg_backend))) == NULL)
-	return (NULL);
+	if ((conf = (struct pg_backend *)malloc(sizeof(struct pg_backend))) == NULL)
+		return (NULL);
 
 	conf->conn       = NULL;
 	conf->host       = host;
@@ -88,9 +88,13 @@ if ((conf = (struct pg_backend *)malloc(sizeof(struct pg_backend))) == NULL)
 	conf->superquery = p_stab("superquery");
 	conf->aclquery   = p_stab("aclquery");
 
+	_log( LOG_DEBUG, "HERE: %s", conf->superquery );
+	_log( LOG_DEBUG, "HERE: %s", conf->aclquery );
+
+
 	char *connect_string = NULL;
 
-	conf->conn = PQsetdbLogin(conf->host, conf->port, NULL, NULL, conf->dbname, conf->user, conf->pass ); 
+	conf->conn = PQsetdbLogin(conf->host, conf->port, NULL, NULL, conf->dbname, conf->user, conf->pass );
 
 	if (PQstatus(conf->conn) == CONNECTION_BAD) {
 		free(conf);
@@ -99,9 +103,9 @@ if ((conf = (struct pg_backend *)malloc(sizeof(struct pg_backend))) == NULL)
 		return (NULL);
 	}
 
-free(connect_string);
+	free(connect_string);
 
-return ((void *)conf);
+	return ((void *)conf);
 }
 
 void be_pg_destroy(void *handle)
@@ -120,12 +124,14 @@ void be_pg_destroy(void *handle)
 	}
 }
 
-char *be_pg_getuser(void *handle, const char *username)
+char *be_pg_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct pg_backend *conf = (struct pg_backend *)handle;
 	char *value = NULL, *v = NULL;
 	long nrows;
 	PGresult *res = NULL;
+
+	_log(LOG_DEBUG, "GETTING USERS: %s", username );
 
 	if (!conf || !conf->userquery || !username || !*username)
 		return (NULL);
@@ -179,6 +185,8 @@ int be_pg_superuser(void *handle, const char *username)
 	int issuper = FALSE;
 	PGresult *res = NULL;
 
+	_log( LOG_DEBUG, "SUPERUSER: %s", username );
+
 	if (!conf || !conf->superquery || !username || !*username)
 		return (FALSE);
 
@@ -210,7 +218,9 @@ int be_pg_superuser(void *handle, const char *username)
 
 	issuper = atoi(v);
 
+
 out:
+	_log(LOG_DEBUG, "user is %d", issuper );
 
 	PQclear(res);
 
@@ -239,6 +249,8 @@ int be_pg_aclcheck(void *handle, const char *username, const char *topic, int ac
 	bool bf;
 	PGresult *res = NULL;
 
+	_log( LOG_DEBUG, "USERNAME: %s, TOPIC: %s, acc: %d", username, topic, acc );
+
 
 	if (!conf || !conf->aclquery)
 		return (FALSE);
@@ -249,7 +261,7 @@ int be_pg_aclcheck(void *handle, const char *username, const char *topic, int ac
 	int lengths[2] = {strlen(username),sizeof(localacc)};
 	int binary[2] = {0,1};
 
-	res = PQexecParams(conf->conn, conf->superquery, 2, NULL, values, lengths, binary, 0);
+	res = PQexecParams(conf->conn, conf->aclquery, 2, NULL, values, lengths, binary, 0);
 
 	if ( PQresultStatus(res) != PGRES_TUPLES_OK )
 	{
