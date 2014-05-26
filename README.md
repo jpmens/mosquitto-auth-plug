@@ -315,7 +315,7 @@ In the following example, the table has a column `rw` containing 1 for
 readonly topics, and 2 for read-write topics:
 
 ```sql
-SELECT topic FROM acl WHERE (username = $1) AND (rw & $2) > 0
+SELECT topic FROM acl WHERE (username = $1) AND rw >= $2
 ```
 
 Mosquitto configuration for the `postgres` back-end:
