@@ -43,6 +43,7 @@
 #include "be-mysql.h"
 #include "be-sqlite.h"
 #include "be-redis.h"
+#include "be-postgres.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -182,6 +183,24 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->getuser =  be_mysql_getuser;
 			(*bep)->superuser =  be_mysql_superuser;
 			(*bep)->aclcheck =  be_mysql_aclcheck;
+			found = 1;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_POSTGRES
+		if (!strcmp(q, "postgres")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("postgres");
+			(*bep)->conf = be_pg_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_pg_destroy;
+			(*bep)->getuser =  be_pg_getuser;
+			(*bep)->superuser =  be_pg_superuser;
+			(*bep)->aclcheck =  be_pg_aclcheck;
 			found = 1;
 			PSKSETUP;
 		}
