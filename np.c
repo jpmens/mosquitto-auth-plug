@@ -40,7 +40,7 @@
 #define SEPARATOR       "$"
 #define SALTLEN 12
 
-#define USAGE() fprintf(stderr, "Usage: %s [-i iterations]\n", progname)
+#define USAGE() fprintf(stderr, "Usage: %s [-i iterations] [-p password]\n", progname)
 
 int main(int argc, char **argv)
 {
@@ -51,11 +51,19 @@ int main(int argc, char **argv)
 	char *pw1, *pw2, *password;
 	char *progname = argv[0];
 	int c;
+	int prompt;
 
-	while ((c = getopt(argc, argv, "i:")) != EOF) {
+	prompt = 1;
+
+	while ((c = getopt(argc, argv, "ip:")) != EOF) {
 		switch (c) {
 			case 'i':
 				iterations = atoi(optarg);
+				break;
+			case 'p':
+				pw1 = strdup(optarg);
+				pw2 = strdup(optarg);	
+				prompt = 0;
 				break;
 			default:
 				exit(USAGE());
@@ -69,8 +77,10 @@ int main(int argc, char **argv)
 		exit(USAGE());
 	}
 
-	pw1 = strdup(getpass("Enter password: "));
-	pw2 = getpass("Re-enter same password: ");
+	if ( prompt ) {
+		pw1 = strdup(getpass("Enter password: "));
+		pw2 = getpass("Re-enter same password: ");
+	}
 
 	if (strcmp(pw1, pw2) != 0) {
 		fprintf(stderr, "Passwords don't match!\n");
