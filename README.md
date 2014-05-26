@@ -20,7 +20,7 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 | authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |
 | superusers                 |   Y   |       |       |        |      |  2  |    Y     |
 | acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     Y
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
@@ -315,7 +315,7 @@ In the following example, the table has a column `rw` containing 1 for
 readonly topics, and 2 for read-write topics:
 
 ```sql
-SELECT topic FROM acl WHERE (username = $1) AND (rw & $2) > 0
+SELECT topic FROM acl WHERE (username = $1) AND rw >= $2
 ```
 
 Mosquitto configuration for the `postgres` back-end:
@@ -330,7 +330,7 @@ auth_opt_pass supersecret
 auth_opt_userquery SELECT password FROM account WHERE username = $1 limit 1
 auth_opt_superquery SELECT COALESCE(COUNT(*),0) FROM account WHERE username = $1 AND mosquitto_super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE (username = $1) AND (rw & $2) > 0```
-
+```
 Assuming the following database tables:
 
 ```
