@@ -11,16 +11,16 @@ of several distinct back-ends:
 
 ## Introduction
 
-This plugin can perform authentication (check username / password) 
+This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |
-| superusers                 |   Y   |       |       |        |      |  2  |
-| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |
+| superusers                 |   Y   |       |       |        |      |  2  |    Y     |
+| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
@@ -29,11 +29,11 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 Multiple back-ends can be configured simultaneously for authentication, and they're attempted in
 the order you specify. Once a user has been authenticated, the _same_ back-end is used to
 check authorization (ACLs). Superusers are checked for in all back-ends.
-The configuration option is called `auth_opt_backends` and it takes a 
+The configuration option is called `auth_opt_backends` and it takes a
 comma-separated list of back-end names which are checked in exactly that order.
 
 ```
-auth_opt_backends cdb,sqlite,mysql,redis
+auth_opt_backends cdb,sqlite,mysql,redis,postgres
 ```
 
 Passwords are obtained from the back-end as a PBKF2 string (see section
@@ -84,7 +84,7 @@ obtaining passwords, checking for _superusers_, and verifying ACLs by
 configuring up to three distinct SQL queries used to obtain those results.
 
 You configure the SQL queries in order to adapt to whichever schema
-you currently have. 
+you currently have.
 
 The following `auth_opt_` options are supported by the mysql back-end:
 
@@ -211,7 +211,7 @@ the beginning of the line indicating a _superuser_)
 ### LDAP
 
 The LDAP plugin currently does authentication only; authenticated users are allowed
-to publish/subscribe at will. 
+to publish/subscribe at will.
 
 The user with which Mosquitto connects to the broker is searched in the LDAP directory
 via the `ldap_uri` configuration parameter. This LDAP search MUST return exactly one
@@ -257,6 +257,134 @@ auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=
 | redis_host     | localhost         |             | hostname / IP address
 | redis_port     | 6379              |             | TCP port number |
 
+### PostgreSQL
+
+The `postgres`  like `mysql` back-end is currently the most feature-complete: it supports
+obtaining passwords, checking for _superusers_, and verifying ACLs by
+configuring up to three distinct SQL queries used to obtain those results.
+
+You configure the SQL queries in order to adapt to whichever schema
+you currently have.
+
+The following `auth_opt_` options are supported by the mysql back-end:
+
+| Option         | default           |  Mandatory  | Meaning               |
+| -------------- | ----------------- | :---------: | --------------------- |
+| host           | localhost         |             | hostname/address
+| port           | 5432              |             | TCP port
+| user           |                   |             | username
+| pass           |                   |             | password
+| dbname         |                   |     Y       | database name
+| userquery      |                   |     Y       | SQL for users
+| superquery     |                   |             | SQL for superusers
+| aclquery       |                   |             | SQL for ACLs
+
+The SQL query for looking up a user's password hash is mandatory. The query
+MUST return a single row only (any other number of rows is considered to be
+"user not found"), and it MUST return a single column only with the PBKF2
+password hash. A single `'$1'` in the query string is replaced by the
+username attempting to access the broker.
+
+```sql
+SELECT pass FROM account WHERE username = $1 limit 1
+```
+
+The SQL query for checking whether a user is a _superuser_ - and thus
+circumventing ACL checks - is optional. If it is specified, the query MUST
+return a single row with a single value: 0 is false and 1 is true. We recommend
+using a `SELECT COALESCE(COUNT(*),0) FROM ...` for this query as it satisfies
+both conditions. ). A single `'$1`' in the query string is replaced by the
+username attempting to access the broker. The following example uses the
+same `users` table, but it could just as well reference a distinct table
+or view.
+
+```sql
+SELECT COALESCE(COUNT(*),0) FROM account WHERE username = $1 AND super = 1
+```
+
+The SQL query for checking ACLs is optional, but if it is specified, the
+`mysql` back-end can try to limit access to particular topics or topic branches
+depending on the value of a database table. The query MAY return zero or more
+rows for a particular user, each returning EXACTLY one column containing a
+topic (wildcards are supported). A single `'$1`' in the query string is
+replaced by the username attempting to access the broker, and a single `'$2`' is
+replaced with the integer value `1` signifying a read-only access attempt
+(SUB) or `2` signifying a read-write access attempt (PUB).
+
+In the following example, the table has a column `rw` containing 1 for
+readonly topics, and 2 for read-write topics:
+
+```sql
+SELECT topic FROM acl WHERE (username = $1) AND rw >= $2
+```
+
+Mosquitto configuration for the `postgres` back-end:
+
+```
+auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
+auth_opt_host localhost
+auth_opt_port 5432
+auth_opt_dbname test
+auth_opt_user jjj
+auth_opt_pass supersecret
+auth_opt_userquery SELECT password FROM account WHERE username = $1 limit 1
+auth_opt_superquery SELECT COALESCE(COUNT(*),0) FROM account WHERE username = $1 AND mosquitto_super = 1
+auth_opt_aclquery SELECT topic FROM acls WHERE (username = $1) AND (rw & $2) > 0```
+```
+Assuming the following database tables:
+
+```
+mysql> SELECT * FROM users;
++----+----------+---------------------------------------------------------------------+-------+
+| id | username | pw                                                                  | super |
++----+----------+---------------------------------------------------------------------+-------+
+|  1 | jjolie   | PBKDF2$sha256$901$x8mf3JIFTUFU9C23$Mid2xcgTrKBfBdye6W/4hE3GKeksu00+ |     0 |
+|  2 | a        | PBKDF2$sha256$901$XPkOwNbd05p5XsUn$1uPtR6hMKBedWE44nqdVg+2NPKvyGst8 |     0 |
+|  3 | su1      | PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp |     1 |
++----+----------+---------------------------------------------------------------------+-------+
+
+mysql> SELECT * FROM acls;
++----+----------+-------------------+----+
+| id | username | topic             | rw |
++----+----------+-------------------+----+
+|  1 | jjolie   | loc/jjolie        |  1 |
+|  2 | jjolie   | $SYS/something    |  1 |
+|  3 | a        | loc/test/#        |  1 |
+|  4 | a        | $SYS/broker/log/+ |  1 |
+|  5 | su1      | mega/secret       |  1 |
+|  6 | nop      | mega/secret       |  1 |
++----+----------+-------------------+----+
+```
+
+the above SQL queries would enable the following combinations (note the `*` at
+the beginning of the line indicating a _superuser_)
+
+```
+  jjolie     PBKDF2$sha256$901$x8mf3JIFTUFU9C23$Mid2xcgTrKBfBdye6W/4hE3GKeksu00+
+  loc/a                                    DENY
+  loc/jjolie                               PERMIT
+  mega/secret                              DENY
+  loc/test                                 DENY
+  $SYS/broker/log/N                        DENY
+  nop        <nil>
+  loc/a                                    DENY
+  loc/jjolie                               DENY
+  mega/secret                              PERMIT
+  loc/test                                 DENY
+  $SYS/broker/log/N                        DENY
+  a          PBKDF2$sha256$901$XPkOwNbd05p5XsUn$1uPtR6hMKBedWE44nqdVg+2NPKvyGst8
+  loc/a                                    DENY
+  loc/jjolie                               DENY
+  mega/secret                              DENY
+  loc/test                                 PERMIT
+  $SYS/broker/log/N                        PERMIT
+* su1        PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp
+  loc/a                                    PERMIT
+  loc/jjolie                               PERMIT
+  mega/secret                              PERMIT
+  loc/test                                 PERMIT
+  $SYS/broker/log/N                        PERMIT
+```
 
 ## Passwords
 
@@ -314,9 +442,9 @@ auth_opt_superusers S*
 In addition to ACL checking which is possibly performed by a back-end,
 there's a more "static" checking which can be configured in `mosquitto.conf`.
 
-Note that if ACLs are being verified by the plugin, this also applies to 
+Note that if ACLs are being verified by the plugin, this also applies to
 Will topics (_last will and testament_). Failing to correctly set up
-an ACL for these, will cause a broker to silently fail with a 'not 
+an ACL for these, will cause a broker to silently fail with a 'not
 authorized' message.
 
 Users can be given "superuser" status (i.e. they may access any topic)
@@ -359,7 +487,7 @@ use_identity_as_username true
 TLS PSK is available on port 8885 and is activated with, say,
 
 ```
-mosquitto_pub -h localhost -p 8885 -t x -m hi --psk-identity ps2 --psk 020202 
+mosquitto_pub -h localhost -p 8885 -t x -m hi --psk-identity ps2 --psk 020202
 ```
 
 The `use_identity_as_username` option has _auth-plug_ see the name `ps2` as the
