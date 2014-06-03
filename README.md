@@ -36,7 +36,7 @@ comma-separated list of back-end names which are checked in exactly that order.
 auth_opt_backends cdb,sqlite,mysql,redis,postgres
 ```
 
-Passwords are obtained from the back-end as a PBKF2 string (see section
+Passwords are obtained from the back-end as a PBKDF2 string (see section
 on Passwords below). Even if you try and store a clear-text password,
 it simply won't work.
 
@@ -101,7 +101,7 @@ The following `auth_opt_` options are supported by the mysql back-end:
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
-"user not found"), and it MUST return a single column only with the PBKF2
+"user not found"), and it MUST return a single column only with the PBKDF2
 password hash. A single `'%s'` in the query string is replaced by the
 username attempting to access the broker.
 
@@ -281,7 +281,7 @@ The following `auth_opt_` options are supported by the mysql back-end:
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
-"user not found"), and it MUST return a single column only with the PBKF2
+"user not found"), and it MUST return a single column only with the PBKDF2
 password hash. A single `'$1'` in the query string is replaced by the
 username attempting to access the broker.
 
