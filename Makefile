@@ -11,7 +11,7 @@ BE_CFLAGS= -I`pg_config --includedir` `mysql_config --cflags`
 BE_LDFLAGS=`mysql_config --libs` -lpq
 BE_DEPS=
 
-MOSQUITTO_SRC=/home/vtoms/mosquitto
+MOSQUITTO_SRC=/Users/jpm/Auto/pubgit/MQTT/mosquitto/140/mosquitto/
 
 CDBDIR=contrib/tinycdb-0.78
 CDB=$(CDBDIR)/cdb

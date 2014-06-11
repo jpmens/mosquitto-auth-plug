@@ -131,11 +131,11 @@ replaced by the username attempting to access the broker, and a single `'%d`' is
 replaced with the integer value `1` signifying a read-only access attempt
 (SUB) or `2` signifying a read-write access attempt (PUB).
 
-In the following example, the table has a `CHAR(2)` column `rw` containing `"1"` for
-readonly topics, and `"2"` for read-write topics:
+In the following example, the table has an `INT(1)` column `rw` containing `1` for
+readonly topics, and `2` for read-write topics:
 
 ```sql
-SELECT topic FROM acls WHERE (username = '%s') AND (INSTR(rw, %d) != 0)
+SELECT topic FROM acls WHERE (username = '%s') AND (rw <= %d)
 ```
 
 Mosquitto configuration for the `mysql` back-end:
@@ -150,7 +150,7 @@ auth_opt_pass supersecret
 auth_opt_userquery SELECT pw FROM users WHERE username = '%s'
 auth_opt_superquery SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1
 #auth_opt_aclquery SELECT topic FROM acls WHERE username = '%s'
-auth_opt_aclquery SELECT topic FROM acls WHERE (username = '%s') AND (rw & %d)
+auth_opt_aclquery SELECT topic FROM acls WHERE (username = '%s') AND (rw <= %d)
 ```
 
 Assuming the following database tables:
