@@ -98,6 +98,8 @@ The following `auth_opt_` options are supported by the mysql back-end:
 | userquery      |                   |     Y       | SQL for users
 | superquery     |                   |             | SQL for superusers
 | aclquery       |                   |             | SQL for ACLs
+| mysql_opt_reconnect | true         |             | enable MYSQL_OPT_RECONNECT option
+| mysql_auto_connect  | true         |             | enable auto_connect function
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
@@ -206,6 +208,14 @@ the beginning of the line indicating a _superuser_)
 	mega/secret                              PERMIT
 	loc/test                                 PERMIT
 	$SYS/broker/log/N                        PERMIT
+```
+
+The `mysql` back-end would re-connect to mysql server when connection has gone away
+in default configuration. 
+If you'd like to disable these function, add to Mosquitto conf with settings:
+```
+auth_opt_mysql_opt_reconnect false
+auth_opt_mysql_auto_connect false
 ```
 
 ### LDAP
