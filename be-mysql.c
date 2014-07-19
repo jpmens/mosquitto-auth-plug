@@ -45,17 +45,31 @@ struct mysql_backend {
 	char *dbname;
 	char *user;
 	char *pass;
+        bool auto_connect;
         char *userquery;        // MUST return 1 row, 1 column
         char *superquery;       // MUST return 1 row, 1 column, [0, 1]
         char *aclquery;         // MAY return n rows, 1 column, string
 };
+
+static char *get_bool(char *option, char *defval)
+{
+    char *flag = p_stab(option);
+    flag = flag ? flag : defval;
+    if(!strcmp("true", flag) || !strcmp("false", flag)) {
+       return flag;
+    }
+    _log(LOG_NOTICE, "WARN: %s is unexpected value -> %s", option, flag);
+    return defval;
+}
 
 void *be_mysql_init()
 {
 	struct mysql_backend *conf;
 	char *host, *user, *pass, *dbname, *p;
 	char *userquery;
+    char *opt_flag;
 	int port;
+    my_bool reconnect = false;
 
 	_log(LOG_DEBUG, "}}}} MYSQL");
 
@@ -83,16 +97,30 @@ void *be_mysql_init()
 	conf->port		= port;
 	conf->user		= user;
 	conf->pass		= pass;
+    conf->auto_connect  = false;
 	conf->dbname		= dbname;
 	conf->userquery		= userquery;
 	conf->superquery	= p_stab("superquery");
 	conf->aclquery		= p_stab("aclquery");
 
+    opt_flag = get_bool("mysql_auto_connect", "true");
+    if (!strcmp("true", opt_flag)) {
+        conf->auto_connect = true;
+    }
+
+    opt_flag = get_bool("mysql_opt_reconnect", "true");
+    if (!strcmp("true", opt_flag)) {
+        reconnect = true;
+        mysql_options(conf->mysql, MYSQL_OPT_RECONNECT, &reconnect);
+    }
+
 	if (!mysql_real_connect(conf->mysql, host, user, pass, dbname, port, NULL, 0)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
-		free(conf);
-		mysql_close(conf->mysql);
-		return (NULL);
+        if (!conf->auto_connect && !reconnect) {
+            free(conf);
+            mysql_close(conf->mysql);
+            return (NULL);
+        }
 	}
 
 	return ((void *)conf);
@@ -126,6 +154,18 @@ static char *escape(void *handle, const char *value, long *vlen)
 	return (v);
 }
 
+static bool auto_connect(struct mysql_backend *conf)
+{
+    if (conf->auto_connect) {
+        if (!mysql_real_connect(conf->mysql, conf->host, conf->user, conf->pass, conf->dbname, conf->port, NULL, 0)) {
+            fprintf(stderr, "do auto_connect but %s\n", mysql_error(conf->mysql));
+            return false;
+        }
+        return true;
+	}
+    return false;
+}
+
 char *be_mysql_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
@@ -136,6 +176,13 @@ char *be_mysql_getuser(void *handle, const char *username, const char *password,
 
 	if (!conf || !conf->userquery || !username || !*username)
 		return (NULL);
+
+    if (mysql_ping(conf->mysql)) {
+        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+        if (!auto_connect(conf)) {
+            return (NULL);
+        }
+    }
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (NULL);
@@ -197,6 +244,13 @@ int be_mysql_superuser(void *handle, const char *username)
 
 	if (!conf || !conf->superquery)
 		return (FALSE);
+
+    if (mysql_ping(conf->mysql)) {
+        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+        if (!auto_connect(conf)) {
+            return (FALSE);
+        }
+    }
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (FALSE);
@@ -263,9 +317,15 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
-
 	if (!conf || !conf->aclquery)
 		return (FALSE);
+
+    if (mysql_ping(conf->mysql)) {
+        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+        if (!auto_connect(conf)) {
+            return (FALSE);
+        }
+    }
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (FALSE);
@@ -277,7 +337,7 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	sprintf(query, conf->aclquery, u, acc);
 	free(u);
 
-	_log(LOG_DEBUG, "SQL: %s", query);
+	//_log(LOG_DEBUG, "SQL: %s", query);
 
 	if (mysql_query(conf->mysql, query)) {
 		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));
