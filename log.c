@@ -33,7 +33,7 @@
 #include <string.h>
 #include <time.h>
 #include "log.h"
-
+#include <logging_mosq.h>
 
 void _log(int priority, const char *fmt, ...)
 {
@@ -49,6 +49,7 @@ void _log(int priority, const char *fmt, ...)
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	fflush(stderr);
+	//FIXME: does this work? _mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "NOPE");
 	va_end(va);
 }	
 
@@ -64,4 +65,4 @@ void _fatal(const char *fmt, ...)
 	fflush(stderr);
 	va_end(va);
 	exit(1);
-}	
+}
