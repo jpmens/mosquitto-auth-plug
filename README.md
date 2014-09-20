@@ -4,10 +4,13 @@ This is a plugin to authenticate and authorize [Mosquitto] users from one
 of several distinct back-ends:
 
 * MySQL
+* PostgreSQL
 * CDB
 * SQLite3 database
 * [Redis] key/value store
 * TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
+* LDAP
+* Http (custom Http API)
 
 ## Introduction
 
