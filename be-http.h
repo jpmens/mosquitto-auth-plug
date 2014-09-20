@@ -43,4 +43,4 @@ void be_http_destroy(void *conf);
 char *be_http_getuser(void *conf, const char *username, const char *password, int *authenticated);
 int be_http_superuser(void *conf, const char *username);
 int be_http_aclcheck(void *conf, const char *username, const char *topic, int acc);
-#endif /* BE_REDIS */
+#endif /* BE_HTTP */
