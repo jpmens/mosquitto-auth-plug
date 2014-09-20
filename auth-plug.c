@@ -45,6 +45,7 @@
 #include "be-redis.h"
 #include "be-postgres.h"
 #include "be-ldap.h"
+#include "be-http.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -278,6 +279,24 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->getuser =  be_redis_getuser;
 			(*bep)->superuser =  be_redis_superuser;
 			(*bep)->aclcheck =  be_redis_aclcheck;
+			found = 1;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_HTTP
+		if (!strcmp(q, "http")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("http");
+			(*bep)->conf = be_http_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_http_destroy;
+			(*bep)->getuser =  be_http_getuser;
+			(*bep)->superuser =  be_http_superuser;
+			(*bep)->aclcheck =  be_http_aclcheck;
 			found = 1;
 			PSKSETUP;
 		}
