@@ -504,4 +504,83 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	return MOSQ_ERR_AUTH;
 #endif /* BE_PSK */
 }
+#ifdef CONFIG_USE_BINDED_TOPIC_MATCH
+/* copy from mosquitto 1.3.4 */
+/* Does a topic match a subscription? */
+int mosquitto_topic_matches_sub(const char *sub, const char *topic, bool *result)
+{
+	int slen, tlen;
+	int spos, tpos;
+	bool multilevel_wildcard = false;
 
+	if(!sub || !topic || !result) return MOSQ_ERR_INVAL;
+
+	slen = strlen(sub);
+	tlen = strlen(topic);
+
+	if(slen && tlen){
+		if((sub[0] == '$' && topic[0] != '$')
+				|| (topic[0] == '$' && sub[0] != '$')){
+
+			*result = false;
+			return MOSQ_ERR_SUCCESS;
+		}
+	}
+
+	spos = 0;
+	tpos = 0;
+
+	while(spos < slen && tpos < tlen){
+		if(sub[spos] == topic[tpos]){
+			if(tpos == tlen-1){
+				/* Check for e.g. foo matching foo/# */
+				if(spos == slen-3 
+						&& sub[spos+1] == '/'
+						&& sub[spos+2] == '#'){
+					*result = true;
+					multilevel_wildcard = true;
+					return MOSQ_ERR_SUCCESS;
+				}
+			}
+			spos++;
+			tpos++;
+			if(spos == slen && tpos == tlen){
+				*result = true;
+				return MOSQ_ERR_SUCCESS;
+			}else if(tpos == tlen && spos == slen-1 && sub[spos] == '+'){
+				spos++;
+				*result = true;
+				return MOSQ_ERR_SUCCESS;
+			}
+		}else{
+			if(sub[spos] == '+'){
+				spos++;
+				while(tpos < tlen && topic[tpos] != '/'){
+					tpos++;
+				}
+				if(tpos == tlen && spos == slen){
+					*result = true;
+					return MOSQ_ERR_SUCCESS;
+				}
+			}else if(sub[spos] == '#'){
+				multilevel_wildcard = true;
+				if(spos+1 != slen){
+					*result = false;
+					return MOSQ_ERR_SUCCESS;
+				}else{
+					*result = true;
+					return MOSQ_ERR_SUCCESS;
+				}
+			}else{
+				*result = false;
+				return MOSQ_ERR_SUCCESS;
+			}
+		}
+	}
+	if(multilevel_wildcard == false && (tpos < tlen || spos < slen)){
+		*result = false;
+	}
+
+	return MOSQ_ERR_SUCCESS;
+}
+#endif

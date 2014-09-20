@@ -11,6 +11,9 @@ BE_REDIS=0
 BE_POSTGRES=0
 BE_LDAP=0
 BE_HTTP=1
+USE_BINDED_TOPIC_MATCH=1
+MOSQUITTO_SRC=/home/Administrator/mosquitto-1.3.4
+OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 
 ifeq ($(BE_MYSQL), 1)
 	BACKENDS += -DBE_MYSQL
@@ -28,7 +31,6 @@ ifeq ($(BE_LDAP), 1)
 	BE_LDFLAGS += -L/usr/lib -lldap -llber
 endif
 
-MOSQUITTO_SRC=/home/Administrator/mosquitto-1.3.4
 
 ifeq ($(BE_CDB), 1)
 	BACKENDS+= -DBE_CDB
@@ -57,7 +59,12 @@ ifeq ($(BE_HTTP), 1)
 	BE_LDFLAGS += -lcurl
 endif
 
-OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
+ifeq ($(USE_BINDED_TOPIC_MATCH), 1)
+	BE_CFLAGS += -DCONFIG_USE_BINDED_TOPIC_MATCH
+else
+	MOS_LIB = -lmosquitto
+endif
+
 OSSLINC=-I$(OPENSSLDIR)/include
 OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
 
@@ -65,7 +72,7 @@ OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o be-cdb.o be-mysql
 CFLAGS = -I$(MOSQUITTO_SRC)/src/
 CFLAGS += -I$(MOSQUITTO_SRC)/lib/
 CFLAGS += -fPIC -Wall  $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
-LDFLAGS=$(BE_LDFLAGS) -lmosquitto $(OSSLIBS)
+LDFLAGS=$(BE_LDFLAGS) $(MOS_LIB) $(OSSLIBS)
 LDFLAGS += -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
