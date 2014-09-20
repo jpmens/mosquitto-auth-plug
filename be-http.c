@@ -89,7 +89,7 @@ int http_post(void *handle, char *uri, const char *username,const char *password
 			//_log(LOG_NOTICE, "http auth fail re=%d respCode=%d", re, respCode);
 		}
 	} else {
-		_log(LOG_DEBUG, "http req fail url=%s re=%d", url, curl_easy_strerror(re));
+		_log(LOG_DEBUG, "http req fail url=%s re=%s", url, curl_easy_strerror(re));
 	}
 	
 	curl_easy_cleanup(curl);
