@@ -4,30 +4,53 @@
 #	BE_SQLITE
 #	BE_REDIS
 #	BE_POSTGRES
+BE_CDB=0
+BE_MYSQL=1
+BE_SQLITE=0
+BE_REDIS=0
+BE_POSTGRES=0
+BE_LDAP=0
 
-BACKENDS=-DBE_MYSQL -DBE_POSTGRES -DBE_LDAP
+ifeq ($(BE_MYSQL), 1)
+	BACKENDS += -DBE_MYSQL
+	BE_CFLAGS+=`mysql_config --cflags`
+	BE_LDFLAGS+=`mysql_config --libs`
+endif
+ifeq ($(BE_POSTGRES), 1)
+	BACKENDS+= -DBE_POSTGRES
+	BE_CFLAGS+= -I`pg_config --includedir`
+	BE_LDFLAGS+=-lpq
+endif
+ifeq ($(BE_LDAP), 1)
+	BACKENDS+= -DBE_LDAP
+	BE_CFLAGS += -I/usr/include
+	BE_LDFLAGS += -L/usr/lib -lldap -llber
+endif
 
-BE_CFLAGS= -I`pg_config --includedir` `mysql_config --cflags`
-BE_LDFLAGS=`mysql_config --libs` -lpq
-BE_DEPS=
+MOSQUITTO_SRC=/home/Administrator/mosquitto-1.3.4
 
-MOSQUITTO_SRC=/Users/jpm/Auto/pubgit/MQTT/mosquitto/140/mosquitto/
+ifeq ($(BE_CDB), 1)
+	BACKENDS+= -DBE_CDB
+	CDBDIR=contrib/tinycdb-0.78
+	CDB=$(CDBDIR)/cdb
+	CDBINC=$(CDBDIR)/
+	CDBLIB=$(CDBDIR)/libcdb.a
+	BE_CFLAGS += -I$(CDBINC)/
+	BE_LDFLAGS += -L$(CDBDIR) -lcdb
+	BE_DEPS += $(CDBLIB)
+endif
 
-CDBDIR=contrib/tinycdb-0.78
-CDB=$(CDBDIR)/cdb
-CDBINC=$(CDBDIR)/
-CDBLIB=$(CDBDIR)/libcdb.a
-BE_CFLAGS += -I$(CDBINC)/
-BE_LDFLAGS += -L$(CDBDIR) -lcdb
-BE_DEPS += $(CDBLIB)
+ifeq ($(BE_SQLITE), 1)
+	BACKENDS+= -DBE_SQLITE
+	BE_LDFLAGS += -lsqlite3
+endif
 
-BE_LDFLAGS += -lsqlite3
+ifeq ($(BE_REDIS), 1)
+	BACKENDS+= -DBE_REDIS
+	BE_CFLAGS += -I/usr/local/include/hiredis
+	BE_LDFLAGS += -L/usr/local/lib -lhiredis
+endif
 
-BE_CFLAGS += -I/usr/local/include/hiredis
-BE_LDFLAGS += -L/usr/local/lib -lhiredis
-
-BE_CFLAGS += -I/usr/include
-BE_LDFLAGS += -L/usr/lib -lldap -llber
 
 OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
 OSSLINC=-I$(OPENSSLDIR)/include
@@ -36,7 +59,7 @@ OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto
 OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o be-postgres.o be-ldap.o
 CFLAGS = -I$(MOSQUITTO_SRC)/src/
 CFLAGS += -I$(MOSQUITTO_SRC)/lib/
-CFLAGS += -fPIC -Wall -Werror $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+CFLAGS += -fPIC -Wall  $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
 LDFLAGS=$(BE_LDFLAGS) -lmosquitto $(OSSLIBS)
 LDFLAGS += -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
