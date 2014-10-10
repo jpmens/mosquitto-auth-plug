@@ -320,12 +320,12 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 	if (!conf || !conf->aclquery)
 		return (FALSE);
 
-    if (mysql_ping(conf->mysql)) {
-        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
-        if (!auto_connect(conf)) {
-            return (FALSE);
-        }
-    }
+	if (mysql_ping(conf->mysql)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		if (!auto_connect(conf)) {
+			return (FALSE);
+		}
+	}
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (FALSE);

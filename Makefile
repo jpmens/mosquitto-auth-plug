@@ -1,87 +1,121 @@
-# Choose one or more back-ends Allowed values are
-#	BE_CDB
-#	BE_MYSQL
-#	BE_SQLITE
-#	BE_REDIS
-#	BE_POSTGRES
-BE_CDB=0
-BE_MYSQL=1
-BE_SQLITE=0
-BE_REDIS=0
-BE_POSTGRES=0
-BE_LDAP=0
-BE_HTTP=1
-USE_BINDED_TOPIC_MATCH=1
-MOSQUITTO_SRC=/home/Administrator/mosquitto-1.3.4
-OPENSSLDIR=/usr/local/stow/openssl-1.0.0c/
+# Select your backends from this list
+BACKEND_CDB ?= no
+BACKEND_MYSQL ?= yes
+BACKEND_SQLITE ?= no
+BACKEND_REDIS ?= no
+BACKEND_POSTGRES ?= yes
+BACKEND_LDAP ?= yes
+BACKEND_HTTP ?= no
 
-ifeq ($(BE_MYSQL), 1)
-	BACKENDS += -DBE_MYSQL
-	BE_CFLAGS+=`mysql_config --cflags`
-	BE_LDFLAGS+=`mysql_config --libs`
-endif
-ifeq ($(BE_POSTGRES), 1)
-	BACKENDS+= -DBE_POSTGRES
-	BE_CFLAGS+= -I`pg_config --includedir`
-	BE_LDFLAGS+=-lpq
-endif
-ifeq ($(BE_LDAP), 1)
-	BACKENDS+= -DBE_LDAP
-	BE_CFLAGS += -I/usr/include
-	BE_LDFLAGS += -L/usr/lib -lldap -llber
-endif
+BE_CFLAGS =
+BE_LDFLAGS =
+BE_LDADD =
+BE_DEPS =
+OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o
 
+BACKENDS =
+BACKENDSTR =
+MOSQUITTO_SRC = 
+USE_BINDED_TOPIC_MATCH ?= yes
 
-ifeq ($(BE_CDB), 1)
-	BACKENDS+= -DBE_CDB
-	CDBDIR=contrib/tinycdb-0.78
-	CDB=$(CDBDIR)/cdb
-	CDBINC=$(CDBDIR)/
-	CDBLIB=$(CDBDIR)/libcdb.a
+ifneq ($(BACKEND_CDB),no)
+	BACKENDS += -DBE_CDB
+	BACKENDSTR += CDB
+
+	CDBDIR = contrib/tinycdb-0.78
+	CDB = $(CDBDIR)/cdb
+	CDBINC = $(CDBDIR)/
+	CDBLIB = $(CDBDIR)/libcdb.a
 	BE_CFLAGS += -I$(CDBINC)/
-	BE_LDFLAGS += -L$(CDBDIR) -lcdb
+	BE_LDFLAGS += -L$(CDBDIR)
+	BE_LDADD = -lcdb
 	BE_DEPS += $(CDBLIB)
+	OBJS += be-cdb.o
 endif
 
-ifeq ($(BE_SQLITE), 1)
-	BACKENDS+= -DBE_SQLITE
-	BE_LDFLAGS += -lsqlite3
+ifneq ($(BACKEND_MYSQL),no)
+	BACKENDS += -DBE_MYSQL
+	BACKENDSTR += MySQL
+
+	BE_CFLAGS += `mysql_config --cflags`
+	BE_LDADD += `mysql_config --libs`
+	OBJS += be-mysql.o
 endif
 
-ifeq ($(BE_REDIS), 1)
-	BACKENDS+= -DBE_REDIS
+ifneq ($(BACKEND_SQLITE),no)
+	BACKENDS += -DBE_SQLITE
+	BACKENDSTR += SQLite
+
+	BE_LDADD += -lsqlite3
+	OBJS += be-sqlite.o
+endif
+
+ifneq ($(BACKEND_REDIS),no)
+	BACKENDS += -DBE_REDIS
+	BACKENDSTR += Redis
+
 	BE_CFLAGS += -I/usr/local/include/hiredis
-	BE_LDFLAGS += -L/usr/local/lib -lhiredis
+	BE_LDFLAGS += -L/usr/local/lib
+	BE_LDADD += -lhiredis
+	OBJS += be-redis.o
 endif
 
-ifeq ($(BE_HTTP), 1)
+ifneq ($(BACKEND_POSTGRES),no)
+	BACKENDS += -DBE_POSTGRES
+	BACKENDSTR += PostgreSQL
+
+	BE_CFLAGS += -I`pg_config --includedir`
+	BE_LDADD += -lpq
+	OBJS += be-postgres.o
+endif
+
+ifneq ($(BACKEND_LDAP),no)
+	BACKENDS += -DBE_LDAP
+	BACKENDSTR += LDAP
+
+	BE_LDADD = -lldap -llber
+	OBJS += be-ldap.o
+endif
+
+ifneq ($(BACKEND_HTTP), no)
 	BACKENDS+= -DBE_HTTP
-	BE_LDFLAGS += -lcurl
+	BE_LDADD += -lcurl
+	OBJS += be-http.o
 endif
 
-ifeq ($(USE_BINDED_TOPIC_MATCH), 1)
+ifneq ($(USE_BINDED_TOPIC_MATCH), no)
 	BE_CFLAGS += -DCONFIG_USE_BINDED_TOPIC_MATCH
 else
 	MOS_LIB = -lmosquitto
 endif
 
-OSSLINC=-I$(OPENSSLDIR)/include
-OSSLIBS=-L$(OPENSSLDIR)/lib -lcrypto 
+OPENSSLDIR = /usr
+OSSLINC = -I$(OPENSSLDIR)/include
+OSSLIBS = -L$(OPENSSLDIR)/lib -lcrypto
 
-OBJS=auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o be-cdb.o be-mysql.o be-sqlite.o be-redis.o be-postgres.o be-ldap.o be-http.o
 CFLAGS = -I$(MOSQUITTO_SRC)/src/
 CFLAGS += -I$(MOSQUITTO_SRC)/lib/
-CFLAGS += -fPIC -Wall  $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
-LDFLAGS=$(BE_LDFLAGS) $(MOS_LIB) $(OSSLIBS)
-LDFLAGS += -L$(MOSQUITTO_SRC)/lib/
+ifneq ($(OS),Windows_NT)
+	CFLAGS += -fPIC -Wall -Werror 
+endif
+CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
+LDADD = $(BE_LDADD) $(OSSLIBS) $(MOS_LIB)
 
+all: printconfig auth-plug.so np
 
-all: auth-plug.so np 
+printconfig:
+	@echo "Selected backends:         $(BACKENDSTR)"
+	@echo "Using mosquitto source dir: $(MOSQUITTO_SRC)"
+	@echo "OpenSSL install dir:        $(OPENSSLDIR)"
+	@echo
+	@echo "If you changed the backend selection, you might need to 'make clean' first"
+	@echo
 
 auth-plug.so : $(OBJS) $(BE_DEPS)
-	$(CC) -fPIC -shared $(OBJS) -o $@  $(OSSLIBS) $(BE_DEPS) $(LDFLAGS) 
+	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
 
 be-redis.o: be-redis.c be-redis.h log.h hash.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
