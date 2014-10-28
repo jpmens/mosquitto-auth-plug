@@ -209,9 +209,9 @@ the beginning of the line indicating a _superuser_)
 	$SYS/broker/log/N                        PERMIT
 ```
 
-The `mysql` back-end would re-connect to mysql server when connection has gone away
-in default configuration. 
-If you'd like to disable these function, add to Mosquitto conf with settings:
+The `mysql` back-end will re-connect to the MySQL server when the connection has gone away.
+If you wish, you can disable this by configuring:
+
 ```
 auth_opt_mysql_opt_reconnect false
 auth_opt_mysql_auto_connect false
