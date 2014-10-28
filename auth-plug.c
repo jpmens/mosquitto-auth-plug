@@ -76,6 +76,7 @@ struct userdata {
 	struct backend_p **be_list;
 	char *superusers;		/* Static glob list */
 	int authentication_be;		/* Back-end number user was authenticated in */
+	int fallback_be;		/* Backend to use for anonymous connections */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -112,6 +113,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud = *userdata;
 	ud->superusers	= NULL;
 	ud->authentication_be = -1;
+	ud->fallback_be = -1;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -189,6 +191,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_mysql_superuser;
 			(*bep)->aclcheck =  be_mysql_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -207,6 +210,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser = be_pg_superuser;
 			(*bep)->aclcheck = be_pg_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -225,6 +229,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_ldap_superuser;
 			(*bep)->aclcheck =  be_ldap_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -243,6 +248,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_cdb_superuser;
 			(*bep)->aclcheck =  be_cdb_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -261,6 +267,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_sqlite_superuser;
 			(*bep)->aclcheck =  be_sqlite_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -279,6 +286,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->superuser =  be_redis_superuser;
 			(*bep)->aclcheck =  be_redis_aclcheck;
 			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
 #endif
@@ -378,11 +386,15 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	char *backend_name = NULL;
 	int match = 0, authorized = FALSE, nord;
 
-	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %d)",
+	if (!username || !*username) { 	// anonymous users
+		username = "AnonymouS";
+	}
+
+	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %s)",
 		clientid ? clientid : "NULL",
 		username ? username : "NULL",
 		topic ? topic : "NULL",
-		access);
+		access == MOSQ_ACL_READ ? "MOSQ_ACL_READ" : "MOSQ_ACL_WRITE" );
 
 
 	if (!username || !*username || !topic || !*topic)
@@ -414,6 +426,9 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	 */
 
 	nord = ud->authentication_be;
+	if (nord < 0 || nord >= NBACKENDS) {
+		nord = ud->fallback_be;
+	}
 	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
 
 	if ((nord < 0) || (nord >= NBACKENDS)) {

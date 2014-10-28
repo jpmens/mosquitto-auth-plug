@@ -36,6 +36,10 @@ comma-separated list of back-end names which are checked in exactly that order.
 auth_opt_backends cdb,sqlite,mysql,redis,postgres
 ```
 
+Note: anonymous MQTT connections are assigned a username of `AnonymouS` and
+are handled by a so-called _fallback back-end_ which is the *first* configured
+back-end.
+
 Passwords are obtained from the back-end as a PBKDF2 string (see section
 on Passwords below). Even if you try and store a clear-text password,
 it simply won't work.
