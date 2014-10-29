@@ -307,7 +307,7 @@ int be_mysql_superuser(void *handle, const char *username)
  * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
  */
 
-int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int acc)
+int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *v;
@@ -356,11 +356,19 @@ int be_mysql_aclcheck(void *handle, const char *username, const char *topic, int
 			/* Check mosquitto_match_topic. If true,
 			 * if true, set match and break out of loop. */
 
-			// FIXME: does this need special work for %c and %u ???
-			mosquitto_topic_matches_sub(v, topic, &bf);
-			match |= bf;
-			_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
-				topic, v, bf);
+			char *expanded;
+
+			t_expand(clientid, username, v, &expanded);
+			if (expanded && *expanded) {
+				mosquitto_topic_matches_sub(expanded, topic, &bf);
+				match |= bf;
+				_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
+					expanded, v, bf);
+
+				if (expanded) {
+					free(expanded);
+				}
+			}
 		}
 	}
 

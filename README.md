@@ -36,13 +36,25 @@ comma-separated list of back-end names which are checked in exactly that order.
 auth_opt_backends cdb,sqlite,mysql,redis,postgres
 ```
 
-Note: anonymous MQTT connections are assigned a username of `AnonymouS` and
+Note: anonymous MQTT connections are assigned a username of configured in the
+plugin as `auth_opt_anonusername` and they
 are handled by a so-called _fallback back-end_ which is the *first* configured
 back-end.
 
 Passwords are obtained from the back-end as a PBKDF2 string (see section
 on Passwords below). Even if you try and store a clear-text password,
 it simply won't work.
+
+The mysql back-end supports expansion of `%c` and `%u` as clientid and username
+respectively. This allows ACLs in the database to look like this:
+
+```
++-----------+---------------------------------+----+
+| username  | topic                           | rw |
++-----------+---------------------------------+----+
+| bridge-01 | $SYS/broker/connection/%c/state |  2 |
++-----------+---------------------------------+----+
+```
 
 The plugin supports so-called _superusers_. These are usernames exempt
 from ACL checking. In other words, if a user is a _superuser_, that user
@@ -105,6 +117,7 @@ The following `auth_opt_` options are supported by the mysql back-end:
 | aclquery       |                   |             | SQL for ACLs
 | mysql_opt_reconnect | true         |             | enable MYSQL_OPT_RECONNECT option
 | mysql_auto_connect  | true         |             | enable auto_connect function
+| anonusername   |                   |             | username to use for anonymous connections
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
@@ -157,6 +170,7 @@ auth_opt_pass supersecret
 auth_opt_userquery SELECT pw FROM users WHERE username = '%s'
 auth_opt_superquery SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE (username = '%s') AND (rw >= %d)
+auth_opt_anonusername AnonymouS
 ```
 
 Assuming the following database tables:

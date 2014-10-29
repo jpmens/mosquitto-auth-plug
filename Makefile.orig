@@ -10,7 +10,7 @@ BE_CFLAGS =
 BE_LDFLAGS =
 BE_LDADD =
 BE_DEPS =
-OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o
+OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o backends.o
 
 BACKENDS =
 BACKENDSTR =

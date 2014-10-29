@@ -112,7 +112,7 @@ int be_redis_superuser(void *conf, const char *username)
 	return 0;
 }
 
-int be_redis_aclcheck(void *conf, const char *username, const char *topic, int acc)
+int be_redis_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
 {
 	/* FIXME: implement. Currently TRUE */
 

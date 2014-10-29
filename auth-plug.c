@@ -77,6 +77,7 @@ struct userdata {
 	char *superusers;		/* Static glob list */
 	int authentication_be;		/* Back-end number user was authenticated in */
 	int fallback_be;		/* Backend to use for anonymous connections */
+	char *anonusername;		/* Configured name of anonymous MQTT user */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -114,6 +115,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->superusers	= NULL;
 	ud->authentication_be = -1;
 	ud->fallback_be = -1;
+	ud->anonusername = NULL;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -128,6 +130,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 		if (!strcmp(o->key, "superusers"))
 			ud->superusers = strdup(o->value);
+		if (!strcmp(o->key, "anonusername"))
+			ud->anonusername = strdup(o->value);
 #if 0
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);
@@ -305,9 +309,14 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *auth_opts, int auth_opt_count)
 {
-	// struct userdata *ud = (struct userdata *)userdata;
+	struct userdata *ud = (struct userdata *)userdata;
 
 	/* FIXME: free other elements */
+
+	if (ud->superusers)
+		free(ud->superusers);
+	if (ud->anonusername)
+		free(ud->anonusername);
 
 	return MOSQ_ERR_SUCCESS;
 }
@@ -387,7 +396,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	int match = 0, authorized = FALSE, nord;
 
 	if (!username || !*username) { 	// anonymous users
-		username = "AnonymouS";
+		username = ud->anonusername;
 	}
 
 	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %s)",
@@ -446,7 +455,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		return (MOSQ_ERR_ACL_DENIED);
 
 
-	match = (*bep)->aclcheck((*bep)->conf, username, topic, access);
+	match = (*bep)->aclcheck((*bep)->conf, clientid, username, topic, access);
 	if (match == 1) {
 		authorized = TRUE;
 	}

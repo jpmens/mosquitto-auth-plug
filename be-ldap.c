@@ -257,7 +257,7 @@ int be_ldap_superuser(void *handle, const char *username)
  * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
  */
 
-int be_ldap_aclcheck(void *handle, const char *username, const char *topic, int acc)
+int be_ldap_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	return (TRUE);
 }

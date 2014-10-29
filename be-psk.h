@@ -38,7 +38,7 @@ void *be_psk_init();
 void be_psk_destroy(void *handle);
 char *be_psk_getuser(void *handle, const char *username, const char *password, int *authenticated);
 int be_psk_superuser(void *handle, const char *username);
-int be_psk_aclcheck(void *handle, const char *username, const char *topic, int acc);
+int be_psk_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc);
 
 #endif
 

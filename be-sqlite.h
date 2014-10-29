@@ -41,5 +41,5 @@ void be_sqlite_destroy(void *handle);
 char *be_sqlite_getuser(void *handle, const char *username, const char *password, int *authenticated);
 int be_sqlite_access(void *handle, const char *username, char *topic);
 int be_sqlite_superuser(void *handle, const char *username);
-int be_sqlite_aclcheck(void *handle, const char *username, const char *topic, int acc);
+int be_sqlite_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc);
 #endif /* BE_SQLITE */

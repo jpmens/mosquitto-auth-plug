@@ -36,5 +36,5 @@ void *be_ldap_init();
 void be_ldap_destroy(void *conf);
 char *be_ldap_getuser(void *conf, const char *username, const char *password, int *authenticated);
 int be_ldap_superuser(void *conf, const char *username);
-int be_ldap_aclcheck(void *conf, const char *username, const char *topic, int acc);
+int be_ldap_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc);
 #endif /* BE_LDAP */
