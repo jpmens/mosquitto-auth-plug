@@ -1,0 +1,22 @@
+{
+    "name": "mosquitto-pbkdf2",
+    "version": "0.1",
+    "description": "Small module to generate/verify PBKDF2 as needed by mosquitto-auth-plug",
+    "main": "./mosquitto_pbkdf2.js",
+    "author": {
+        "name": "Manuel Domínguez",
+        "email": "manuel.dominguez@enzinatec.es"
+    },
+    "license": "MIT",
+    "devDependencies": {
+        "pbkdf2-sha256": "~1.0.1",
+        "prompt": "~0.2.14"
+    },
+    "keywords": [
+        "pbkdf2",
+        "sha256",
+        "mosquitto",
+        "mosquitto-auth-plug"
+    ]
+}
+}
