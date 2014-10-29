@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
+ * Copyright (c) 2013, 2014 Jan-Piet Mens <jpmens()gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <openssl/evp.h>
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
 #include <fnmatch.h>
+#include <time.h>
 
 #include "log.h"
 #include "hash.h"
@@ -45,6 +47,8 @@
 #include "be-redis.h"
 #include "be-postgres.h"
 #include "be-ldap.h"
+
+#include "cache.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -78,6 +82,7 @@ struct userdata {
 	int authentication_be;		/* Back-end number user was authenticated in */
 	int fallback_be;		/* Backend to use for anonymous connections */
 	char *anonusername;		/* Configured name of anonymous MQTT user */
+	time_t cachetics;		/* number of seconds to cache ACL lookups */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -104,6 +109,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	char *psk_database = NULL;
 #endif
 
+	OpenSSL_add_all_algorithms();
+
 	*userdata = (struct userdata *)malloc(sizeof(struct userdata));
 	if (*userdata == NULL) {
 		perror("allocting userdata");
@@ -116,6 +123,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->authentication_be = -1;
 	ud->fallback_be = -1;
 	ud->anonusername = NULL;
+	ud->cachetics = 300;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -132,6 +140,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			ud->superusers = strdup(o->value);
 		if (!strcmp(o->key, "anonusername"))
 			ud->anonusername = strdup(o->value);
+		if (!strcmp(o->key, "cachetics"))
+			ud->cachetics = atol(o->value);
 #if 0
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);
@@ -394,6 +404,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct backend_p **bep;
 	char *backend_name = NULL;
 	int match = 0, authorized = FALSE, nord;
+	int granted = MOSQ_ERR_ACL_DENIED;
 
 	if (!username || !*username) { 	// anonymous users
 		username = ud->anonusername;
@@ -406,8 +417,18 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		access == MOSQ_ACL_READ ? "MOSQ_ACL_READ" : "MOSQ_ACL_WRITE" );
 
 
-	if (!username || !*username || !topic || !*topic)
-		return MOSQ_ERR_ACL_DENIED;
+	granted = cache_q(clientid, username, topic, access, ud->cachetics);
+	if (granted != MOSQ_ERR_UNKNOWN) {
+		_log(DEBUG, "aclcheck(%s, %s, %d) CACHEDAUTH: %d",
+			username, topic, access, granted);
+		return (granted);
+	}
+
+	if (!username || !*username || !topic || !*topic) {
+		granted =  MOSQ_ERR_ACL_DENIED;
+		goto outout;
+	}
+
 
 	/* Check for usernames exempt from ACL checking, first */
 
@@ -415,7 +436,8 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		if (fnmatch(ud->superusers, username, 0) == 0) {
 			_log(DEBUG, "aclcheck(%s, %s, %d) GLOBAL SUPERUSER=Y",
 				username, topic, access);
-			return MOSQ_ERR_SUCCESS;
+			granted = MOSQ_ERR_SUCCESS;
+			goto outout;
 		}
 	}
 
@@ -426,7 +448,8 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		if (match == 1) {
 			_log(DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
 				username, topic, access, b->name);
-			return MOSQ_ERR_SUCCESS;
+			granted = MOSQ_ERR_SUCCESS;
+			goto outout;
 		}
 	}
 
@@ -442,7 +465,8 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 	if ((nord < 0) || (nord >= NBACKENDS)) {
 		_log(LOG_NOTICE, "nord is %d: unpossible!", nord);
-		return (MOSQ_ERR_ACL_DENIED);
+		granted = MOSQ_ERR_ACL_DENIED;
+		goto outout;
 	}
 
 	/* FIXME: |-- user bridge was authenticated in back-end 16 (<nil>)  */
@@ -451,8 +475,10 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 
 	bep = &ud->be_list[nord];
-	if (nord == -1 || !bep)
-		return (MOSQ_ERR_ACL_DENIED);
+	if (nord == -1 || !bep) {
+		granted = MOSQ_ERR_ACL_DENIED;
+		goto outout;
+	}
 
 
 	match = (*bep)->aclcheck((*bep)->conf, clientid, username, topic, access);
@@ -463,7 +489,13 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
 		username, topic, access, authorized, backend_name);
 
-	return (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_ERR_ACL_DENIED;
+	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_ERR_ACL_DENIED;
+
+   outout:	/* goto fail goto fail */
+
+	acl_cache(clientid, username, topic, access, granted, ud->cachetics);
+	return (granted);
+	
 }
 
 
