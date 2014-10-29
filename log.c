@@ -42,6 +42,8 @@ void _log(int priority, const char *fmt, ...)
 
 
 	/* FIXME: use new log function when @ralight is ready */
+	/* interim solution - link with -rdynamic then #include <mosquitto_broker.h> and use _mosquitto_log_printf(). */
+
 	time(&now);
 
 	va_start(va, fmt);
