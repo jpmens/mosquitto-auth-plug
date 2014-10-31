@@ -124,5 +124,5 @@ $(CDBLIB):
 pwdb.cdb: pwdb.in
 	$(CDB) -c -m  pwdb.cdb pwdb.in
 clean :
-	rm -f *.o *.so 
+	rm -f *.o *.so np
 	(cd contrib/tinycdb-0.78; make realclean )

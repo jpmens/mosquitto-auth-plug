@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
+ * Copyright (c) 2013, 2014 Jan-Piet Mens <jpmens()gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TRUE
-# define TRUE (1)
-#endif
-#ifndef FALSE
-# define FALSE (0)
-#endif
+#include <time.h>
+#include "backends.h"
+#include "cache.h"
 
-#ifndef __BACKENDS_H
-# define __BACKENDS_H
+#ifndef __USERDATA_H
+# define _USERDATA_H
 
-typedef void (f_kill)(void *conf);
-typedef char *(f_getuser)(void *conf, const char *username, const char *password, int *authenticated);
-typedef int (f_superuser)(void *conf, const char *username);
-typedef int (f_aclcheck)(void *conf, const char *clientid, const char *username, const char *topic, int acc);
-
-void t_expand(const char *clientid, const char *username, char *in, char **res);
+struct userdata {
+	struct backend_p **be_list;
+	char *superusers;		/* Static glob list */
+	int authentication_be;		/* Back-end number user was authenticated in */
+	int fallback_be;		/* Backend to use for anonymous connections */
+	char *anonusername;		/* Configured name of anonymous MQTT user */
+	time_t cachetics;		/* number of seconds to cache ACL lookups */
+	struct aclcache *aclcache;
+};
 
 #endif

@@ -48,6 +48,7 @@
 #include "be-postgres.h"
 #include "be-ldap.h"
 
+#include "userdata.h"
 #include "cache.h"
 
 #define STRINGIFY(x) #x
@@ -74,15 +75,6 @@ struct backend_p {
 	f_getuser *getuser;
 	f_superuser *superuser;
 	f_aclcheck *aclcheck;
-};
-
-struct userdata {
-	struct backend_p **be_list;
-	char *superusers;		/* Static glob list */
-	int authentication_be;		/* Back-end number user was authenticated in */
-	int fallback_be;		/* Backend to use for anonymous connections */
-	char *anonusername;		/* Configured name of anonymous MQTT user */
-	time_t cachetics;		/* number of seconds to cache ACL lookups */
 };
 
 int pbkdf2_check(char *password, char *hash);
@@ -124,6 +116,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->fallback_be = -1;
 	ud->anonusername = NULL;
 	ud->cachetics = 300;
+	ud->aclcache = NULL;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -327,6 +320,9 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 		free(ud->superusers);
 	if (ud->anonusername)
 		free(ud->anonusername);
+	if (ud->aclcache != NULL) {
+		/* FIXME */
+	}
 
 	return MOSQ_ERR_SUCCESS;
 }
@@ -417,7 +413,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		access == MOSQ_ACL_READ ? "MOSQ_ACL_READ" : "MOSQ_ACL_WRITE" );
 
 
-	granted = cache_q(clientid, username, topic, access, ud->cachetics);
+	granted = cache_q(clientid, username, topic, access, userdata);
 	if (granted != MOSQ_ERR_UNKNOWN) {
 		_log(DEBUG, "aclcheck(%s, %s, %d) CACHEDAUTH: %d",
 			username, topic, access, granted);
@@ -493,7 +489,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
    outout:	/* goto fail goto fail */
 
-	acl_cache(clientid, username, topic, access, granted, ud->cachetics);
+	acl_cache(clientid, username, topic, access, granted, userdata);
 	return (granted);
 	
 }

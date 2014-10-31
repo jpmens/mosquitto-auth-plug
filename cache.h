@@ -27,5 +27,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-void acl_cache(const char *clientid, const char *username, const char *topic, int access, int granted, time_t cachetics);
-int cache_q(const char *clientid, const char *username, const char *topic, int access, time_t cachetics);
+#include <time.h>
+#include "uthash.h"
+#include <openssl/sha.h>
+
+#ifndef __CACHE_H
+# define __CACHE_H
+
+struct aclcache {
+        char hex[SHA_DIGEST_LENGTH * 2 + 1];    /* key within struct */
+        int granted;
+        time_t tics;
+        UT_hash_handle hh;
+};
+
+void acl_cache(const char *clientid, const char *username, const char *topic, int access, int granted, void *userdata);
+int cache_q(const char *clientid, const char *username, const char *topic, int access, void *userdata);
+
+#endif

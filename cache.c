@@ -32,19 +32,11 @@
 #include <string.h>
 #include <time.h>
 #include <mosquitto.h>
+#include "userdata.h"
 #include "cache.h"
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include "uthash.h"
-
-struct aclcache {
-	char hex[SHA_DIGEST_LENGTH * 2 + 1];	/* key within struct */
-	int granted;
-	time_t tics;
-	UT_hash_handle hh;
-};
-
-static struct aclcache *aclcache = NULL;
 
 static unsigned int sha_hash(const char *data, size_t size, unsigned char *out)
 {
@@ -91,39 +83,43 @@ static void hexify(const char *clientid, const char *username, const char *topic
  * granted is what Mosquitto auth-plug actually granted
  */
 
-void acl_cache(const char *clientid, const char *username, const char *topic, int access, int granted, time_t cachetics)
+void acl_cache(const char *clientid, const char *username, const char *topic, int access, int granted, void *userdata)
 {
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct aclcache *a;
+	struct userdata *ud = (struct userdata *)userdata;
+	time_t cachetics = ud->cachetics;
 
 	hexify(clientid, username, topic, access, hex);
 
-	HASH_FIND_STR(aclcache, hex, a);
+	HASH_FIND_STR(ud->aclcache, hex, a);
 	if (a) {
 		granted = a->granted;
 
 		if (time(NULL) > (a->tics + cachetics)) {
 			printf("EXPIRED!!!!!!!!!!!!!\n");
-			HASH_DEL(aclcache, a);
+			HASH_DEL(ud->aclcache, a);
 		}
 	} else {
 		a = (struct aclcache *)malloc(sizeof(struct aclcache));
 		strcpy(a->hex, hex);
 		a->granted = granted;
 		a->tics = time(NULL);
-		HASH_ADD_STR(aclcache, hex, a);
+		HASH_ADD_STR(ud->aclcache, hex, a);
 	}
 }
 
-int cache_q(const char *clientid, const char *username, const char *topic, int access, time_t cachetics)
+int cache_q(const char *clientid, const char *username, const char *topic, int access, void *userdata)
 {
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct aclcache *a;
+	struct userdata *ud = (struct userdata *)userdata;
+	time_t cachetics = ud->cachetics;
 	int granted = MOSQ_ERR_UNKNOWN;
 
 	hexify(clientid, username, topic, access, hex);
 
-	HASH_FIND_STR(aclcache, hex, a);
+	HASH_FIND_STR(ud->aclcache, hex, a);
 	if (a) {
 		// printf("---> CACHED! %d\n", a->granted);
 
@@ -131,7 +127,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 
 		if (time(NULL) > (a->tics + cachetics)) {
 			printf("EXPIRED!!!!!!!!!!!!!\n");
-			HASH_DEL(aclcache, a);
+			HASH_DEL(ud->aclcache, a);
 		}
 	}
 
