@@ -11,5 +11,5 @@ BACKEND_HTTP ?= no
 MOSQUITTO_SRC =
 
 # Specify the path the OpenSSL here
-OPENSSLDIR =
+OPENSSLDIR = /usr
 
