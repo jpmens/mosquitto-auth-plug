@@ -333,15 +333,20 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 {
 	struct userdata *ud = (struct userdata *)userdata;
 
-	/* FIXME: free other elements */
-
 	if (ud->superusers)
 		free(ud->superusers);
 	if (ud->anonusername)
 		free(ud->anonusername);
 	if (ud->aclcache != NULL) {
-		/* FIXME */
+		struct aclcache *a, *tmp;
+
+		HASH_ITER(hh, ud->aclcache, a, tmp) {
+			HASH_DEL(ud->aclcache, a);
+			free(a);
+		}
 	}
+
+	free(ud);
 
 	return MOSQ_ERR_SUCCESS;
 }
