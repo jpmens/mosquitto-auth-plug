@@ -98,7 +98,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		granted = a->granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			_log(DEBUG, " Cache for (%s,%s,%d) [%s] Expired!", clientid, username, access,hex);
+			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 		}
 	} else {
@@ -107,6 +107,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		a->granted = granted;
 		a->seconds = time(NULL);
 		HASH_ADD_STR(ud->aclcache, hex, a);
+		_log(DEBUG, " Cached  [%s] for (%s,%s,%d)", hex, clientid, username, access);
 	}
 }
 
@@ -127,7 +128,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 		granted = a->granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			_log(DEBUG, " Cache for (%s,%s,%d) [%s] Expired!", clientid, username, access,hex);
+			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 		}
 	}
