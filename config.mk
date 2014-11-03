@@ -3,9 +3,13 @@ BACKEND_CDB ?= no
 BACKEND_MYSQL ?= yes
 BACKEND_SQLITE ?= no
 BACKEND_REDIS ?= no
-BACKEND_POSTGRES ?= yes
-BACKEND_LDAP ?= yes
+BACKEND_POSTGRES ?= no
+BACKEND_LDAP ?= no
 BACKEND_HTTP ?= no
 
-# Specify the path to the mosquitto sources here
+# Specify the path to the Mosquitto sources here
 MOSQUITTO_SRC = 
+
+# Specify the path the OpenSSL here
+OPENSSLDIR =
+

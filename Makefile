@@ -78,7 +78,6 @@ ifneq ($(BACKEND_HTTP), no)
 	OBJS += be-http.o
 endif
 
-OPENSSLDIR = /usr
 OSSLINC = -I$(OPENSSLDIR)/include
 OSSLIBS = -L$(OPENSSLDIR)/lib -lcrypto
 
