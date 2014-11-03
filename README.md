@@ -4,10 +4,13 @@ This is a plugin to authenticate and authorize [Mosquitto] users from one
 of several distinct back-ends:
 
 * MySQL
+* PostgreSQL
 * CDB
 * SQLite3 database
 * [Redis] key/value store
 * TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
+* LDAP
+* HTTP (custom HTTP API)
 
 ## Introduction
 
@@ -15,12 +18,12 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |
-| superusers                 |   Y   |       |       |        |      |  2  |    Y     |
-| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |
+| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |
+| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |  Y   |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
@@ -285,6 +288,44 @@ auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=
 | -------------- | ----------------- | :---------: | ----------  |
 | redis_host     | localhost         |             | hostname / IP address
 | redis_port     | 6379              |             | TCP port number |
+
+### HTTP
+
+The `http` back-end is for auth by custom HTTP API.
+
+The following `auth_opt_` options are supported by the `http` back-end:
+
+| Option            | default           |  Mandatory  | Meaning     |
+| ----------------- | ----------------- | :---------: | ----------  |
+| http_ip           |                   |      Y      | IP address,will skip dns lookup |
+| http_port         | 80                |             | TCP port number                 |
+| http_hostname     |                   |             | hostname for HTTP header        |
+| http_getuser_uri  |                   |      Y      | URI for check username/password |
+| http_superuser_uri|                   |      Y      | URI for check superuser         |
+| http_aclcheck_uri |                   |      Y      | URI for check acl               |
+
+If the configured URLs return an HTTP status code == `200`, the authentication /
+authorization succeeds, else it fails.
+
+| URI-Param         | username | password | topic | acc |
+| ----------------- | -------- | -------- | :---: | :-: |
+| http_getuser_uri  |   Y      |   Y      |   N   |  N  |
+| http_superuser_uri|   Y      |   N      |   N   |  N  |
+| http_aclcheck_uri |   Y      |   N      |   Y   |  Y  |
+
+Mosquitto configuration for the `http` back-end:
+
+```
+auth_opt_backends http
+auth_opt_http_ip 127.0.0.1
+auth_opt_http_port 8089
+#auth_opt_http_hostname example.org
+auth_opt_http_getuser_uri /auth
+auth_opt_http_superuser_uri /superuser
+auth_opt_http_aclcheck_uri /acl
+```
+
+A very simple example service using Python and bottle can be found in [examples/http-auth-be.py](examples/http-auth-be.py).
 
 ### PostgreSQL
 

@@ -5,6 +5,7 @@ BACKEND_SQLITE ?= no
 BACKEND_REDIS ?= no
 BACKEND_POSTGRES ?= yes
 BACKEND_LDAP ?= yes
+BACKEND_HTTP ?= no
 
 BE_CFLAGS =
 BE_LDFLAGS =
@@ -14,7 +15,7 @@ OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o backends.o cach
 
 BACKENDS =
 BACKENDSTR =
-MOSQUITTO_SRC =
+MOSQUITTO_SRC = 
 
 ifneq ($(BACKEND_CDB),no)
 	BACKENDS += -DBE_CDB
@@ -75,13 +76,22 @@ ifneq ($(BACKEND_LDAP),no)
 	OBJS += be-ldap.o
 endif
 
+ifneq ($(BACKEND_HTTP), no)
+	BACKENDS+= -DBE_HTTP
+	BE_LDADD += -lcurl
+	OBJS += be-http.o
+endif
+
 OPENSSLDIR = /usr
 OSSLINC = -I$(OPENSSLDIR)/include
 OSSLIBS = -L$(OPENSSLDIR)/lib -lcrypto
 
 CFLAGS = -I$(MOSQUITTO_SRC)/src/
 CFLAGS += -I$(MOSQUITTO_SRC)/lib/
-CFLAGS += -fPIC -Wall -Werror $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+ifneq ($(OS),Windows_NT)
+	CFLAGS += -fPIC -Wall -Werror 
+endif
+CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
 LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
@@ -113,7 +123,11 @@ base64.o: base64.c base64.h Makefile
 log.o: log.c log.h Makefile
 hash.o: hash.c hash.h uthash.h Makefile
 be-postgres.o: be-postgres.c be-postgres.h Makefile
+<<<<<<< HEAD:Makefile.orig
 cache.o: cache.c cache.h uthash.h Makefile
+=======
+be-http.o: be-http.c be-http.h Makefile
+>>>>>>> 2fda787f0ab2994b0e339a78d8808385519c934d:Makefile
 
 np: np.c base64.o
 	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)
