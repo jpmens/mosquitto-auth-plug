@@ -16,6 +16,7 @@ def auth():
     response.status = 403
 
     # data = bottle.request.body.read()   # username=jane%40mens.de&password=jolie&topic=&acc=-1
+
     username = request.forms.get('username')
     password = request.forms.get('password')
     topic    = request.forms.get('topic')
@@ -46,10 +47,11 @@ def acl():
     response.content_type = 'text/plain'
     response.status = 403
 
-    # data = bottle.request.body.read()   # username=jane%40mens.de&password=&topic=t%2F1&acc=2
+    data = bottle.request.body.read()   # username=jane%40mens.de&password=&topic=t%2F1&acc=2&clientid=JANESUB
 
     username = request.forms.get('username')
     topic    = request.forms.get('topic')
+    clientid = request.forms.get('clientid')
     acc      = request.forms.get('acc') # 1 == SUB, 2 == PUB
 
     if username == 'jane@mens.de' and topic == 't/1':

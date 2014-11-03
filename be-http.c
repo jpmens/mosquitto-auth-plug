@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com> wendal <wendal1985()gmai.com>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  * 3. Neither the name of mosquitto nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -37,9 +37,10 @@
 #include "log.h"
 #include <curl/curl.h>
 
-static int http_post(void *handle, char *uri, const char *username,const char *password, const char *topic, int acc)
+static int http_post(void *handle, char *uri, const char *clientid, const char *username,const char *password, const char *topic, int acc)
 {
 	struct http_backend *conf = (struct http_backend *)handle;
+	CURL *curl;
 	struct curl_slist *headerlist=NULL;
 	int re;
 	int respCode = 0;
@@ -50,15 +51,13 @@ static int http_post(void *handle, char *uri, const char *username,const char *p
 	if (username == NULL) {
 		return (FALSE);
 	}
-	if (password == NULL)
-		password = "";
 
-	if (topic == NULL)
-		topic = "";
-	
-	CURL *curl = curl_easy_init();
-	if (NULL == curl) {
-		_fatal("create easy_handle fail");
+	clientid = (clientid && *clientid) ? clientid : "";
+	password = (password && *password) ? password : "";
+	topic    = (topic && *topic) ? topic : "";
+
+	if ((curl = curl_easy_init()) == NULL) {
+		_fatal("create curl_easy_handle fails");
 		return (FALSE);
 	}
 	if (conf->hostheader != NULL)
@@ -67,15 +66,25 @@ static int http_post(void *handle, char *uri, const char *username,const char *p
 		
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 	
-	url = (char *)malloc(1024);
-	data = (char *)malloc(1024);
-	sprintf(data, "username=%s&password=%s&topic=%s&acc=%d", 
+	url = (char *)malloc(strlen(conf->ip) + strlen(uri) + 20);
+	if (url == NULL) {
+		_fatal("ENOMEM");
+		return (FALSE);
+	}
+	sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
+
+	/* Hoping the 1024 is sufficient for curl_easy_escapes ... */
+	data = (char *)malloc(strlen(username) + strlen(password) + strlen(topic) + strlen(clientid) + 1024);
+	if (data == NULL) {
+		_fatal("ENOMEM");
+		return (FALSE);
+	}
+	sprintf(data, "username=%s&password=%s&topic=%s&acc=%d&clientid=%s",
 			curl_easy_escape(curl, username, 0),
 			curl_easy_escape(curl, password, 0),
 			curl_easy_escape(curl, topic, 0),
-			acc);
-	
-	sprintf(url, "http://%s:%d%s", conf->ip, conf->port, strdup(uri));
+			acc,
+			curl_easy_escape(curl, clientid, 0));
 
 	_log(LOG_DEBUG, "url=%s", url);
 	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -106,7 +115,8 @@ static int http_post(void *handle, char *uri, const char *username,const char *p
 }
 
 
-void *be_http_init() {
+void *be_http_init()
+{
 	struct http_backend *conf;
 	char *ip;
 	char *getuser_uri;
@@ -151,36 +161,42 @@ void *be_http_init() {
 	_log(LOG_DEBUG, "superuser_uri=%s", superuser_uri);
 	_log(LOG_DEBUG, "aclcheck_uri=%s", aclcheck_uri);
 	
-	return conf;
+	return (conf);
 };
-void be_http_destroy(void *handle){
+void be_http_destroy(void *handle)
+{
 	struct http_backend *conf = (struct http_backend *)handle;
+
 	if (conf) {
 		curl_global_cleanup();
 		free(conf);
 	}
 };
+
 char *be_http_getuser(void *handle, const char *username, const char *password, int *authenticated) {
 	struct http_backend *conf = (struct http_backend *)handle;
 	int re;
 	if (username == NULL) {
 		return NULL;
 	}
-	re = http_post(handle, conf->getuser_uri, username, password, NULL, -1);
+	re = http_post(handle, conf->getuser_uri, NULL, username, password, NULL, -1);
 	if (re == 1) {
 		*authenticated = 1;
 	}
 	return NULL;
 };
-int be_http_superuser(void *handle, const char *username){
+
+int be_http_superuser(void *handle, const char *username)
+{
 	struct http_backend *conf = (struct http_backend *)handle;
-	return http_post(handle, conf->superuser_uri, username, NULL, NULL, -1);
+
+	return http_post(handle, conf->superuser_uri, NULL, username, NULL, NULL, -1);
 };
+
 int be_http_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	struct http_backend *conf = (struct http_backend *)handle;
 
-	/* FIXME: support clientid */
-	return http_post(conf, conf->aclcheck_uri, username, NULL, topic, acc);
+	return http_post(conf, conf->aclcheck_uri, clientid, username, NULL, topic, acc);
 };
 #endif /* BE_HTTP */
