@@ -1,11 +1,6 @@
-# Select your backends from this list
-BACKEND_CDB ?= no
-BACKEND_MYSQL ?= yes
-BACKEND_SQLITE ?= no
-BACKEND_REDIS ?= no
-BACKEND_POSTGRES ?= yes
-BACKEND_LDAP ?= yes
-BACKEND_HTTP ?= no
+# Load our module (and misc) configuration from config.mk
+# It also contains MOSQUITTO_SRC
+-include config.mk
 
 BE_CFLAGS =
 BE_LDFLAGS =
@@ -15,7 +10,6 @@ OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o backends.o cach
 
 BACKENDS =
 BACKENDSTR =
-MOSQUITTO_SRC = 
 
 ifneq ($(BACKEND_CDB),no)
 	BACKENDS += -DBE_CDB
@@ -78,6 +72,8 @@ endif
 
 ifneq ($(BACKEND_HTTP), no)
 	BACKENDS+= -DBE_HTTP
+	BACKENDSTR += HTTP
+
 	BE_LDADD += -lcurl
 	OBJS += be-http.o
 endif
