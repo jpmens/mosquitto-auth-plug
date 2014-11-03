@@ -33,7 +33,6 @@
 #include <string.h>
 #include <time.h>
 #include "log.h"
-#include <logging_mosq.h>
 
 void _log(int priority, const char *fmt, ...)
 {
