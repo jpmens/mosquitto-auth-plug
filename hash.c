@@ -40,7 +40,6 @@ static struct my_opts {
 
 /*
  * Add a key/value pair to the hash.
- * FIXME: must bail-out on ENOMEM
  */
 
 void p_add(char *name, char *value)
@@ -48,6 +47,9 @@ void p_add(char *name, char *value)
 	struct my_opts *mo;
 
 	mo = (struct my_opts *)malloc(sizeof(struct my_opts));
+	if (mo == NULL) {
+		return;
+	}
 	mo->name = strdup(name);
 	mo->value = strdup(value);
 
