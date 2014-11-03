@@ -69,7 +69,7 @@ In order to compile the plugin you'll require a copy of the [Mosquitto] source
 code together with the libraries required for the back-end you want to use in
 the plugin. OpenSSL is also required.
 
-Modify `config.mk` to suit your building environment, in particular, you have
+Copy `config.mk.in` to `config.mk` and modify `config.mk` to suit your building environment, in particular, you have
 to configure which back-ends you want to provide as well as the path to the
 [Mosquitto] source and its library.
 

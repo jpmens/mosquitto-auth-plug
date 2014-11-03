@@ -8,7 +8,7 @@ BACKEND_LDAP ?= no
 BACKEND_HTTP ?= no
 
 # Specify the path to the Mosquitto sources here
-MOSQUITTO_SRC = 
+MOSQUITTO_SRC =
 
 # Specify the path the OpenSSL here
 OPENSSLDIR =
