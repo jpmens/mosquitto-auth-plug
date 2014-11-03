@@ -82,8 +82,7 @@ int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
-	/* FIXME */
-	fprintf(stderr, "*** auth-plug: backend=%s\n", TOSTRING(BACKEND));
+	_log(LOG_NOTICE, "*** auth-plug: startup");
 
 	return MOSQ_AUTH_PLUGIN_VERSION;
 }
@@ -154,7 +153,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
         p = strdup(backends);
 
-        printf("** Configured order: %s\n", p);
+        _log(LOG_NOTICE, "** Configured order: %s\n", p);
 
 	ud->be_list = (struct backend_p **)malloc((sizeof (struct backend_p *)) * (NBACKENDS + 1));
 
