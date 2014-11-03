@@ -123,11 +123,8 @@ base64.o: base64.c base64.h Makefile
 log.o: log.c log.h Makefile
 hash.o: hash.c hash.h uthash.h Makefile
 be-postgres.o: be-postgres.c be-postgres.h Makefile
-<<<<<<< HEAD:Makefile.orig
 cache.o: cache.c cache.h uthash.h Makefile
-=======
-be-http.o: be-http.c be-http.h Makefile
->>>>>>> 2fda787f0ab2994b0e339a78d8808385519c934d:Makefile
+be-http.o: be-http.c be-http.h Makefile backends.h
 
 np: np.c base64.o
 	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)
