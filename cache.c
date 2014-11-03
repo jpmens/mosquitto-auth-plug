@@ -87,9 +87,12 @@ static void hexify(const char *clientid, const char *username, const char *topic
 void acl_cache(const char *clientid, const char *username, const char *topic, int access, int granted, void *userdata)
 {
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
-	struct aclcache *a;
+	struct aclcache *a, *tmp;
 	struct userdata *ud = (struct userdata *)userdata;
 	time_t cacheseconds = ud->cacheseconds;
+	time_t now;
+
+	now = time(NULL);
 
 	hexify(clientid, username, topic, access, hex);
 
@@ -105,9 +108,21 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		a = (struct aclcache *)malloc(sizeof(struct aclcache));
 		strcpy(a->hex, hex);
 		a->granted = granted;
-		a->seconds = time(NULL);
+		a->seconds = now;
 		HASH_ADD_STR(ud->aclcache, hex, a);
 		_log(DEBUG, " Cached  [%s] for (%s,%s,%d)", hex, clientid, username, access);
+	}
+
+	/*
+	 * Check whole cache for items which need deleting. Important with
+	 * clients who show up once only (mosquitto_[sp]ub with variable clientIDs
+	 */
+
+	HASH_ITER(hh, ud->aclcache, a, tmp) {
+		if (now > (a->seconds + ud->cacheseconds)) {
+			_log(DEBUG, " Cleanup [%s]", a->hex);
+			HASH_DEL(ud->aclcache, a);
+		}
 	}
 }
 
