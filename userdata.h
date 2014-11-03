@@ -40,7 +40,7 @@ struct userdata {
 	int authentication_be;		/* Back-end number user was authenticated in */
 	int fallback_be;		/* Backend to use for anonymous connections */
 	char *anonusername;		/* Configured name of anonymous MQTT user */
-	time_t cachetics;		/* number of seconds to cache ACL lookups */
+	time_t cacheseconds;		/* number of seconds to cache ACL lookups */
 	struct aclcache *aclcache;
 };
 

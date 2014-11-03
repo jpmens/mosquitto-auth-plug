@@ -37,7 +37,7 @@
 struct aclcache {
         char hex[SHA_DIGEST_LENGTH * 2 + 1];    /* key within struct */
         int granted;
-        time_t tics;
+        time_t seconds;
         UT_hash_handle hh;
 };
 

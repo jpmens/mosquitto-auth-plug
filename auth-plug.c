@@ -116,7 +116,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->authentication_be = -1;
 	ud->fallback_be = -1;
 	ud->anonusername = NULL;
-	ud->cachetics = 300;
+	ud->cacheseconds = 300;
 	ud->aclcache = NULL;
 
 	/*
@@ -134,8 +134,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			ud->superusers = strdup(o->value);
 		if (!strcmp(o->key, "anonusername"))
 			ud->anonusername = strdup(o->value);
-		if (!strcmp(o->key, "cachetics"))
-			ud->cachetics = atol(o->value);
+		if (!strcmp(o->key, "cacheseconds"))
+			ud->cacheseconds = atol(o->value);
 #if 0
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);

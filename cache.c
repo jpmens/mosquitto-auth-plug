@@ -88,7 +88,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct aclcache *a;
 	struct userdata *ud = (struct userdata *)userdata;
-	time_t cachetics = ud->cachetics;
+	time_t cacheseconds = ud->cacheseconds;
 
 	hexify(clientid, username, topic, access, hex);
 
@@ -96,7 +96,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 	if (a) {
 		granted = a->granted;
 
-		if (time(NULL) > (a->tics + cachetics)) {
+		if (time(NULL) > (a->seconds + cacheseconds)) {
 			printf("EXPIRED!!!!!!!!!!!!!\n");
 			HASH_DEL(ud->aclcache, a);
 		}
@@ -104,7 +104,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		a = (struct aclcache *)malloc(sizeof(struct aclcache));
 		strcpy(a->hex, hex);
 		a->granted = granted;
-		a->tics = time(NULL);
+		a->seconds = time(NULL);
 		HASH_ADD_STR(ud->aclcache, hex, a);
 	}
 }
@@ -114,7 +114,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct aclcache *a;
 	struct userdata *ud = (struct userdata *)userdata;
-	time_t cachetics = ud->cachetics;
+	time_t cacheseconds = ud->cacheseconds;
 	int granted = MOSQ_ERR_UNKNOWN;
 
 	hexify(clientid, username, topic, access, hex);
@@ -125,7 +125,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 
 		granted = a->granted;
 
-		if (time(NULL) > (a->tics + cachetics)) {
+		if (time(NULL) > (a->seconds + cacheseconds)) {
 			printf("EXPIRED!!!!!!!!!!!!!\n");
 			HASH_DEL(ud->aclcache, a);
 		}
