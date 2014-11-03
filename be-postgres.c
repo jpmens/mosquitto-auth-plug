@@ -282,10 +282,17 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 			/* Check mosquitto_match_topic. If true,
 			 * if true, set match and break out of loop. */
 
-			// FIXME: does this need special work for %c and %u ???
-			mosquitto_topic_matches_sub(v, topic, &bf);
-			match |= bf;
-			_log(LOG_DEBUG, "  postgres: topic_matches(%s, %s) == %d", topic, v, bf);
+                        char *expanded;
+
+                        t_expand(clientid, username, v, &expanded);
+                        if (expanded && *expanded) {
+                                mosquitto_topic_matches_sub(expanded, topic, &bf);
+                                match |= bf;
+                                _log(LOG_DEBUG, "  postgres: topic_matches(%s, %s) == %d",
+                                        expanded, v, bf);
+
+				free(expanded);
+                        }
 		}
 
 		if ( match != 0 )
