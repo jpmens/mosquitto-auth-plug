@@ -37,6 +37,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include "uthash.h"
+#include "log.h"
 
 static unsigned int sha_hash(const char *data, size_t size, unsigned char *out)
 {
@@ -97,7 +98,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		granted = a->granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			printf("EXPIRED!!!!!!!!!!!!!\n");
+			_log(DEBUG, " Cache for (%s,%s,%d) [%s] Expired!", clientid, username, access,hex);
 			HASH_DEL(ud->aclcache, a);
 		}
 	} else {
@@ -126,7 +127,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 		granted = a->granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			printf("EXPIRED!!!!!!!!!!!!!\n");
+			_log(DEBUG, " Cache for (%s,%s,%d) [%s] Expired!", clientid, username, access,hex);
 			HASH_DEL(ud->aclcache, a);
 		}
 	}
