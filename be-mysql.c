@@ -365,9 +365,7 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 				_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
 					expanded, v, bf);
 
-				if (expanded) {
-					free(expanded);
-				}
+				free(expanded);
 			}
 		}
 	}
