@@ -120,7 +120,7 @@ The following `auth_opt_` options are supported by the mysql back-end:
 | mysql_opt_reconnect | true         |             | enable MYSQL_OPT_RECONNECT option
 | mysql_auto_connect  | true         |             | enable auto_connect function
 | anonusername   |                   |             | username to use for anonymous connections
-| cacheseconds      | 300               |             | number of seconds to cache ACL lookups
+| cacheseconds   | 300               |             | number of seconds to cache ACL lookups. 0 disables
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
