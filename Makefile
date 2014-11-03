@@ -1,6 +1,6 @@
 # Load our module (and misc) configuration from config.mk
 # It also contains MOSQUITTO_SRC
--include config.mk
+include config.mk
 
 BE_CFLAGS =
 BE_LDFLAGS =
@@ -132,3 +132,8 @@ pwdb.cdb: pwdb.in
 clean :
 	rm -f *.o *.so np
 	(cd contrib/tinycdb-0.78; make realclean )
+
+config.mk:
+	@echo "Please create your own config.mk file"
+	@echo "You can use config.mk.in as base"
+	@false
