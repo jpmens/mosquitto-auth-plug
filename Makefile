@@ -58,7 +58,7 @@ ifneq ($(BACKEND_POSTGRES),no)
 	BACKENDSTR += PostgreSQL
 
 	BE_CFLAGS += -I`pg_config --includedir`
-	BE_LDADD += -lpq
+	BE_LDADD += -L`pg_config --libdir` -lpq
 	OBJS += be-postgres.o
 endif
 
