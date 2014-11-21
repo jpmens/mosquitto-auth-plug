@@ -93,7 +93,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
 	
 	re = curl_easy_perform(curl);
 	if (re == CURLE_OK) {
