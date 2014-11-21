@@ -76,6 +76,9 @@ to configure which back-ends you want to provide as well as the path to the
 After a `make` you should have a shared object called `auth-plug.so`
 which you will reference in your `mosquitto.conf`.
 
+Note that OpenSSL as shipped with OS X is probably too old. You may wish to use a version
+supplied by home brew or build your own, and then adapt `OPENSSLDIR` in `config.mk`.
+
 ## Configuration
 
 The plugin is configured in [Mosquitto]'s configuration file (typically `mosquitto.conf`),
