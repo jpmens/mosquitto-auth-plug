@@ -39,14 +39,41 @@
 struct redis_backend {
 	redisContext *redis;
 	char *host;
+	char *userquery;
+	char *aclquery;
 	int port;
+	int db;
 };
+
+
+static int be_redis_reconnect(struct redis_backend *conf)
+{
+	if (conf->redis != NULL) {
+		redisFree(conf->redis);
+		conf->redis = NULL;
+	}
+
+	struct timeval timeout = { 2, 500000 }; // 2.5 seconds
+	conf->redis = redisConnectWithTimeout(conf->host, conf->port, timeout);
+	if (conf->redis->err) {
+		_log(LOG_NOTICE, "Redis connection error: %s for %s:%d\n",
+		    conf->redis->errstr, conf->host, conf->port);
+		return 1;
+	}
+
+	redisReply *r =  redisCommand(conf->redis, "SELECT %i", conf->db);
+	if (r == NULL || conf->redis->err != REDIS_OK) {
+		return 2;
+	}
+	freeReplyObject(r);
+
+	return 0;
+}
 
 void *be_redis_init()
 {
 	struct redis_backend *conf;
-	struct timeval timeout = { 2, 500000 }; // 2.5 seconds
-	char *host, *p;
+	char *host, *p, *db, *userquery, *aclquery;
 
 	_log(LOG_DEBUG, "}}}} Redis");
 
@@ -54,6 +81,16 @@ void *be_redis_init()
 		host = "localhost";
 	if ((p = p_stab("redis_port")) == NULL)
 		p = "6379";
+	if ((db = p_stab("redis_db")) == NULL)
+		db = "0";
+	if ((userquery = p_stab("redis_userquery")) == NULL) {
+	    _fatal("Mandatory parameter `redis_userquery' missing");
+	    return (NULL);
+	}
+	if ((aclquery = p_stab("redis_aclquery")) == NULL) {
+	    _fatal("Mandatory parameter `redis_aclquery' missing");
+	    return (NULL);
+	}
 
 	conf = (struct redis_backend *)malloc(sizeof(struct redis_backend));
 	if (conf == NULL)
@@ -61,12 +98,16 @@ void *be_redis_init()
 
 	conf->host = strdup(host);
 	conf->port = atoi(p);
+	conf->db   = atoi(db);
+	conf->userquery = strdup(userquery);
+	conf->aclquery  = strdup(aclquery);
 
-	conf->redis = redisConnectWithTimeout(conf->host, conf->port, timeout);
-	if (conf->redis->err) {
-		_log(LOG_NOTICE, "Redis connection error: %s for %s:%d\n",
-			conf->redis->errstr, conf->host, conf->port);
+	conf->redis = NULL;
+
+	if (be_redis_reconnect(conf)) {
 		free(conf->host);
+		free(conf->userquery);
+		free(conf->aclquery);
 		free(conf);
 		return (NULL);
 	}
@@ -87,17 +128,23 @@ void be_redis_destroy(void *handle)
 char *be_redis_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct redis_backend *conf = (struct redis_backend *)handle;
+
 	redisReply *r;
 	char *pwhash = NULL;
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return (NULL);
 
-	r = redisCommand(conf->redis, "GET %b", username, strlen(username));
+	char *query = malloc(strlen(conf->userquery) + strlen(username) + 128);
+	sprintf(query, conf->userquery, username);
+
+	r = redisCommand(conf->redis, query);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
-		/* FIXME: reconnect */
+		be_redis_reconnect(conf);
 		return (NULL);
 	}
+
+	free(query);
 
 	if (r->type == REDIS_REPLY_STRING) {
 		pwhash = strdup(r->str);
@@ -112,10 +159,35 @@ int be_redis_superuser(void *conf, const char *username)
 	return 0;
 }
 
-int be_redis_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
+int be_redis_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
-	/* FIXME: implement. Currently TRUE */
+	struct redis_backend *conf = (struct redis_backend *)handle;
 
-	return 1;
+	redisReply *r;
+
+	if (conf == NULL || conf->redis == NULL || username == NULL)
+		return 0;
+
+	char *query = malloc(strlen(conf->aclquery) + strlen(username) + strlen(topic) + 128);
+	sprintf(query, conf->aclquery, username, topic);
+
+
+	r = redisCommand(conf->redis, query, username, acc);
+	if (r == NULL || conf->redis->err != REDIS_OK) {
+		be_redis_reconnect(conf);
+		return 0;
+	}
+
+	free(query);
+
+	int answer = 0;
+	if (r->type == REDIS_REPLY_STRING) {
+		int x = atoi(r->str);
+		if (x >= acc)
+			answer = 1;
+	}
+
+	freeReplyObject(r);
+	return answer;
 }
 #endif /* BE_REDIS */
