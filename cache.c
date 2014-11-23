@@ -96,6 +96,10 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		return;
 	}
 
+	if (!clientid || !username || !topic) {
+		return;
+	}
+
 	now = time(NULL);
 
 	hexify(clientid, username, topic, access, hex);
@@ -141,6 +145,11 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 	if (ud->cacheseconds <= 0) {
 		return (MOSQ_ERR_UNKNOWN);
 	}
+
+	if (!clientid || !username || !topic) {
+		return (MOSQ_ERR_UNKNOWN);
+	}
+
 	hexify(clientid, username, topic, access, hex);
 
 	HASH_FIND_STR(ud->aclcache, hex, a);
