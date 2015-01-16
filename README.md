@@ -607,3 +607,10 @@ Received DISCONNECT from mosqpub/90759-tiggr.ww.
  [1]: https://exyr.org/2011/hashing-passwords/
  [hiredis]: https://github.com/redis/hiredis
  [uthash]: http://troydhanson.github.io/uthash/
+
+## Possibly related
+
+ * [mosquitto_pyauth](https://github.com/mbachry/mosquitto_pyauth)
+ * [mosquitto-auth-plugin-http](https://github.com/hadleyrich/mosquitto-auth-plugin-http)
+ * [lua_auth_plugin](https://github.com/DenkiYagi/lua_auth_plugin)
+
