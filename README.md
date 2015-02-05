@@ -18,12 +18,12 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |
-| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |
-| acl checking               |   Y   |   1   |   1   |   1    |      |  2  |    Y     |  Y   |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | MongoDB |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-----: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y      |
+| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |         |
+| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  1      |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |  Y      |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
@@ -36,7 +36,7 @@ The configuration option is called `auth_opt_backends` and it takes a
 comma-separated list of back-end names which are checked in exactly that order.
 
 ```
-auth_opt_backends cdb,sqlite,mysql,redis,postgres
+auth_opt_backends cdb,sqlite,mysql,redis,postgres,http,mongo
 ```
 
 Note: anonymous MQTT connections are assigned a username of configured in the
