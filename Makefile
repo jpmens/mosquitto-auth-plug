@@ -82,7 +82,7 @@ ifneq ($(BACKEND_MONGO), no)
 	BACKENDS+= -DBE_MONGO
 	BACKENDSTR += MongoDB
 
-	BE_CFLAGS += -I/usr/local/include/ 
+	BE_CFLAGS += -I/usr/local/include/
 	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lmongoc-1.0 -lbson-1.0
 	OBJS += be-mongo.o
@@ -94,7 +94,7 @@ OSSLIBS = -L$(OPENSSLDIR)/lib -lcrypto
 CFLAGS = -I$(MOSQUITTO_SRC)/src/
 CFLAGS += -I$(MOSQUITTO_SRC)/lib/
 ifneq ($(OS),Windows_NT)
-	CFLAGS += -fPIC -Wall -Werror 
+	CFLAGS += -fPIC -Wall -Werror
 endif
 CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
 LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/
