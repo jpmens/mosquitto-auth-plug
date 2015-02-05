@@ -11,6 +11,7 @@ of several distinct back-ends:
 * TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
 * LDAP
 * HTTP (custom HTTP API)
+* MongoDB
 
 ## Introduction
 
