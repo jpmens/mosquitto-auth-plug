@@ -615,3 +615,6 @@ Received DISCONNECT from mosqpub/90759-tiggr.ww.
  * [mosquitto-auth-plugin-http](https://github.com/hadleyrich/mosquitto-auth-plugin-http)
  * [lua_auth_plugin](https://github.com/DenkiYagi/lua_auth_plugin)
 
+## Press
+
+ * [How to make Access Control Lists (ACL) work for Mosquitto MQTT Broker with Auth Plugin](http://my-classes.com/2015/02/05/acl-mosquitto-mqtt-broker-auth-plugin/)
