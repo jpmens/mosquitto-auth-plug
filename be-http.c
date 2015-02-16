@@ -73,18 +73,22 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	}
 	sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
 
-	/* Hoping the 1024 is sufficient for curl_easy_escapes ... */
 	data = (char *)malloc(strlen(username) + strlen(password) + strlen(topic) + strlen(clientid) + 1024);
 	if (data == NULL) {
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-	sprintf(data, "username=%s&password=%s&topic=%s&acc=%d&clientid=%s",
+	if (snprintf(data, strlen(username) + strlen(password) + strlen(topic) + strlen(clientid) + 1024,
+			"username=%s&password=%s&topic=%s&acc=%d&clientid=%s",
 			curl_easy_escape(curl, username, 0),
 			curl_easy_escape(curl, password, 0),
 			curl_easy_escape(curl, topic, 0),
 			acc,
-			curl_easy_escape(curl, clientid, 0));
+			curl_easy_escape(curl, clientid, 0)) == -1) {
+		
+		_fatal("ENOMEM");
+		return (FALSE);
+	}
 
 	_log(LOG_DEBUG, "url=%s", url);
 	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
