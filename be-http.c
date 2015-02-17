@@ -72,23 +72,25 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		return (FALSE);
 	}
 	sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
-
-	data = (char *)malloc(strlen(username) + strlen(password) + strlen(topic) + strlen(clientid) + 1024);
+	
+	char* escaped_username = curl_easy_escape(curl, username, 0);
+	char* escaped_password = curl_easy_escape(curl, password, 0);
+	char* escaped_topic = curl_easy_escape(curl, topic, 0);
+	char* escaped_clientid = curl_easy_escape(curl, clientid, 0);
+	char string_acc[20];
+	snprintf(string_acc, 20, "%d", acc);
+	
+	data = (char *)malloc(strlen(escaped_username) + strlen(escaped_password) + strlen(escaped_topic) + strlen(string_acc) + strlen(escaped_clientid) + 50);
 	if (data == NULL) {
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-	if (snprintf(data, strlen(username) + strlen(password) + strlen(topic) + strlen(clientid) + 1024,
-			"username=%s&password=%s&topic=%s&acc=%d&clientid=%s",
-			curl_easy_escape(curl, username, 0),
-			curl_easy_escape(curl, password, 0),
-			curl_easy_escape(curl, topic, 0),
-			acc,
-			curl_easy_escape(curl, clientid, 0)) == -1) {
-		
-		_fatal("ENOMEM");
-		return (FALSE);
-	}
+	sprintf(data, "username=%s&password=%s&topic=%s&acc=%s&clientid=%s",
+		escaped_username,
+		escaped_password,
+		escaped_topic,
+		string_acc,
+		clientid);
 
 	_log(LOG_DEBUG, "url=%s", url);
 	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -115,6 +117,10 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	curl_slist_free_all (headerlist);
 	free(url);
 	free(data);
+	free(escaped_username);
+	free(escaped_password);
+	free(escaped_topic);
+	free(escaped_clientid);
 	return (ok);
 }
 
