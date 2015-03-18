@@ -83,19 +83,22 @@ void *be_redis_init()
 		p = "6379";
 	if ((db = p_stab("redis_db")) == NULL)
 		db = "0";
+	if ((userquery = p_stab("redis_userquery")) == NULL) {
+	  userquery = "";
+	}
+	if ((aclquery = p_stab("redis_aclquery")) == NULL) {
+    aclquery = "";
+	}
 
 	conf = (struct redis_backend *)malloc(sizeof(struct redis_backend));
 	if (conf == NULL)
 		_fatal("Out of memory");
 
-  userquery = p_stab("redis_userquery");
-  aclquery = p_stab("redis_aclquery");
-
 	conf->host = strdup(host);
 	conf->port = atoi(p);
 	conf->db   = atoi(db);
-  conf->userquery = strdup(userquery);  
-  conf->aclquery  = strdup(aclquery);
+	conf->userquery = strdup(userquery);
+	conf->aclquery  = strdup(aclquery);
 
 	conf->redis = NULL;
 
@@ -130,10 +133,10 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return (NULL);
   
-  if (conf->userquery == NULL) {
+  if (strlen(conf->userquery) == 0) {
     conf->userquery = "GET %s";
   }
-  
+
 	char *query = malloc(strlen(conf->userquery) + strlen(username) + 128);
 	sprintf(query, conf->userquery, username);
 
@@ -167,8 +170,9 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return 0;
 
-  if (conf->aclquery == NULL) 
+  if (strlen(conf->aclquery) == 0) {
     return 1;
+  }
 
 	char *query = malloc(strlen(conf->aclquery) + strlen(username) + strlen(topic) + 128);
 	sprintf(query, conf->aclquery, username, topic);

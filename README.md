@@ -287,6 +287,13 @@ auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=
 
 ### Redis
 
+
+auth_opt_redis_userquery GET %s (param is username)
+auth_opt_redis_aclquery GET %s-%s (first param is username and second param is topic)
+
+If no options are provided then it will default to not using an ACL and using the above userquery.
+
+
 | Option         | default           |  Mandatory  | Meaning     |
 | -------------- | ----------------- | :---------: | ----------  |
 | redis_host     | localhost         |             | hostname / IP address
