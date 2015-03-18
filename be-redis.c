@@ -84,12 +84,10 @@ void *be_redis_init()
 	if ((db = p_stab("redis_db")) == NULL)
 		db = "0";
 	if ((userquery = p_stab("redis_userquery")) == NULL) {
-	    _fatal("Mandatory parameter `redis_userquery' missing");
-	    return (NULL);
+	  userquery = "";
 	}
 	if ((aclquery = p_stab("redis_aclquery")) == NULL) {
-	    _fatal("Mandatory parameter `redis_aclquery' missing");
-	    return (NULL);
+    aclquery = "";
 	}
 
 	conf = (struct redis_backend *)malloc(sizeof(struct redis_backend));
@@ -134,6 +132,10 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return (NULL);
+  
+  if (strlen(conf->userquery) == 0) {
+    conf->userquery = "GET %s";
+  }
 
 	char *query = malloc(strlen(conf->userquery) + strlen(username) + 128);
 	sprintf(query, conf->userquery, username);
@@ -167,6 +169,10 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return 0;
+
+  if (strlen(conf->aclquery) == 0) {
+    return 1;
+  }
 
 	char *query = malloc(strlen(conf->aclquery) + strlen(username) + strlen(topic) + 128);
 	sprintf(query, conf->aclquery, username, topic);
