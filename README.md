@@ -288,8 +288,12 @@ auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=
 ### Redis
 
 
+```
 auth_opt_redis_userquery GET %s (param is username)
 auth_opt_redis_aclquery GET %s-%s (first param is username and second param is topic)
+```
+
+In `auth_opt_redis_userquery` the parameter is the _username_, whereas in `auth_opt_redis_aclquery`, the first parameter is the _username_ and the second is the _topic_.
 
 If no options are provided then it will default to not using an ACL and using the above userquery.
 
