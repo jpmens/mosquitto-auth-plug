@@ -88,6 +88,9 @@ void *be_redis_init()
 	if (conf == NULL)
 		_fatal("Out of memory");
 
+  userquery = p_stab("redis_userquery");
+  aclquery = p_stab("redis_aclquery");
+
 	conf->host = strdup(host);
 	conf->port = atoi(p);
 	conf->db   = atoi(db);
