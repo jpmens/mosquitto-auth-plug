@@ -26,8 +26,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifdef BE_HTTP
+
+#define MAXPARAMSLEN  1024
+#define METHOD_GETUSER   1
+#define METHOD_SUPERUSER 2
+#define METHOD_ACLCHECK  3
 
 struct http_backend {
 	char *ip;
@@ -36,6 +40,9 @@ struct http_backend {
 	char *getuser_uri;
 	char *superuser_uri;
 	char *aclcheck_uri;
+	char *getuser_envs;
+	char *superuser_envs;
+	char *aclcheck_envs;
 };
 
 void *be_http_init();
