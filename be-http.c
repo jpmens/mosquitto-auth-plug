@@ -77,7 +77,11 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 			return (-1);
 		}
 		sprintf(data, "%s=%s&", escaped_key, escaped_val);
-		strcat(querystring, data);
+		if ( i == 0 ) {
+			sprintf(querystring, "%s", data);
+		} else {
+			strcat(querystring, data);
+		}
 	}
 
 	free(data);
