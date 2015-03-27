@@ -341,6 +341,29 @@ auth_opt_http_aclcheck_uri /acl
 
 A very simple example service using Python and bottle can be found in [examples/http-auth-be.py](examples/http-auth-be.py).
 
+The _http_ plugin can utilize environment variables which are exported before it (i.e. Mosquitto) is started by adding configuration settings like
+
+```
+auth_opt_<interface>_<method>_params <key>=<evn_name>[,<key>=<evn_name>]*
+```
+
+For example, set the following:
+
+```bash
+export DOMAIN=example.com
+export PORT=8080
+```
+
+and add the following settings to `mosquitto.conf`:
+
+```
+auth_opt_http_getuser_params domain=DOMAIN,port=PORT
+auth_opt_http_superuser_params domain=DOMAIN,port=PORT
+auth_opt_http_aclcheck_params domain=DOMAIN,port=PORT
+```
+
+
+
 ### PostgreSQL
 
 The `postgres`  like `mysql` back-end is currently the most feature-complete: it supports
