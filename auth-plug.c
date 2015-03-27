@@ -39,6 +39,7 @@
 #include "log.h"
 #include "hash.h"
 #include "backends.h"
+#include "envs.h"
 
 #include "be-psk.h"
 #include "be-cdb.h"

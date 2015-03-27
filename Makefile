@@ -6,7 +6,7 @@ BE_CFLAGS =
 BE_LDFLAGS =
 BE_LDADD =
 BE_DEPS =
-OBJS = auth-plug.o base64.o pbkdf2-check.o log.o hash.o be-psk.o backends.o cache.o
+OBJS = auth-plug.o base64.o pbkdf2-check.o log.o envs.o hash.o be-psk.o backends.o cache.o
 
 BACKENDS =
 BACKENDSTR =
@@ -116,7 +116,7 @@ printconfig:
 auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
 
-be-redis.o: be-redis.c be-redis.h log.h hash.h Makefile
+be-redis.o: be-redis.c be-redis.h log.h hash.h envs.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile cache.h
 be-psk.o: be-psk.c be-psk.h Makefile
@@ -127,6 +127,7 @@ be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 pbkdf2-check.o: pbkdf2-check.c base64.h Makefile
 base64.o: base64.c base64.h Makefile
 log.o: log.c log.h Makefile
+envs.o: envs.c envs.h Makefile
 hash.o: hash.c hash.h uthash.h Makefile
 be-postgres.o: be-postgres.c be-postgres.h Makefile
 cache.o: cache.c cache.h uthash.h Makefile
