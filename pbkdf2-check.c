@@ -33,7 +33,6 @@
 #include <openssl/evp.h>
 #include "base64.h"
 
-#define KEY_LENGTH      24
 #define SEPARATOR       "$"
 #define TRUE	(1)
 #define FALSE	(0)
@@ -83,19 +82,38 @@ int pbkdf2_check(char *password, char *hash)
 {
         static char *sha, *salt, *h_pw;
         int iterations, saltlen, blen;
-	char *b64;
-	unsigned char key[128];
+	char *b64, *keybuf;
+	unsigned char *out;
 	int match = FALSE;
 	const EVP_MD *evpmd;
+	int keylen;
 
         if (detoken(hash, &sha, &iterations, &salt, &h_pw) != 0)
 		return match;
+
+	/* Determine key length by decoding base64 */
+	if ((keybuf = malloc(strlen(h_pw) + 1)) == NULL) {
+		fprintf(stderr, "Out of memory\n");
+		return FALSE;
+	}
+	keylen = base64_decode(h_pw, keybuf);
+	if (keylen < 1) {
+		free(keybuf);
+		return (FALSE);
+	}
+	free(keybuf);
+
+	if ((out = malloc(keylen)) == NULL) {
+		fprintf(stderr, "Cannot allocate out; out of memory\n");
+		return (FALSE);
+	}
 
 #ifdef PWDEBUG
 	fprintf(stderr, "sha        =[%s]\n", sha);
 	fprintf(stderr, "iterations =%d\n", iterations);
 	fprintf(stderr, "salt       =[%s]\n", salt);
 	fprintf(stderr, "h_pw       =[%s]\n", h_pw);
+	fprintf(stderr, "kenlen     =[%d]\n", keylen);
 #endif
 
 	saltlen = strlen((char *)salt);
@@ -110,9 +128,9 @@ int pbkdf2_check(char *password, char *hash)
 	PKCS5_PBKDF2_HMAC(password, strlen(password),
                 (unsigned char *)salt, saltlen,
 		iterations,
-		evpmd, KEY_LENGTH, key);
+		evpmd, keylen, out);
 
-	blen = base64_encode(key, KEY_LENGTH, &b64);
+	blen = base64_encode(out, keylen, &b64);
 	if (blen > 0) {
 		int i, diff = 0, hlen = strlen(h_pw);
 #ifdef PWDEBUG
@@ -134,6 +152,7 @@ int pbkdf2_check(char *password, char *hash)
 	free(sha);
 	free(salt);
 	free(h_pw);
+	free(out);
 
 	return match;
 }
@@ -141,17 +160,13 @@ int pbkdf2_check(char *password, char *hash)
 #if TEST
 int main()
 {
-        // char password[] = "hello";
-	// char PB1[] = "PBKDF2$sha256$10000$eytf9sEo8EprP9P3$2eO6tROHiqI3bm+gg+vpmWooWMpz1zji";
-        char password[] = "supersecret";
-	char PB1[] = "PBKDF2$sha256$10000$YEbSTt8FaMRDq/ib$Kt97+sMCYg00mqMOBAYinqZlnxX8HqHk";
-	// char PB1[] = "PBKDF2$sha1$10000$XWfyPLeC9gsD6SbI$HOnjU4Ux7RpeBHdqYxpIGH1R5qCCtNA1";
-	// char PB1[] = "PBKDF2$sha512$10000$v/aaCgBZ+VZN5L8n$BpgjSTyb4weVxr9cA2mvQ+jaCyaAPeYe";
+        char password[] = "password";
+	char pbkstr[] = "PBKDF2$sha1$98$XaIs9vQgmLujKHZG4/B3dNTbeP2PyaVKySTirZznBrE=$2DX/HZDTojVbfgAIdozBi6CihjWP1+akYnh/h9uQfIVl6pLoAiwJe1ey2WW2BnT+";
 	int match;
 
-	printf("Checking password [%s] for %s\n", password, PB1);
+	printf("Checking password [%s] for %s\n", password, pbkstr);
 
-	match = pbkdf2_check(password, PB1);
+	match = pbkdf2_check(password, pbkstr);
 	printf("match == %d\n", match);
 	return match;
 }
