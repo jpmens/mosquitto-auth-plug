@@ -86,7 +86,7 @@ int pbkdf2_check(char *password, char *hash)
 	unsigned char *out;
 	int match = FALSE;
 	const EVP_MD *evpmd;
-	int keylen;
+	int keylen, rc;
 
         if (detoken(hash, &sha, &iterations, &salt, &h_pw) != 0)
 		return match;
@@ -125,10 +125,13 @@ int pbkdf2_check(char *password, char *hash)
 		evpmd = EVP_sha512();
 	}
 
-	PKCS5_PBKDF2_HMAC(password, strlen(password),
+	rc = PKCS5_PBKDF2_HMAC(password, strlen(password),
                 (unsigned char *)salt, saltlen,
 		iterations,
 		evpmd, keylen, out);
+	if (rc != 1) {
+		goto out;
+	}
 
 	blen = base64_encode(out, keylen, &b64);
 	if (blen > 0) {
@@ -149,6 +152,7 @@ int pbkdf2_check(char *password, char *hash)
 		free(b64);
 	}
 
+  out:
 	free(sha);
 	free(salt);
 	free(h_pw);
