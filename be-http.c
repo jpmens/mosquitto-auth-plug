@@ -130,7 +130,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	}
 	
 	// enable the https
-	if (strcpy(conf->with_ssl, "true") == 0){
+	if (strcmp(conf->with_ssl, "true") == 0){
 		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
 	}else{
 		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
