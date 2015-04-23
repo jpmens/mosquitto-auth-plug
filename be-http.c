@@ -128,7 +128,13 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-	sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
+	
+	// enable the https
+	if (strcpy(conf->with_ssl, "true") == 0){
+		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
+	}else{
+		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
+	}
 
 	char* escaped_username = curl_easy_escape(curl, username, 0);
 	char* escaped_password = curl_easy_escape(curl, password, 0);
@@ -250,7 +256,14 @@ void *be_http_init()
 	conf->getuser_envs = p_stab("http_getuser_params");
 	conf->superuser_envs = p_stab("http_superuser_params");
 	conf->aclcheck_envs = p_stab("http_aclcheck_params");
+	
+	if (p_stab("http_with_ssl") != NULL) {
+		conf->with_ssl = p_stab("http_with_ssl");
+	} else {
+		conf->with_ssl = "false";
+	}
 
+	_log(LOG_DEBUG, "with_ssl=%s", conf->with_ssl);
 	_log(LOG_DEBUG, "getuser_uri=%s", getuser_uri);
 	_log(LOG_DEBUG, "superuser_uri=%s", superuser_uri);
 	_log(LOG_DEBUG, "aclcheck_uri=%s", aclcheck_uri);
