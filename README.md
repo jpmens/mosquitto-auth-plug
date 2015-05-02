@@ -317,6 +317,7 @@ The following `auth_opt_` options are supported by the `http` back-end:
 | http_getuser_uri  |                   |      Y      | URI for check username/password |
 | http_superuser_uri|                   |      Y      | URI for check superuser         |
 | http_aclcheck_uri |                   |      Y      | URI for check acl               |
+| http_with_tls     | false             |      N      | Use TLS on connect              |
 
 If the configured URLs return an HTTP status code == `200`, the authentication /
 authorization succeeds, else it fails.

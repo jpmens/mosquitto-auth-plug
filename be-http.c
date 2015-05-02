@@ -130,7 +130,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	}
 	
 	// enable the https
-	if (strcmp(conf->with_ssl, "true") == 0){
+	if (strcmp(conf->with_tls, "true") == 0){
 		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
 	}else{
 		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
@@ -257,13 +257,13 @@ void *be_http_init()
 	conf->superuser_envs = p_stab("http_superuser_params");
 	conf->aclcheck_envs = p_stab("http_aclcheck_params");
 	
-	if (p_stab("http_with_ssl") != NULL) {
-		conf->with_ssl = p_stab("http_with_ssl");
+	if (p_stab("http_with_tls") != NULL) {
+		conf->with_tls = p_stab("http_with_tls");
 	} else {
-		conf->with_ssl = "false";
+		conf->with_tls = "false";
 	}
 
-	_log(LOG_DEBUG, "with_ssl=%s", conf->with_ssl);
+	_log(LOG_DEBUG, "with_tls=%s", conf->with_tls);
 	_log(LOG_DEBUG, "getuser_uri=%s", getuser_uri);
 	_log(LOG_DEBUG, "superuser_uri=%s", superuser_uri);
 	_log(LOG_DEBUG, "aclcheck_uri=%s", aclcheck_uri);
