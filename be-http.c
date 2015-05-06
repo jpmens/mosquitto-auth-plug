@@ -149,6 +149,9 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
+
+	memset(string_envs, 0, MAXPARAMSLEN);
+
 	//get the sys_env from here
 	int env_num = 0;
 	if ( method == METHOD_GETUSER && conf->getuser_envs != NULL ){
