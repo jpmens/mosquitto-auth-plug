@@ -37,7 +37,6 @@
 struct userdata {
 	struct backend_p **be_list;
 	char *superusers;		/* Static glob list */
-	int authentication_be;		/* Back-end number user was authenticated in */
 	int fallback_be;		/* Backend to use for anonymous connections */
 	char *anonusername;		/* Configured name of anonymous MQTT user */
 	time_t cacheseconds;		/* number of seconds to cache ACL lookups */
