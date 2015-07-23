@@ -156,11 +156,11 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 	if (a) {
 		// printf("---> CACHED! %d\n", a->granted);
 
-		granted = a->granted;
-
 		if (time(NULL) > (a->seconds + cacheseconds)) {
 			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
+		} else {
+			granted = a->granted;
 		}
 	}
 
