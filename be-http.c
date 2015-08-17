@@ -104,6 +104,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	int ok = FALSE;
 	char *url;
 	char *data;
+	char *userpwd;
 
 	if (username == NULL) {
 		return (FALSE);
@@ -128,7 +129,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-	
+
 	// enable the https
 	if (strcmp(conf->with_tls, "true") == 0){
 		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
@@ -179,6 +180,13 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		string_acc,
 		clientid);
 
+	userpwd = (char *)malloc(strlen(username) + strlen(password) + 2);
+	if (userpwd == NULL) {
+		_fatal("ENOMEM");
+		return (FALSE);
+	}
+	sprintf(userpwd, "%s:%s", username, password);
+
 	_log(LOG_DEBUG, "url=%s", url);
 	_log(LOG_DEBUG, "data=%s", data);
 	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -187,6 +195,8 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	curl_easy_setopt(curl, CURLOPT_USERPWD, userpwd);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
 
 	re = curl_easy_perform(curl);
@@ -210,6 +220,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	free(escaped_password);
 	free(escaped_topic);
 	free(escaped_clientid);
+	free(userpwd);
 	return (ok);
 }
 
@@ -259,7 +270,7 @@ void *be_http_init()
 	conf->getuser_envs = p_stab("http_getuser_params");
 	conf->superuser_envs = p_stab("http_superuser_params");
 	conf->aclcheck_envs = p_stab("http_aclcheck_params");
-	
+
 	if (p_stab("http_with_tls") != NULL) {
 		conf->with_tls = p_stab("http_with_tls");
 	} else {
