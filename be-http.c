@@ -104,7 +104,6 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	int ok = FALSE;
 	char *url;
 	char *data;
-	char *userpwd;
 
 	if (username == NULL) {
 		return (FALSE);
@@ -180,13 +179,6 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		string_acc,
 		clientid);
 
-	userpwd = (char *)malloc(strlen(username) + strlen(password) + 2);
-	if (userpwd == NULL) {
-		_fatal("ENOMEM");
-		return (FALSE);
-	}
-	sprintf(userpwd, "%s:%s", username, password);
-
 	_log(LOG_DEBUG, "url=%s", url);
 	_log(LOG_DEBUG, "data=%s", data);
 	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -196,7 +188,8 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
 	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-	curl_easy_setopt(curl, CURLOPT_USERPWD, userpwd);
+	curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+	curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
 
 	re = curl_easy_perform(curl);
@@ -220,7 +213,6 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	free(escaped_password);
 	free(escaped_topic);
 	free(escaped_clientid);
-	free(userpwd);
 	return (ok);
 }
 
