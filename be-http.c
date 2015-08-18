@@ -128,7 +128,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-	
+
 	// enable the https
 	if (strcmp(conf->with_tls, "true") == 0){
 		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
@@ -187,6 +187,9 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+	curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
 
 	re = curl_easy_perform(curl);
@@ -259,7 +262,7 @@ void *be_http_init()
 	conf->getuser_envs = p_stab("http_getuser_params");
 	conf->superuser_envs = p_stab("http_superuser_params");
 	conf->aclcheck_envs = p_stab("http_aclcheck_params");
-	
+
 	if (p_stab("http_with_tls") != NULL) {
 		conf->with_tls = p_stab("http_with_tls");
 	} else {
