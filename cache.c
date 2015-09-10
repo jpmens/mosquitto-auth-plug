@@ -111,6 +111,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		if (time(NULL) > (a->seconds + cacheseconds)) {
 			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
+			free(a);
 		}
 	} else {
 		a = (struct aclcache *)malloc(sizeof(struct aclcache));
@@ -130,6 +131,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		if (now > (a->seconds + ud->cacheseconds)) {
 			_log(DEBUG, " Cleanup [%s]", a->hex);
 			HASH_DEL(ud->aclcache, a);
+			free(a);
 		}
 	}
 }
@@ -156,11 +158,12 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 	if (a) {
 		// printf("---> CACHED! %d\n", a->granted);
 
-		granted = a->granted;
-
 		if (time(NULL) > (a->seconds + cacheseconds)) {
 			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
+			free(a);
+		} else {
+			granted = a->granted;
 		}
 	}
 
