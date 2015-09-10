@@ -114,7 +114,6 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	memset(*userdata, 0, sizeof(struct userdata));
 	ud = *userdata;
 	ud->superusers	= NULL;
-	ud->authentication_be = -1;
 	ud->fallback_be = -1;
 	ud->anonusername = strdup("anonymous");
 	ud->cacheseconds = 300;
@@ -394,8 +393,6 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_ERR_AUTH;
 
-	ud->authentication_be = -1;
-
 	_log(LOG_DEBUG, "mosquitto_auth_unpwd_check(%s)", (username) ? username : "<nil>");
 
 	for (nord = 0, bep = ud->be_list; bep && *bep; bep++, nord++) {
@@ -411,7 +408,6 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 
 		phash = b->getuser(b->conf, username, password, &authenticated);
 		if (authenticated == TRUE) {
-			ud->authentication_be = nord;
 			break;
 		}
 		if (phash != NULL) {
@@ -421,7 +417,6 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 				/* Mark backend index in userdata so we can check
 				 * authorization in this back-end only.
 				 */
-				ud->authentication_be = nord;
 				break;
 			}
 		}
@@ -445,7 +440,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *backend_name = NULL;
-	int match = 0, authorized = FALSE, nord;
+	int match = 0, authorized = FALSE;
 	int granted = MOSQ_ERR_ACL_DENIED;
 
 	if (!username || !*username) { 	// anonymous users
@@ -499,34 +494,19 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	 * Check authorization in the back-end used to authenticate the user.
 	 */
 
-	nord = ud->authentication_be;
-	if (nord < 0 || nord >= NBACKENDS) {
-		nord = ud->fallback_be;
+	for (bep = ud->be_list; bep && *bep; bep++) {
+		struct backend_p *b = *bep;
+
+		match = b->aclcheck((*bep)->conf, clientid, username, topic, access);
+		if (match == 1) {
+			backend_name = b->name;
+			_log(DEBUG, "aclcheck(%s, %s, %d) trying to acl with %s",
+				username, topic, access, b->name);
+			authorized = TRUE;
+			break;
 	}
-	backend_name = (nord >= 0 && nord < NBACKENDS) ?  ud->be_list[nord]->name : "<nil>";
-
-	if ((nord < 0) || (nord >= NBACKENDS)) {
-		_log(LOG_NOTICE, "nord is %d: unpossible!", nord);
-		granted = MOSQ_ERR_ACL_DENIED;
-		goto outout;
-	}
-
-	/* FIXME: |-- user bridge was authenticated in back-end 16 (<nil>)  */
-	_log(LOG_NOTICE, "user %s was authenticated in back-end %d (%s)",
-		username, nord, (backend_name) ? backend_name : "<nil>");
-
-
-	bep = &ud->be_list[nord];
-	if (nord == -1 || !bep) {
-		granted = MOSQ_ERR_ACL_DENIED;
-		goto outout;
 	}
 
-
-	match = (*bep)->aclcheck((*bep)->conf, clientid, username, topic, access);
-	if (match == 1) {
-		authorized = TRUE;
-	}
 
 	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
 		username, topic, access, authorized, backend_name);
@@ -572,8 +552,6 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 		free(psk_key);
 		psk_found = TRUE;
 	}
-
-	ud->authentication_be = 0;		/* PSK */
 
 	// free(username);
 
