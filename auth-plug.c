@@ -36,6 +36,14 @@
 #include <fnmatch.h>
 #include <time.h>
 
+#if LIBMOSQUITTO_VERSION_NUMBER >= 1004090
+# define MOSQ_DENY_AUTH	MOSQ_ERR_PLUGIN_DEFER
+# define MOSQ_DENY_ACL	MOSQ_ERR_PLUGIN_DEFER
+#else
+# define MOSQ_DENY_AUTH	MOSQ_ERR_AUTH
+# define MOSQ_DENY_ACL	MOSQ_ERR_ACL_DENIED
+#endif
+
 #include "log.h"
 #include "hash.h"
 #include "backends.h"
@@ -391,7 +399,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	int match, authenticated = FALSE, nord;
 
 	if (!username || !*username || !password || !*password)
-		return MOSQ_ERR_AUTH;
+		return MOSQ_DENY_AUTH;
 
 	_log(LOG_DEBUG, "mosquitto_auth_unpwd_check(%s)", (username) ? username : "<nil>");
 
@@ -426,13 +434,13 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	backend_name = (authenticated) ? (*bep)->name : "none";
 
 	_log(DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
-		username, authenticated, backend_name);
+		username, authenticated, (backend_name) ? backend_name : "none");
 
 	if (phash != NULL) {
 		free(phash);
 	}
 
-	return (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
+	return (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
 }
 
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
@@ -441,7 +449,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct backend_p **bep;
 	char *backend_name = NULL;
 	int match = 0, authorized = FALSE;
-	int granted = MOSQ_ERR_ACL_DENIED;
+	int granted = MOSQ_DENY_ACL;
 
 	if (!username || !*username) { 	// anonymous users
 		username = ud->anonusername;
@@ -462,7 +470,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	}
 
 	if (!username || !*username || !topic || !*topic) {
-		granted =  MOSQ_ERR_ACL_DENIED;
+		granted =  MOSQ_DENY_ACL;
 		goto outout;
 	}
 
@@ -511,7 +519,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
 		username, topic, access, authorized, backend_name);
 
-	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_ERR_ACL_DENIED;
+	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_DENY_ACL;
 
    outout:	/* goto fail goto fail */
 
@@ -555,9 +563,9 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 
 	// free(username);
 
-	return (psk_found) ? MOSQ_ERR_SUCCESS : MOSQ_ERR_AUTH;
+	return (psk_found) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
 
 #else /* !BE_PSK */
-	return MOSQ_ERR_AUTH;
+	return MOSQ_DENY_AUTH;
 #endif /* BE_PSK */
 }
