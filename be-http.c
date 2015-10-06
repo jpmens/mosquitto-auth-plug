@@ -195,7 +195,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	re = curl_easy_perform(curl);
 	if (re == CURLE_OK) {
 		re = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &respCode);
-		if (re == CURLE_OK && respCode == 200) {
+		if (re == CURLE_OK && respCode >= 200 && respCode < 300) {
 			ok = TRUE;
 		} else {
 			//_log(LOG_NOTICE, "http auth fail re=%d respCode=%d", re, respCode);
