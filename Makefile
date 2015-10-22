@@ -2,7 +2,6 @@
 # It also contains MOSQUITTO_SRC
 include config.mk
 
-CC = gcc
 BE_CFLAGS =
 BE_LDFLAGS =
 BE_LDADD =
@@ -83,8 +82,8 @@ ifneq ($(BACKEND_MONGO), no)
 	BACKENDS+= -DBE_MONGO
 	BACKENDSTR += MongoDB
 
-	BE_CFLAGS += -I/usr/include/libmongoc-1.0 -I/usr/include/libbson-1.0
-	BE_LDFLAGS += -L/usr/lib64/ 
+	BE_CFLAGS += -I/usr/local/include/
+	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lmongoc-1.0 -lbson-1.0
 	OBJS += be-mongo.o
 endif
@@ -97,17 +96,16 @@ CFLAGS += -I$(MOSQUITTO_SRC)/lib/
 ifneq ($(OS),Windows_NT)
 	CFLAGS += -fPIC -Wall -Werror
 endif
-CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQUITTO_SRC)/src -DDEBUG=1 $(OSSLINC) 
-LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/ 
+CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
+LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
-CFLAGS += -L/usr/lib/x86_64-linux-gnu/libcares -lcares
-LDADD = $(BE_LDADD) $(OSSLIBS) -L/usr/lib/x86_64-linux-gnu/libmosquitto -lmosquitto
+LDFLAGS += -lcares
+LDADD = $(BE_LDADD) $(OSSLIBS) -lmosquitto
 
 all: printconfig auth-plug.so np
 
 printconfig:
-	@echo "flags:		$(LDFLAGS)"
 	@echo "Selected backends:         $(BACKENDSTR)"
 	@echo "Using mosquitto source dir: $(MOSQUITTO_SRC)"
 	@echo "OpenSSL install dir:        $(OPENSSLDIR)"
@@ -115,8 +113,8 @@ printconfig:
 	@echo "If you changed the backend selection, you might need to 'make clean' first"
 	@echo
 
-auth-plug.so : $(OBJS)
-	$(CC) $(LDFLAGS) $(CFLAGS) -fPIC -shared -o $@ $(OBJS) $(LDADD)
+auth-plug.so : $(OBJS) $(BE_DEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
 
 be-redis.o: be-redis.c be-redis.h log.h hash.h envs.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile

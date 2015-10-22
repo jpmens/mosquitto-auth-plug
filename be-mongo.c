@@ -14,13 +14,7 @@
 #include <mongoc.h>
 #include "hash.h"
 #include "log.h"
-
-
-#define dbName "mqGate"
-#define colName "users"
-#define passLoc "password"
-#define topicLoc "topics"
-#define topicID "_id"
+#include "mongoParam.h"
 
 struct mongo_backend {
     mongoc_client_t *client;
@@ -124,27 +118,22 @@ int be_mongo_superuser(void *conf, const char *username)
 	return 0;
 }
 
-int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
+int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
 {
-	/* FIXME: implement. Currently TRUE */
-	struct mongo_backend *conf = (struct mongo_backend *) handle;
+	struct mongo_backend *handle = (struct mongo_backend *) conf;
 	mongoc_collection_t *collection;
 	mongoc_cursor_t *cursor;
 	bson_error_t error;
 	const bson_t *doc;
-//	const bson_t *doc2;
 	bool check = false;
 	int match = 0;
 
 	bson_t query;
-	//bson_t query2;
-	//char *topicStr; //= malloc(100);
-	//memset(result, 0, 100);
 
 	bson_init(&query);
 	bson_append_utf8(&query, "username", -1, username, -1);
 
-	collection = mongoc_client_get_collection(conf->client, dbName, colName);
+	collection = mongoc_client_get_collection(handle->client, dbName, colName);
 
 	cursor = mongoc_collection_find(collection,
 									MONGOC_QUERY_NONE,
@@ -156,7 +145,7 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 									NULL);
 	bson_iter_t iter;
 	int foundFlag = 0;
-	//TODO: many topics
+
 	while (!mongoc_cursor_error (cursor, &error) &&
 			mongoc_cursor_more (cursor)) {
 		if (foundFlag == 0 && mongoc_cursor_next (cursor, &doc)) {
@@ -171,7 +160,7 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 				
 				bson_init(&query);
 				bson_append_int64(&query, topicID, -1, topId);
-				collection = mongoc_client_get_collection(conf->client, dbName, topicLoc);
+				collection = mongoc_client_get_collection(handle->client, dbName, topicLoc);
 				cursor = mongoc_collection_find(collection,
 												MONGOC_QUERY_NONE,
 												0,
@@ -181,15 +170,6 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 												NULL,
 												NULL);		
 				foundFlag = 1;
-				//_log(LOG_NOTICE, "SIZETOPIC: %d", topId);				
-
-				//size_t tmp = strlen(src);
-				//topicStr = (char *)malloc(tmp);
-				//int topicID;
-				//_log(LOG_NOTICE, "SIZETOPIC: %s", src);
-				//memset(topicStr, 0, tmp);
-				//memcpy(topicStr, src, tmp); 
-				//break;
 		}
 		if (foundFlag == 1 && mongoc_cursor_next(cursor, &doc)) {
 				
@@ -217,7 +197,6 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 					bson_free(str);
 				}
 			}
-			//bson_free(str);
 
 		}
 
@@ -229,15 +208,6 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 			return 0;
 	}
 	
-	//_log(LOG_NOTICE, "TOPIC PASSED: %s ^^^^^ TOPIC AUTHING TO: %s",topic,topicStr);
-	
-	//mosquitto_topic_matches_sub(topicStr,topic, &check);
-
-	//_log(LOG_NOTICE, "MATCHED?: %d",(match |= check) );
-	
-	//free(topicStr);
-	
-
 
 	bson_destroy(&query);
 	mongoc_cursor_destroy (cursor);

@@ -1,4 +1,5 @@
 np
+*.swp
 *.o
 *.so
 *.pyc
