@@ -20,6 +20,7 @@
 #define colName "users"
 #define passLoc "password"
 #define topicLoc "topics"
+#define topicID "_id"
 
 struct mongo_backend {
     mongoc_client_t *client;
@@ -43,7 +44,6 @@ void *be_mongo_init()
      strcat(uristr, ":");
      strcat(uristr, p);
      printf("mongo: [%s]\n", uristr);
-   //"mongodb://127.0.0.1:27017/";
 
     conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
    mongoc_init ();
@@ -60,16 +60,12 @@ void *be_mongo_init()
 char *be_mongo_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
     struct mongo_backend *conf = (struct mongo_backend *)handle;
-	//_log(LOG_NOTICE, "GETTING USER: %s", password);
    mongoc_collection_t *collection;
    mongoc_cursor_t *cursor;
    bson_error_t error;
    const bson_t *doc;
- //  const char *collection_name = colName;
    bson_t query;
-   //char *str = NULL;
-   char *result;// = malloc(50);
-   //memset(result, 0, 50);
+   char *result;
 
    bson_init (&query);
 
@@ -93,17 +89,11 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
          bson_iter_init(&iter, doc);
          bson_iter_find(&iter, passLoc);
-         //fprintf (stdout, "%s\n", bson_iter_utf8(&iter, NULL));
-         //str = bson_as_json (doc, NULL); //TODO: needed?
-		 
-         //fprintf (stdout, "%s\n", str);
-         //bson_free (str);
 		 
          char *src = (char *)bson_iter_utf8(&iter, NULL);
 		 size_t tmp = strlen(src); 
 		 result = (char *) malloc(tmp);
 		 memset(result, 0, tmp);
-		 //_log(LOG_NOTICE, "GOT PASS: %s",src);
          memcpy(result, src, tmp);
       }
    }
@@ -112,7 +102,6 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
       fprintf (stderr, "Cursor Failure: %s\n", error.message);
       return result;
    }
-	//_log(LOG_NOTICE, "PASSWORD: %s",result);
    bson_destroy (&query);
    mongoc_cursor_destroy (cursor);
    mongoc_collection_destroy (collection);
@@ -181,7 +170,7 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 				mongoc_collection_destroy(collection);
 				
 				bson_init(&query);
-				bson_append_int64(&query, "_id", -1, topId);
+				bson_append_int64(&query, topicID, -1, topId);
 				collection = mongoc_client_get_collection(conf->client, dbName, topicLoc);
 				cursor = mongoc_collection_find(collection,
 												MONGOC_QUERY_NONE,
@@ -191,7 +180,6 @@ int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, 
 												&query,
 												NULL,
 												NULL);		
-				_log(LOG_NOTICE, "SIZETOPIC: %d", topId);		
 				foundFlag = 1;
 				//_log(LOG_NOTICE, "SIZETOPIC: %d", topId);				
 
