@@ -10,8 +10,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mosquitto.h>
 #include <mongoc.h>
 #include "hash.h"
+#include "log.h"
+
+
+#define dbName "mqGate"
+#define colName "users"
+#define passLoc "password"
+#define topicLoc "topics"
 
 struct mongo_backend {
     mongoc_client_t *client;
@@ -52,21 +60,22 @@ void *be_mongo_init()
 char *be_mongo_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
     struct mongo_backend *conf = (struct mongo_backend *)handle;
+	//_log(LOG_NOTICE, "GETTING USER: %s", password);
    mongoc_collection_t *collection;
    mongoc_cursor_t *cursor;
    bson_error_t error;
    const bson_t *doc;
-   const char *collection_name = "passport";
+ //  const char *collection_name = colName;
    bson_t query;
-   char *str = NULL;
-   char *result = malloc(33);
-   memset(result, 0, 33);
+   //char *str = NULL;
+   char *result;// = malloc(50);
+   //memset(result, 0, 50);
 
    bson_init (&query);
 
    bson_append_utf8 (&query, "username", -1, username, -1);
 
-   collection = mongoc_client_get_collection (conf->client, "cas", collection_name);
+   collection = mongoc_client_get_collection (conf->client, dbName, colName);
    cursor = mongoc_collection_find (collection,
                                     MONGOC_QUERY_NONE,
                                     0,
@@ -83,13 +92,19 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
       if (mongoc_cursor_next (cursor, &doc)) {
 
          bson_iter_init(&iter, doc);
-         bson_iter_find(&iter, "pwd");
+         bson_iter_find(&iter, passLoc);
          //fprintf (stdout, "%s\n", bson_iter_utf8(&iter, NULL));
-         str = bson_as_json (doc, NULL);
+         //str = bson_as_json (doc, NULL); //TODO: needed?
+		 
          //fprintf (stdout, "%s\n", str);
-         bson_free (str);
+         //bson_free (str);
+		 
          char *src = (char *)bson_iter_utf8(&iter, NULL);
-         memcpy(result, src, strlen(src));
+		 size_t tmp = strlen(src); 
+		 result = (char *) malloc(tmp);
+		 memset(result, 0, tmp);
+		 //_log(LOG_NOTICE, "GOT PASS: %s",src);
+         memcpy(result, src, tmp);
       }
    }
 
@@ -97,7 +112,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
       fprintf (stderr, "Cursor Failure: %s\n", error.message);
       return result;
    }
-
+	//_log(LOG_NOTICE, "PASSWORD: %s",result);
    bson_destroy (&query);
    mongoc_cursor_destroy (cursor);
    mongoc_collection_destroy (collection);
@@ -120,10 +135,131 @@ int be_mongo_superuser(void *conf, const char *username)
 	return 0;
 }
 
-int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
+int be_mongo_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	/* FIXME: implement. Currently TRUE */
+	struct mongo_backend *conf = (struct mongo_backend *) handle;
+	mongoc_collection_t *collection;
+	mongoc_cursor_t *cursor;
+	bson_error_t error;
+	const bson_t *doc;
+//	const bson_t *doc2;
+	bool check = false;
+	int match = 0;
 
-	return 1;
+	bson_t query;
+	//bson_t query2;
+	//char *topicStr; //= malloc(100);
+	//memset(result, 0, 100);
+
+	bson_init(&query);
+	bson_append_utf8(&query, "username", -1, username, -1);
+
+	collection = mongoc_client_get_collection(conf->client, dbName, colName);
+
+	cursor = mongoc_collection_find(collection,
+									MONGOC_QUERY_NONE,
+									0,
+									0,
+									0,
+									&query,
+									NULL,
+									NULL);
+	bson_iter_t iter;
+	int foundFlag = 0;
+	//TODO: many topics
+	while (!mongoc_cursor_error (cursor, &error) &&
+			mongoc_cursor_more (cursor)) {
+		if (foundFlag == 0 && mongoc_cursor_next (cursor, &doc)) {
+				bson_iter_init(&iter, doc);
+				bson_iter_find(&iter, topicLoc);
+
+				int64_t topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
+
+				bson_destroy(&query);
+				mongoc_cursor_destroy(cursor);
+				mongoc_collection_destroy(collection);
+				
+				bson_init(&query);
+				bson_append_int64(&query, "_id", -1, topId);
+				collection = mongoc_client_get_collection(conf->client, dbName, topicLoc);
+				cursor = mongoc_collection_find(collection,
+												MONGOC_QUERY_NONE,
+												0,
+												0,
+												0,
+												&query,
+												NULL,
+												NULL);		
+				_log(LOG_NOTICE, "SIZETOPIC: %d", topId);		
+				foundFlag = 1;
+				//_log(LOG_NOTICE, "SIZETOPIC: %d", topId);				
+
+				//size_t tmp = strlen(src);
+				//topicStr = (char *)malloc(tmp);
+				//int topicID;
+				//_log(LOG_NOTICE, "SIZETOPIC: %s", src);
+				//memset(topicStr, 0, tmp);
+				//memcpy(topicStr, src, tmp); 
+				//break;
+		}
+		if (foundFlag == 1 && mongoc_cursor_next(cursor, &doc)) {
+				
+			bson_iter_init(&iter, doc);
+			bson_iter_find(&iter, topicLoc);
+			uint32_t len;
+			const uint8_t *arr;
+			bson_iter_array(&iter, &len, &arr);
+			bson_t b;
+			
+			
+			
+			if (bson_init_static(&b, arr, len))	{
+				bson_iter_init(&iter, &b);
+				while (bson_iter_next(&iter)) {
+			
+					char *str = bson_iter_dup_utf8(&iter, &len);
+
+					mosquitto_topic_matches_sub(str, topic, &check);
+					if (check) {
+							match = 1;
+							bson_free(str);
+							break;
+					}
+					bson_free(str);
+				}
+			}
+			//bson_free(str);
+
+		}
+
+	}
+	
+
+	if (mongoc_cursor_error (cursor, &error)) {
+			fprintf (stderr, "Cursor Failure: %s\n", error.message);
+			return 0;
+	}
+	
+	//_log(LOG_NOTICE, "TOPIC PASSED: %s ^^^^^ TOPIC AUTHING TO: %s",topic,topicStr);
+	
+	//mosquitto_topic_matches_sub(topicStr,topic, &check);
+
+	//_log(LOG_NOTICE, "MATCHED?: %d",(match |= check) );
+	
+	//free(topicStr);
+	
+
+
+	bson_destroy(&query);
+	mongoc_cursor_destroy (cursor);
+	mongoc_collection_destroy(collection);
+
+
+	
+
+
+
+	return match;
 }
 #endif /* BE_MONGO */
