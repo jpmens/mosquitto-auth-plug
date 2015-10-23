@@ -22,8 +22,8 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 | Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | MongoDB |
 | -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-----: |
 | authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y      |
-| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |         |
-| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  1      |
+| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |  Y      |
+| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  Y      |
 | static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |  Y      |
 
  1. Currently not implemented; back-end returns TRUE

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <mosquitto.h>
 #include <mongoc.h>
+#include <unistd.h>
 #include "hash.h"
 #include "log.h"
 #include "mongoParam.h"
@@ -58,6 +59,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
    mongoc_cursor_t *cursor;
    bson_error_t error;
    const bson_t *doc;
+   bson_iter_t iter;
    bson_t query;
    char *result;
 
@@ -76,7 +78,6 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
                                     NULL); /* Read Prefs, NULL for default */
 
 
-   bson_iter_t iter;
    while (!mongoc_cursor_error (cursor, &error) &&
           mongoc_cursor_more (cursor)) {
       if (mongoc_cursor_next (cursor, &doc)) {
@@ -115,7 +116,55 @@ void be_mongo_destroy(void *handle)
 
 int be_mongo_superuser(void *conf, const char *username)
 {
-	return 0;
+	struct mongo_backend *handle = (struct mongo_backend *) conf;
+	mongoc_collection_t *collection;
+	mongoc_cursor_t *cursor;
+	bson_error_t error;
+	const bson_t *doc;
+	int result;
+	
+	bson_t query;
+	bson_iter_t iter;
+	//sleep(1);
+	bson_init (&query);
+	bson_append_utf8(&query, "username", -1, username, -1);
+
+	collection = mongoc_client_get_collection(handle->client, dbName, colName);
+
+	cursor = mongoc_collection_find(collection,
+									MONGOC_QUERY_NONE,
+									0,
+									0,
+									0,
+									&query,
+									NULL,
+									NULL);
+									
+	while (!mongoc_cursor_error (cursor, &error) &&
+			mongoc_cursor_more (cursor)) {
+		if (mongoc_cursor_next (cursor, &doc)) {
+				bson_iter_init(&iter, doc);
+				bson_iter_find(&iter, superUser);
+				
+				result = (int64_t) bson_iter_as_int64(&iter);
+
+				//_log(LOG_NOTICE, "SUPERUSER: %d", result);
+				
+		}
+	}
+
+	if (mongoc_cursor_error (cursor, &error)) {
+      	fprintf (stderr, "Cursor Failure: %s\n", error.message);
+    	  return result;
+   	}
+
+	bson_destroy (&query);
+	mongoc_cursor_destroy (cursor);
+   	mongoc_collection_destroy (collection);
+
+
+
+	return result;
 }
 
 int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
@@ -125,8 +174,10 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	mongoc_cursor_t *cursor;
 	bson_error_t error;
 	const bson_t *doc;
+	bson_iter_t iter;
+
 	bool check = false;
-	int match = 0;
+	int match = 0, foundFlag = 0;
 
 	bson_t query;
 
@@ -143,9 +194,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 									&query,
 									NULL,
 									NULL);
-	bson_iter_t iter;
-	int foundFlag = 0;
-
+	
 	while (!mongoc_cursor_error (cursor, &error) &&
 			mongoc_cursor_more (cursor)) {
 		if (foundFlag == 0 && mongoc_cursor_next (cursor, &doc)) {
