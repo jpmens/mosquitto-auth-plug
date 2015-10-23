@@ -504,7 +504,7 @@ users = {username: "user",
 	superuser: int (1 true, 0 false)
 }
 topics = {_id: int,
-	topics: /["xx/xx/#", "yy/#", .../]
+	topics: ["xx/xx/#", "yy/#", ...]
 }
 ```
 Collection name parameters can be set in mongoParam.h
