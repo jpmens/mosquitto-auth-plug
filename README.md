@@ -495,7 +495,7 @@ the beginning of the line indicating a _superuser_)
 ```
 
 ## MongoDB
-The `mongo` backend works with superuser and ACL checks with the following collections format.
+The `mongo` back-end works with superuser and ACL checks with the following collections format.
 
 ```
 users = {username: "user",
@@ -508,6 +508,13 @@ topics = {_id: int,
 }
 ```
 Collection name parameters can be set in mongoParam.h
+
+Mosquitto configuration for the `mongo` back-end:
+```
+auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
+auth_opt_mongo_host localhost
+auth_opt_mongo_port 27017
+```
 
 
 ## Passwords
