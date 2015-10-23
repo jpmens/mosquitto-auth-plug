@@ -508,6 +508,20 @@ topics = {_id: int,
 }
 ```
 Collection name parameters can be set in mongoParam.h
+```
+mongoParam.h
+
+/*
+*Mongo database parameters
+*
+*dbName - Mongo database name
+*colName (topics - topicID(int)) - Mongo collection of users (username, password, superuser, topics)
+*topicLoc - Mongo collection of topics (_id, topics)
+*topicID - mongo fieldname for topicSet ID
+*superUser - mongo fieldname for superuser flag (true/false) 
+*/
+...
+```
 
 Mosquitto configuration for the `mongo` back-end:
 ```
@@ -515,6 +529,7 @@ auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
 auth_opt_mongo_host localhost
 auth_opt_mongo_port 27017
 ```
+currently no readwrite checks on ACL, all topics will be readwrite, do not add a flag to the array of topics in db.
 
 
 ## Passwords
