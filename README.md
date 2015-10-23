@@ -495,7 +495,7 @@ the beginning of the line indicating a _superuser_)
 ```
 
 ## MongoDB
-The [mongo] backend works with superuser and ACL checks with the following collections format.
+The `mongo` backend works with superuser and ACL checks with the following collections format.
 
 ```
 users = {username: "user",
