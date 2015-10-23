@@ -494,6 +494,22 @@ the beginning of the line indicating a _superuser_)
   $SYS/broker/log/N                        PERMIT
 ```
 
+## MongoDB
+The [mongo] backend works with superuser and ACL checks with the following collections format.
+
+```
+users = {username: "user",
+	password: "PBKDF_string"
+	topics: int (topicID location)
+	superuser: int (1 true, 0 false)
+}
+topics = {_id: int,
+	topics: /["xx/xx/#", "yy/#", .../]
+}
+```
+Collection name parameters can be set in mongoParam.h
+
+
 ## Passwords
 
 A user's password is stored as a [PBKDF2] hash in the back-end. An example
