@@ -12,7 +12,6 @@
 #include <string.h>
 #include <mosquitto.h>
 #include <mongoc.h>
-#include <unistd.h>
 #include "hash.h"
 #include "log.h"
 #include "mongoParam.h"
@@ -125,7 +124,6 @@ int be_mongo_superuser(void *conf, const char *username)
 	
 	bson_t query;
 	bson_iter_t iter;
-	//sleep(1);
 	bson_init (&query);
 	bson_append_utf8(&query, "username", -1, username, -1);
 
