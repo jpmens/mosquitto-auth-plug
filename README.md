@@ -322,11 +322,11 @@ The following `auth_opt_` options are supported by the `http` back-end:
 If the configured URLs return an HTTP status code == `200`, the authentication /
 authorization succeeds, else it fails.
 
-| URI-Param         | username | password | topic | acc |
-| ----------------- | -------- | -------- | :---: | :-: |
-| http_getuser_uri  |   Y      |   Y      |   N   |  N  |
-| http_superuser_uri|   Y      |   N      |   N   |  N  |
-| http_aclcheck_uri |   Y      |   N      |   Y   |  Y  |
+| URI-Param         | username | password | clientid | topic | acc |
+| ----------------- | -------- | -------- | -------- | :---: | :-: |
+| http_getuser_uri  |   Y      |   Y      |   N      |   N   |  N  |
+| http_superuser_uri|   Y      |   N      |   N      |   N   |  N  |
+| http_aclcheck_uri |   Y      |   N      |   Y      |   Y   |  Y  |
 
 Mosquitto configuration for the `http` back-end:
 
