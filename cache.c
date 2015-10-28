@@ -109,7 +109,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		granted = a->granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
+			_log(LOG_DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
 		}
@@ -119,7 +119,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		a->granted = granted;
 		a->seconds = now;
 		HASH_ADD_STR(ud->aclcache, hex, a);
-		_log(DEBUG, " Cached  [%s] for (%s,%s,%d)", hex, clientid, username, access);
+		_log(LOG_DEBUG, " Cached  [%s] for (%s,%s,%d)", hex, clientid, username, access);
 	}
 
 	/*
@@ -129,7 +129,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 
 	HASH_ITER(hh, ud->aclcache, a, tmp) {
 		if (now > (a->seconds + ud->cacheseconds)) {
-			_log(DEBUG, " Cleanup [%s]", a->hex);
+			_log(LOG_DEBUG, " Cleanup [%s]", a->hex);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
 		}
@@ -159,7 +159,7 @@ int cache_q(const char *clientid, const char *username, const char *topic, int a
 		// printf("---> CACHED! %d\n", a->granted);
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
-			_log(DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
+			_log(LOG_DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
 		} else {
