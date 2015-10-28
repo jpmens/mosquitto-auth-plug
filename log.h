@@ -32,3 +32,5 @@
 
 void _log(int priority, const char *fmt, ...);
 void _fatal(const char *fmt, ...);
+
+extern int log_quiet;
