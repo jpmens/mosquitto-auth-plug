@@ -146,6 +146,15 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		}
 		if (!strcmp(o->key, "cacheseconds"))
 			ud->cacheseconds = atol(o->value);
+		if (!strcmp(o->key, "log_quiet")) {
+			if(!strcmp(o->value, "false") || !strcmp(o->value, "0")){
+				log_quiet = 0;
+			}else if(!strcmp(o->value, "true") || !strcmp(o->value, "1")){
+				log_quiet = 1;
+			}else{
+				_log(LOG_NOTICE, "Error: Invalid log_quiet value (%s).", o->value);
+			}
+		}
 #if 0
 		if (!strcmp(o->key, "topic_prefix"))
 			ud->topicprefix = strdup(o->value);

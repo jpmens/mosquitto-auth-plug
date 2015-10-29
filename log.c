@@ -34,11 +34,15 @@
 #include <time.h>
 #include "log.h"
 
+int log_quiet=0;
+
 void _log(int priority, const char *fmt, ...)
 {
 	va_list va;
 	time_t now;
 
+	if (log_quiet && priority <= LOG_DEBUG)
+		return;
 
 	/* FIXME: use new log function when @ralight is ready */
 	/* interim solution - link with -rdynamic then #include <mosquitto_broker.h> and use _mosquitto_log_printf(). */
