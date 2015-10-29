@@ -433,7 +433,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	/* Set name of back-end which authenticated */
 	backend_name = (authenticated) ? (*bep)->name : "none";
 
-	_log(DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
+	_log(LOG_DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
 		username, authenticated, (backend_name) ? backend_name : "none");
 
 	if (phash != NULL) {
@@ -455,7 +455,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		username = ud->anonusername;
 	}
 
-	_log(DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %s)",
+	_log(LOG_DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %s)",
 		clientid ? clientid : "NULL",
 		username ? username : "NULL",
 		topic ? topic : "NULL",
@@ -464,7 +464,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 	granted = cache_q(clientid, username, topic, access, userdata);
 	if (granted != MOSQ_ERR_UNKNOWN) {
-		_log(DEBUG, "aclcheck(%s, %s, %d) CACHEDAUTH: %d",
+		_log(LOG_DEBUG, "aclcheck(%s, %s, %d) CACHEDAUTH: %d",
 			username, topic, access, granted);
 		return (granted);
 	}
@@ -479,7 +479,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 	if (ud->superusers) {
 		if (fnmatch(ud->superusers, username, 0) == 0) {
-			_log(DEBUG, "aclcheck(%s, %s, %d) GLOBAL SUPERUSER=Y",
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) GLOBAL SUPERUSER=Y",
 				username, topic, access);
 			granted = MOSQ_ERR_SUCCESS;
 			goto outout;
@@ -491,7 +491,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 		match = b->superuser(b->conf, username);
 		if (match == 1) {
-			_log(DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
 				username, topic, access, b->name);
 			granted = MOSQ_ERR_SUCCESS;
 			goto outout;
@@ -508,7 +508,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		match = b->aclcheck((*bep)->conf, clientid, username, topic, access);
 		if (match == 1) {
 			backend_name = b->name;
-			_log(DEBUG, "aclcheck(%s, %s, %d) trying to acl with %s",
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) trying to acl with %s",
 				username, topic, access, b->name);
 			authorized = TRUE;
 			break;
@@ -516,7 +516,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	}
 
 
-	_log(DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
+	_log(LOG_DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
 		username, topic, access, authorized, backend_name);
 
 	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_DENY_ACL;
@@ -551,7 +551,7 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 
 	}
 
-	_log(DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
+	_log(LOG_DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
 		hint, identity, database,
 		psk_key ? 1 : 0);
 
