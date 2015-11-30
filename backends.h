@@ -33,6 +33,9 @@
 #ifndef FALSE
 # define FALSE (0)
 #endif
+#ifndef BACKEND_ERROR
+# define BACKEND_ERROR (2)
+#endif
 
 #ifndef __BACKENDS_H
 # define __BACKENDS_H

@@ -197,11 +197,14 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		re = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &respCode);
 		if (re == CURLE_OK && respCode >= 200 && respCode < 300) {
 			ok = TRUE;
+		} else if (re == CURLE_OK && respCode >= 500) {
+			ok = BACKEND_ERROR;
 		} else {
 			//_log(LOG_NOTICE, "http auth fail re=%d respCode=%d", re, respCode);
 		}
 	} else {
 		_log(LOG_DEBUG, "http req fail url=%s re=%s", url, curl_easy_strerror(re));
+		ok = BACKEND_ERROR;
 	}
 
 	curl_easy_cleanup(curl);

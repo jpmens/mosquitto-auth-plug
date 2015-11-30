@@ -457,7 +457,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *backend_name = NULL;
-	int match = 0, authorized = FALSE;
+	int match = 0, authorized = FALSE, has_error = FALSE;
 	int granted = MOSQ_DENY_ACL;
 
 	if (!username || !*username) { 	// anonymous users
@@ -504,6 +504,10 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 				username, topic, access, b->name);
 			granted = MOSQ_ERR_SUCCESS;
 			goto outout;
+		} else if (match == BACKEND_ERROR) {
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) HAS_ERROR=Y by %s",
+				username, topic, access, b->name);
+			has_error = TRUE;
 		}
 	}
 
@@ -521,6 +525,10 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 				username, topic, access, b->name);
 			authorized = TRUE;
 			break;
+		} else if (match == BACKEND_ERROR) {
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) HAS_ERROR=Y by %s",
+				username, topic, access, b->name);
+			has_error = TRUE;
 	}
 	}
 
@@ -529,6 +537,11 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		username, topic, access, authorized, backend_name);
 
 	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_DENY_ACL;
+	if (granted == MOSQ_DENY_ACL && has_error) {
+		_log(LOG_DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=N HAS_ERROR=Y => ERR_UNKNOWN",
+			username, topic, access);
+		granted = MOSQ_ERR_UNKNOWN;
+	}
 
    outout:	/* goto fail goto fail */
 
