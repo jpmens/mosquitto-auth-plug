@@ -106,7 +106,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 
 	HASH_FIND_STR(ud->aclcache, hex, a);
 	if (a) {
-		granted = a->granted;
+		a->granted = granted;
 
 		if (time(NULL) > (a->seconds + cacheseconds)) {
 			_log(LOG_DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
