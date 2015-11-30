@@ -320,8 +320,10 @@ The following `auth_opt_` options are supported by the `http` back-end:
 | http_aclcheck_uri |                   |      Y      | URI for check acl               |
 | http_with_tls     | false             |      N      | Use TLS on connect              |
 
-If the configured URLs return an HTTP status code == `200`, the authentication /
-authorization succeeds, else it fails.
+If the configured URLs return an HTTP status code == `2xx`, the authentication /
+authorization succeeds. If the status code == `4xx` authentication /
+authorization fails. For status code == `5xx` or server unreachable, if no
+other backend succeeded, then an error is returned and client is disconnected.
 
 | URI-Param         | username | password | clientid | topic | acc |
 | ----------------- | -------- | -------- | -------- | :---: | :-: |
