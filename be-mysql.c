@@ -248,16 +248,16 @@ int be_mysql_superuser(void *handle, const char *username)
     if (mysql_ping(conf->mysql)) {
         fprintf(stderr, "%s\n", mysql_error(conf->mysql));
         if (!auto_connect(conf)) {
-            return (FALSE);
+            return (BACKEND_ERROR);
         }
     }
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
-		return (FALSE);
+		return (BACKEND_ERROR);
 
 	if ((query = malloc(strlen(conf->superquery) + ulen + 128)) == NULL) {
 		free(u);
-		return (FALSE);
+		return (BACKEND_ERROR);
 	}
 	sprintf(query, conf->superquery, u);
 	free(u);
@@ -266,6 +266,7 @@ int be_mysql_superuser(void *handle, const char *username)
 
 	if (mysql_query(conf->mysql, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		issuper = BACKEND_ERROR;
 		goto out;
 	}
 
@@ -323,16 +324,16 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 	if (mysql_ping(conf->mysql)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		if (!auto_connect(conf)) {
-			return (FALSE);
+			return (BACKEND_ERROR);
 		}
 	}
 
 	if ((u = escape(conf, username, &ulen)) == NULL)
-		return (FALSE);
+		return (BACKEND_ERROR);
 
 	if ((query = malloc(strlen(conf->aclquery) + ulen + 128)) == NULL) {
 		free(u);
-		return (FALSE);
+		return (BACKEND_ERROR);
 	}
 	sprintf(query, conf->aclquery, u, acc);
 	free(u);
@@ -341,6 +342,7 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 
 	if (mysql_query(conf->mysql, query)) {
 		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));
+		match = BACKEND_ERROR;
 		goto out;
 	}
 

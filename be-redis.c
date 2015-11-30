@@ -34,6 +34,7 @@
 #include <string.h>
 #include "log.h"
 #include "hash.h"
+#include "backends.h"
 #include <hiredis/hiredis.h>
 
 struct redis_backend {
@@ -181,7 +182,7 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 	r = redisCommand(conf->redis, query, username, acc);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
 		be_redis_reconnect(conf);
-		return 0;
+		return BACKEND_ERROR;
 	}
 
 	free(query);

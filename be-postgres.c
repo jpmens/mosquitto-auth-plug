@@ -200,6 +200,7 @@ int be_pg_superuser(void *handle, const char *username)
 	if ( PQresultStatus(res) != PGRES_TUPLES_OK )
 	{
 		fprintf(stderr, "%s\n", PQresultErrorMessage(res));
+		issuper = BACKEND_ERROR;
 		goto out;
 	}
 
@@ -266,6 +267,7 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 	if ( PQresultStatus(res) != PGRES_TUPLES_OK )
 	{
 		fprintf(stderr, "%s\n", PQresultErrorMessage(res));
+		match = BACKEND_ERROR;
 		goto out;
 	}
 
