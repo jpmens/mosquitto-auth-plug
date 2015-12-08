@@ -21,7 +21,7 @@ ifneq ($(BACKEND_CDB),no)
 	CDBLIB = $(CDBDIR)/libcdb.a
 	BE_CFLAGS += -I$(CDBINC)/
 	BE_LDFLAGS += -L$(CDBDIR)
-	BE_LDADD = -lcdb
+	BE_LDADD += -lcdb
 	BE_DEPS += $(CDBLIB)
 	OBJS += be-cdb.o
 endif
@@ -66,7 +66,7 @@ ifneq ($(BACKEND_LDAP),no)
 	BACKENDS += -DBE_LDAP
 	BACKENDSTR += LDAP
 
-	BE_LDADD = -lldap -llber
+	BE_LDADD += -lldap -llber
 	OBJS += be-ldap.o
 endif
 
