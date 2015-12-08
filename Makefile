@@ -100,7 +100,6 @@ CFLAGS += $(BACKENDS) $(BE_CFLAGS) -I$(MOSQ)/src -DDEBUG=1 $(OSSLINC)
 LDFLAGS = $(BE_LDFLAGS) -L$(MOSQUITTO_SRC)/lib/
 # LDFLAGS += -Wl,-rpath,$(../../../../pubgit/MQTT/mosquitto/lib) -lc
 # LDFLAGS += -export-dynamic
-LDFLAGS += -lcares
 LDADD = $(BE_LDADD) $(OSSLIBS) -lmosquitto
 
 all: printconfig auth-plug.so np
