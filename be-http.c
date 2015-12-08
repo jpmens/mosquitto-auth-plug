@@ -40,10 +40,10 @@
 
 static int get_string_envs(CURL *curl, const char *required_env, char *querystring)
 {
-	char *data;
-	char *escaped_key;
-	char *escaped_val;
-	char *env_string;
+	char *data = NULL;
+	char *escaped_key = NULL;
+	char *escaped_val = NULL;
+	char *env_string = NULL;
 
 	char *params_key[MAXPARAMSNUM];
 	char *env_names[MAXPARAMSNUM];
@@ -84,13 +84,10 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 		}
 	}
 
-	free(data);
-	free(escaped_key);
-	free(escaped_val);
+	if (data) free(data);
+	if (escaped_key) free(escaped_key);
+	if (escaped_val) free(escaped_val);
 	free(env_string);
-	//free(params_key);
-	//free(env_names);
-	//free(env_value);
 	return (num);
 }
 
