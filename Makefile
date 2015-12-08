@@ -111,6 +111,12 @@ printconfig:
 	@echo
 	@echo "If you changed the backend selection, you might need to 'make clean' first"
 	@echo
+	@echo "CFLAGS:  $(CFLAGS)"
+	@echo "LDFLAGS: $(LDFLAGS)"
+	@echo "LDADD:   $(LDADD)"
+	@echo
+
+
 
 auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
