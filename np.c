@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 
 	prompt = 1;
 
-	while ((c = getopt(argc, argv, "ip:")) != EOF) {
+	while ((c = getopt(argc, argv, "i:p:")) != EOF) {
 		switch (c) {
 			case 'i':
 				iterations = atoi(optarg);
