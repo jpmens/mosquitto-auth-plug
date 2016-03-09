@@ -75,7 +75,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
    const bson_t *doc;
    bson_iter_t iter;
    bson_t query;
-   char *result;
+   char *result = NULL;
 
    bson_init (&query);
 
