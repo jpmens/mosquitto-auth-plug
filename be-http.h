@@ -44,6 +44,7 @@ struct http_backend {
 	char *superuser_envs;
 	char *aclcheck_envs;
 	char *with_tls;
+	char *basic_auth;
 };
 
 void *be_http_init();

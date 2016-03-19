@@ -118,6 +118,10 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		headerlist = curl_slist_append(headerlist, conf->hostheader);
 	headerlist = curl_slist_append(headerlist, "Expect:");
 
+	if(conf->basic_auth !=NULL){
+		headerlist = curl_slist_append(headerlist, conf->basic_auth);
+	}
+
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 
 	url = (char *)malloc(strlen(conf->ip) + strlen(uri) + 20);
@@ -262,6 +266,10 @@ void *be_http_init()
 	conf->getuser_envs = p_stab("http_getuser_params");
 	conf->superuser_envs = p_stab("http_superuser_params");
 	conf->aclcheck_envs = p_stab("http_aclcheck_params");
+	if(p_stab("http_basic_auth_key")!= NULL){
+		conf->basic_auth = (char *)malloc( strlen("Authorization: Basic %s") + strlen(p_stab("http_basic_auth_key")));
+		sprintf(conf->basic_auth, "Authorization: Basic %s",p_stab("http_basic_auth_key"));
+	}
 
 	if (p_stab("http_with_tls") != NULL) {
 		conf->with_tls = p_stab("http_with_tls");
