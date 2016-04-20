@@ -80,7 +80,7 @@ static int detoken(char *pbkstr, char **sha, int *iter, char **salt, char **key)
 
 int pbkdf2_check(char *password, char *hash)
 {
-        static char *sha, *salt, *h_pw;
+        char *sha, *salt, *h_pw;
         int iterations, saltlen, blen;
 	char *b64, *keybuf;
 	unsigned char *out;
