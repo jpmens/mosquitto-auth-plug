@@ -57,6 +57,7 @@
 #include "be-postgres.h"
 #include "be-ldap.h"
 #include "be-http.h"
+#include "be-jwt.h"
 #include "be-mongo.h"
 
 #include "userdata.h"
@@ -335,6 +336,25 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
 		}
+#endif
+
+#if BE_JWT
+        if (!strcmp(q, "jwt")) {
+ 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+ 			memset(*bep, 0, sizeof(struct backend_p));
+ 			(*bep)->name = strdup("jwt");
+ 			(*bep)->conf = be_jwt_init();
+ 			if ((*bep)->conf == NULL) {
+ 				_fatal("%s init returns NULL", q);
+ 			}
+ 			(*bep)->kill =  be_jwt_destroy;
+ 			(*bep)->getuser =  be_jwt_getuser;
+ 			(*bep)->superuser =  be_jwt_superuser;
+ 			(*bep)->aclcheck =  be_jwt_aclcheck;
+ 			found = 1;
+ 			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+ 			PSKSETUP;
+ 		}
 #endif
 
 #if BE_MONGO
