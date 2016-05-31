@@ -291,17 +291,17 @@ void be_jwt_destroy(void *handle)
 };
 
 char *be_jwt_getuser(void *handle, const char *token, const char *pass, int *authenticated) {
-   +	struct jwt_backend *conf = (struct jwt_backend *)handle;
-   +	int re;
-   +	if (token == NULL) {
-       +		return NULL;
-       +	}
-   +	re = http_post(handle, conf->getuser_uri, NULL, token, NULL, -1, METHOD_GETUSER);
-   +	if (re == 1) {
-       +		*authenticated = 1;
-       +	}
-   +	return NULL;
-   +};
+   struct jwt_backend *conf = (struct jwt_backend *)handle;
+   int re;
+   if (token == NULL) {
+   		return NULL;
+   }
+   re = http_post(handle, conf->getuser_uri, NULL, token, NULL, -1, METHOD_GETUSER);
+   if (re == 1) {
+   		*authenticated = 1;
+   }
+   return NULL;
+};
 
 int be_jwt_superuser(void *handle, const char *token)
 {
