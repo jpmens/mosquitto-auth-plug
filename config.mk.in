@@ -6,6 +6,7 @@ BACKEND_REDIS ?= no
 BACKEND_POSTGRES ?= no
 BACKEND_LDAP ?= no
 BACKEND_HTTP ?= no
+BACKEND_JWT ?= no
 BACKEND_MONGO ?= no
 
 # Specify the path to the Mosquitto sources here

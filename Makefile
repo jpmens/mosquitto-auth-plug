@@ -78,6 +78,14 @@ ifneq ($(BACKEND_HTTP), no)
 	OBJS += be-http.o
 endif
 
+ifneq ($(BACKEND_JWT), no)
+	BACKENDS+= -DBE_JWT
+	BACKENDSTR += JWT
+
+	BE_LDADD += -lcurl
+	OBJS += be-jwt.o
+endif
+
 ifneq ($(BACKEND_MONGO), no)
 	BACKENDS+= -DBE_MONGO
 	BACKENDSTR += MongoDB
@@ -137,6 +145,7 @@ hash.o: hash.c hash.h uthash.h Makefile
 be-postgres.o: be-postgres.c be-postgres.h Makefile
 cache.o: cache.c cache.h uthash.h Makefile
 be-http.o: be-http.c be-http.h Makefile backends.h
+be-jwt.o: be-jwt.c be-jwt.h Makefile backends.h
 be-mongo.o: be-mongo.c be-mongo.h Makefile
 
 np: np.c base64.o
