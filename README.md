@@ -11,6 +11,7 @@ of several distinct back-ends:
 * TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
 * LDAP
 * HTTP (custom HTTP API)
+* JWT
 * MongoDB
 
 ## Introduction
@@ -19,12 +20,12 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | MongoDB |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-----: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y      |
-| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |  Y      |
-| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  Y      |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |  Y      |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: |
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      |
+| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |  Y  |  Y      |
+| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  Y  |  Y      |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |  Y  |  Y      |
 
  1. Currently not implemented; back-end returns TRUE
  2. Dependent on the database used by PSK
@@ -37,7 +38,7 @@ The configuration option is called `auth_opt_backends` and it takes a
 comma-separated list of back-end names which are checked in exactly that order.
 
 ```
-auth_opt_backends cdb,sqlite,mysql,redis,postgres,http,mongo
+auth_opt_backends cdb,sqlite,mysql,redis,postgres,http,jwt,mongo
 ```
 
 Note: anonymous MQTT connections are assigned a username of configured in the
@@ -365,6 +366,19 @@ auth_opt_http_getuser_params domain=DOMAIN,port=PORT
 auth_opt_http_superuser_params domain=DOMAIN,port=PORT
 auth_opt_http_aclcheck_params domain=DOMAIN,port=PORT
 ```
+
+
+
+### JWT
+
+The `jwt` back-end is for auth by [JWT-webtokens](https://jwt.io/). The JWT and HTTP configurations are identical, so please read the `http`-section above.
+
+The `username`-field is interpreted as the token-field and passed to the http-server in an Authorization-header.
+```
+Authorization: Bearer %token
+```
+
+**Note**: Some clients require the password-field to be populated. This field is ignored by the JWT-backend, so feel free to input some gibberish. 
 
 
 
