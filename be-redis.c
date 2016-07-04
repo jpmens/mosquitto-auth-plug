@@ -63,9 +63,11 @@ static int be_redis_reconnect(struct redis_backend *conf)
 		return 1;
 	}
   if(strlen(conf->dbpass) > 0){
+    _log(LOG_NOTICE, "Using password protected redis\n");
 	  redisReply *r =  redisCommand(conf->redis, "AUTH %s", conf->dbpass);
     if (r == NULL || conf->redis->err != REDIS_OK) {
-        return 3;
+      _log(LOG_NOTICE, "Redis authentication error: %s\n", conf->redis->errstr);
+      return 3;
     }
   }
 	redisReply *r =  redisCommand(conf->redis, "SELECT %i", conf->db);
