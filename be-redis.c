@@ -69,6 +69,7 @@ static int be_redis_reconnect(struct redis_backend *conf)
       _log(LOG_NOTICE, "Redis authentication error: %s\n", conf->redis->errstr);
       return 3;
     }
+	  freeReplyObject(r);
   }
 	redisReply *r =  redisCommand(conf->redis, "SELECT %i", conf->db);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
