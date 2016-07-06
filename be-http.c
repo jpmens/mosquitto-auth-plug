@@ -277,6 +277,8 @@ void *be_http_init()
 		conf->with_tls = "false";
 	}
 
+	conf->retry_count = p_stab("http_retry_count") == NULL ? 3 : atoi(p_stab("http_retry_count"));
+
 	_log(LOG_DEBUG, "with_tls=%s", conf->with_tls);
 	_log(LOG_DEBUG, "getuser_uri=%s", getuser_uri);
 	_log(LOG_DEBUG, "superuser_uri=%s", superuser_uri);
@@ -284,6 +286,7 @@ void *be_http_init()
 	_log(LOG_DEBUG, "getuser_params=%s", conf->getuser_envs);
 	_log(LOG_DEBUG, "superuser_params=%s", conf->superuser_envs);
 	_log(LOG_DEBUG, "aclcheck_paramsi=%s", conf->aclcheck_envs);
+	_log(LOG_DEBUG, "retry_count=%d", conf->retry_count);
 
 	return (conf);
 };
@@ -299,11 +302,18 @@ void be_http_destroy(void *handle)
 
 char *be_http_getuser(void *handle, const char *username, const char *password, int *authenticated) {
 	struct http_backend *conf = (struct http_backend *)handle;
-	int re;
+	int re, try;
 	if (username == NULL) {
 		return NULL;
 	}
-	re = http_post(handle, conf->getuser_uri, NULL, username, password, NULL, -1, METHOD_GETUSER);
+
+	re = BACKEND_ERROR;
+	try = 0;
+
+	while (re == BACKEND_ERROR && try <= conf->retry_count) {
+		try++;
+		re = http_post(handle, conf->getuser_uri, NULL, username, password, NULL, -1, METHOD_GETUSER);
+	}
 	if (re == 1) {
 		*authenticated = 1;
 	}
@@ -313,14 +323,29 @@ char *be_http_getuser(void *handle, const char *username, const char *password, 
 int be_http_superuser(void *handle, const char *username)
 {
 	struct http_backend *conf = (struct http_backend *)handle;
+	int re, try;
 
-	return http_post(handle, conf->superuser_uri, NULL, username, NULL, NULL, -1, METHOD_SUPERUSER);
+	re = BACKEND_ERROR;
+	try = 0;
+	while (re == BACKEND_ERROR && try <= conf->retry_count) {
+		try++;
+		re = http_post(handle, conf->superuser_uri, NULL, username, NULL, NULL, -1, METHOD_SUPERUSER);
+	}
+	return re;
 };
 
 int be_http_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	struct http_backend *conf = (struct http_backend *)handle;
+	int re, try;
 
-	return http_post(conf, conf->aclcheck_uri, clientid, username, NULL, topic, acc, METHOD_ACLCHECK);
+	re = BACKEND_ERROR;
+	try = 0;
+
+	while (re == BACKEND_ERROR && try <= conf->retry_count) {
+		try++;
+		re = http_post(conf, conf->aclcheck_uri, clientid, username, NULL, topic, acc, METHOD_ACLCHECK);
+	}
+	return re;
 };
 #endif /* BE_HTTP */

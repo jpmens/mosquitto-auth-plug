@@ -321,11 +321,13 @@ The following `auth_opt_` options are supported by the `http` back-end:
 | http_aclcheck_uri |                   |      Y      | URI for check acl               |
 | http_with_tls     | false             |      N      | Use TLS on connect              |
 | http_basic_auth_key|                  |      N      | Basic Authentication Key        |
+| http_retry_count  | 3                 |      N      | Number of retries done if backend is unavailable |
 
 If the configured URLs return an HTTP status code == `2xx`, the authentication /
 authorization succeeds. If the status code == `4xx` authentication /
-authorization fails. For status code == `5xx` or server unreachable, if no
-other backend succeeded, then an error is returned and client is disconnected.
+authorization fails. For status code == `5xx` or server unreachable, the HTTP request
+will be retried up to http_retry_count. If all tries fail and if no other backend succeeded,
+then an error is returned and client is disconnected.
 
 | URI-Param         | username | password | clientid | topic | acc |
 | ----------------- | -------- | -------- | -------- | :---: | :-: |
