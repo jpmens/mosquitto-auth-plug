@@ -42,6 +42,7 @@ struct redis_backend {
 	char *host;
 	char *userquery;
 	char *aclquery;
+  char *dbpass;
 	int port;
 	int db;
 };
@@ -61,7 +62,15 @@ static int be_redis_reconnect(struct redis_backend *conf)
 		    conf->redis->errstr, conf->host, conf->port);
 		return 1;
 	}
-
+  if(strlen(conf->dbpass) > 0){
+    _log(LOG_NOTICE, "Using password protected redis\n");
+	  redisReply *r =  redisCommand(conf->redis, "AUTH %s", conf->dbpass);
+    if (r == NULL || conf->redis->err != REDIS_OK) {
+      _log(LOG_NOTICE, "Redis authentication error: %s\n", conf->redis->errstr);
+      return 3;
+    }
+	  freeReplyObject(r);
+  }
 	redisReply *r =  redisCommand(conf->redis, "SELECT %i", conf->db);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
 		return 2;
@@ -74,7 +83,7 @@ static int be_redis_reconnect(struct redis_backend *conf)
 void *be_redis_init()
 {
 	struct redis_backend *conf;
-	char *host, *p, *db, *userquery, *aclquery;
+	char *host, *p, *db, *userquery, *password, *aclquery;
 
 	_log(LOG_DEBUG, "}}}} Redis");
 
@@ -84,6 +93,8 @@ void *be_redis_init()
 		p = "6379";
 	if ((db = p_stab("redis_db")) == NULL)
 		db = "0";
+	if ((password = p_stab("redis_pass")) == NULL)
+    password = "";
 	if ((userquery = p_stab("redis_userquery")) == NULL) {
 	  userquery = "";
 	}
@@ -98,6 +109,7 @@ void *be_redis_init()
 	conf->host = strdup(host);
 	conf->port = atoi(p);
 	conf->db   = atoi(db);
+  conf->dbpass = strdup(password);
 	conf->userquery = strdup(userquery);
 	conf->aclquery  = strdup(aclquery);
 
@@ -106,6 +118,7 @@ void *be_redis_init()
 	if (be_redis_reconnect(conf)) {
 		free(conf->host);
 		free(conf->userquery);
+		free(conf->dbpass);
 		free(conf->aclquery);
 		free(conf);
 		return (NULL);
