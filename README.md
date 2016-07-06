@@ -320,6 +320,7 @@ The following `auth_opt_` options are supported by the `http` back-end:
 | http_superuser_uri|                   |      Y      | URI for check superuser         |
 | http_aclcheck_uri |                   |      Y      | URI for check acl               |
 | http_with_tls     | false             |      N      | Use TLS on connect              |
+| http_basic_auth_key|                  |      N      | Basic Authentication Key        |
 
 If the configured URLs return an HTTP status code == `2xx`, the authentication /
 authorization succeeds. If the status code == `4xx` authentication /
