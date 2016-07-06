@@ -45,6 +45,7 @@ struct http_backend {
 	char *aclcheck_envs;
 	char *with_tls;
 	char *basic_auth;
+	int retry_count;
 };
 
 void *be_http_init();
