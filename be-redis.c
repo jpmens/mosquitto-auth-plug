@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  * 3. Neither the name of mosquitto nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -42,7 +42,7 @@ struct redis_backend {
 	char *host;
 	char *userquery;
 	char *aclquery;
-  char *dbpass;
+	char *dbpass;
 	int port;
 	int db;
 };
@@ -54,24 +54,24 @@ static int be_redis_reconnect(struct redis_backend *conf)
 		redisFree(conf->redis);
 		conf->redis = NULL;
 	}
-
-	struct timeval timeout = { 2, 500000 }; // 2.5 seconds
-	conf->redis = redisConnectWithTimeout(conf->host, conf->port, timeout);
+	struct timeval timeout = {2, 500000};
+	//2.5 seconds
+		conf->redis = redisConnectWithTimeout(conf->host, conf->port, timeout);
 	if (conf->redis->err) {
 		_log(LOG_NOTICE, "Redis connection error: %s for %s:%d\n",
-		    conf->redis->errstr, conf->host, conf->port);
+		     conf->redis->errstr, conf->host, conf->port);
 		return 1;
 	}
-  if(strlen(conf->dbpass) > 0){
-    _log(LOG_NOTICE, "Using password protected redis\n");
-	  redisReply *r =  redisCommand(conf->redis, "AUTH %s", conf->dbpass);
-    if (r == NULL || conf->redis->err != REDIS_OK) {
-      _log(LOG_NOTICE, "Redis authentication error: %s\n", conf->redis->errstr);
-      return 3;
-    }
-	  freeReplyObject(r);
-  }
-	redisReply *r =  redisCommand(conf->redis, "SELECT %i", conf->db);
+	if (strlen(conf->dbpass) > 0) {
+		_log(LOG_NOTICE, "Using password protected redis\n");
+		redisReply *r = redisCommand(conf->redis, "AUTH %s", conf->dbpass);
+		if (r == NULL || conf->redis->err != REDIS_OK) {
+			_log(LOG_NOTICE, "Redis authentication error: %s\n", conf->redis->errstr);
+			return 3;
+		}
+		freeReplyObject(r);
+	}
+	redisReply *r = redisCommand(conf->redis, "SELECT %i", conf->db);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
 		return 2;
 	}
@@ -94,24 +94,23 @@ void *be_redis_init()
 	if ((db = p_stab("redis_db")) == NULL)
 		db = "0";
 	if ((password = p_stab("redis_pass")) == NULL)
-    password = "";
+		password = "";
 	if ((userquery = p_stab("redis_userquery")) == NULL) {
-	  userquery = "";
+		userquery = "";
 	}
 	if ((aclquery = p_stab("redis_aclquery")) == NULL) {
-    aclquery = "";
+		aclquery = "";
 	}
-
 	conf = (struct redis_backend *)malloc(sizeof(struct redis_backend));
 	if (conf == NULL)
 		_fatal("Out of memory");
 
 	conf->host = strdup(host);
 	conf->port = atoi(p);
-	conf->db   = atoi(db);
-  conf->dbpass = strdup(password);
+	conf->db = atoi(db);
+	conf->dbpass = strdup(password);
 	conf->userquery = strdup(userquery);
-	conf->aclquery  = strdup(aclquery);
+	conf->aclquery = strdup(aclquery);
 
 	conf->redis = NULL;
 
@@ -123,7 +122,6 @@ void *be_redis_init()
 		free(conf);
 		return (NULL);
 	}
-
 	return (conf);
 }
 
@@ -146,11 +144,10 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return (NULL);
-  
-  if (strlen(conf->userquery) == 0) {
-    conf->userquery = "GET %s";
-  }
 
+	if (strlen(conf->userquery) == 0) {
+		conf->userquery = "GET %s";
+	}
 	char *query = malloc(strlen(conf->userquery) + strlen(username) + 128);
 	sprintf(query, conf->userquery, username);
 
@@ -159,7 +156,6 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 		be_redis_reconnect(conf);
 		return (NULL);
 	}
-
 	free(query);
 
 	if (r->type == REDIS_REPLY_STRING) {
@@ -184,10 +180,9 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
 		return 0;
 
-  if (strlen(conf->aclquery) == 0) {
-    return 1;
-  }
-
+	if (strlen(conf->aclquery) == 0) {
+		return 1;
+	}
 	char *query = malloc(strlen(conf->aclquery) + strlen(username) + strlen(topic) + 128);
 	sprintf(query, conf->aclquery, username, topic);
 
@@ -197,7 +192,6 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 		be_redis_reconnect(conf);
 		return BACKEND_ERROR;
 	}
-
 	free(query);
 
 	int answer = 0;
@@ -206,8 +200,7 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 		if (x >= acc)
 			answer = 1;
 	}
-
 	freeReplyObject(r);
 	return answer;
 }
-#endif /* BE_REDIS */
+#endif				/* BE_REDIS */
