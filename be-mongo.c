@@ -15,66 +15,98 @@
 #include "hash.h"
 #include "log.h"
 
+
+const char* default_db = "mqGate";
+
 struct mongo_backend {
     mongoc_client_t *client;
-//    char *host;
-//    int port;
-	char *database;
-	char *users_coll;
-	char *topics_coll;
-	char *password_loc;
-	char *topic_loc;
-	char *topicId_loc;
-	char *superuser_loc;
+    char *host;
+    int port;
+    char *database;
+    char *users_coll;
+    char *topics_coll;
+    char *password_loc;
+    char *topic_loc;
+    char *topicId_loc;
+    char *superuser_loc;
 };
 
 void *be_mongo_init()
 {
     struct mongo_backend *conf;
     char *host, *p, *user, *password, *authSource;
-	
-	conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
+    char *database, *users_coll, *topics_coll, *password_loc, *topic_loc;
+    char *topicId_loc, *superuser_loc;
+
+    conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
 
     if ((host = p_stab("mongo_host")) == NULL)
         host = "localhost";
     if ((p = p_stab("mongo_port")) == NULL)
         p = "27017";
-	if ((p = p_stab("mongo_database")) == NULL)
+    if ((database = p_stab("mongo_database")) == NULL){
         conf->database = "mqGate";
-	if ((p = p_stab("mongo_collection_users")) == NULL)
+    }
+    else{
+	conf->database = database;
+    }
+    if ((users_coll  = p_stab("mongo_collection_users")) == NULL){
         conf->users_coll = "users";
-	if ((p = p_stab("mongo_collection_topics")) == NULL)
+    }
+    else{
+	conf->users_coll = users_coll;
+    }
+    if ((topics_coll = p_stab("mongo_collection_topics")) == NULL){
         conf->topics_coll = "topics";
-	if ((p = p_stab("mongo_location_password")) == NULL)
+    }
+    else{
+	conf->topics_coll = topics_coll;
+    }
+    if ((password_loc = p_stab("mongo_location_password")) == NULL){
         conf->password_loc = "password";
-	if ((p = p_stab("mongo_location_topic")) == NULL)
+    }
+    else{
+	conf->password_loc = password_loc;
+    }
+    if ((topic_loc = p_stab("mongo_location_topic")) == NULL){
         conf->topic_loc = "topics";
-	if ((p = p_stab("mongo_location_topicId")) == NULL)
+    }
+    else{
+        conf->topic_loc = topic_loc;
+    }
+    if ((topicId_loc = p_stab("mongo_location_topicId")) == NULL){
         conf->topicId_loc = "_id";
-	if ((p = p_stab("mongo_location_topic")) == NULL)
+    }
+    else{
+        conf->topicId_loc = topicId_loc;
+    }
+    if ((superuser_loc = p_stab("mongo_location_topic")) == NULL){
         conf->superuser_loc = "superuser";
-	
+    }
+    else{
+        conf->superuser_loc = superuser_loc;
+    }	
     user = p_stab("mongo_user");
     password = p_stab("mongo_password");
     authSource = p_stab("mongo_authSource");
 
-	char uristr[128] = {0};
-	strcpy(uristr, "mongodb://");
-	if (user != NULL) {
-	   strcat(uristr, user);
-	if (password != NULL) {
+    char uristr[128] = {0};
+    strcpy(uristr, "mongodb://");
+    if (user != NULL) {
+	strcat(uristr, user);
+        if (password != NULL) {
 	   strcat(uristr, ":");
 	   strcat(uristr, password);
 	}
 	   strcat(uristr, "@");
-	}
-	   strcat(uristr, host);
-	   strcat(uristr, ":");
-	   strcat(uristr, p);
-	if (authSource != NULL) {
-	   strcat(uristr, "?authSource=");
-	   strcat(uristr, authSource);
-	}
+    }
+    strcat(uristr, host);
+    strcat(uristr, ":");
+    strcat(uristr, p);
+    if (authSource != NULL) {
+        strcat(uristr, "?authSource=");
+        strcat(uristr, authSource);
+    }
     
     mongoc_init ();
     conf->client = mongoc_client_new (uristr);
