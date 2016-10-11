@@ -263,23 +263,15 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		}
 
 	}
-
-
-	if (mongoc_cursor_error (cursor, &error)) {
+	
+	if ( (mongoc_cursor_error (cursor, &error)) && (match != 1) ) {
 			fprintf (stderr, "Cursor Failure: %s\n", error.message);
-			return 0;
 	}
-
-
+	
 	bson_destroy(&query);
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy(collection);
-
-
-
-
-
-
 	return match;
+
 }
 #endif /* BE_MONGO */
