@@ -16,8 +16,6 @@
 #include "log.h"
 
 
-const char* default_db = "mqGate";
-
 struct mongo_backend {
     mongoc_client_t *client;
     char *host;
@@ -40,52 +38,56 @@ void *be_mongo_init()
 
     conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
 
-    if ((host = p_stab("mongo_host")) == NULL)
+    if ((host = p_stab("mongo_host")) == NULL){
         host = "localhost";
-    if ((p = p_stab("mongo_port")) == NULL)
+	}
+	
+    if ((p = p_stab("mongo_port")) == NULL){
         p = "27017";
+	}
+	
     if ((database = p_stab("mongo_database")) == NULL){
         conf->database = "mqGate";
-    }
-    else{
+    }else{
 	conf->database = database;
     }
+	
     if ((users_coll  = p_stab("mongo_collection_users")) == NULL){
         conf->users_coll = "users";
-    }
-    else{
+    }else{
 	conf->users_coll = users_coll;
     }
+	
     if ((topics_coll = p_stab("mongo_collection_topics")) == NULL){
         conf->topics_coll = "topics";
-    }
-    else{
+    }else{
 	conf->topics_coll = topics_coll;
     }
+	
     if ((password_loc = p_stab("mongo_location_password")) == NULL){
         conf->password_loc = "password";
-    }
-    else{
+    }else{
 	conf->password_loc = password_loc;
     }
+	
     if ((topic_loc = p_stab("mongo_location_topic")) == NULL){
         conf->topic_loc = "topics";
-    }
-    else{
+    }else{
         conf->topic_loc = topic_loc;
     }
+	
     if ((topicId_loc = p_stab("mongo_location_topicId")) == NULL){
         conf->topicId_loc = "_id";
-    }
-    else{
+    }else{
         conf->topicId_loc = topicId_loc;
     }
+	
     if ((superuser_loc = p_stab("mongo_location_topic")) == NULL){
         conf->superuser_loc = "superuser";
-    }
-    else{
+    }else{
         conf->superuser_loc = superuser_loc;
-    }	
+    }
+	
     user = p_stab("mongo_user");
     password = p_stab("mongo_password");
     authSource = p_stab("mongo_authSource");
@@ -177,6 +179,15 @@ void be_mongo_destroy(void *handle)
     struct mongo_backend *conf = (struct mongo_backend *)handle;
 
     if (conf != NULL) {
+		/* Free Settings */
+		free(conf->database);
+		free(conf->users_coll);
+		free(conf->topics_coll);
+		free(conf->password_loc);
+		free(conf->topic_loc);
+		free(conf->topicId_loc);
+		free(conf->superuser_loc);
+		
         mongoc_client_destroy(conf->client);
         conf->client = NULL;
     }
