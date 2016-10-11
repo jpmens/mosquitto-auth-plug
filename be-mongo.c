@@ -82,7 +82,7 @@ void *be_mongo_init()
         conf->topicId_loc = topicId_loc;
     }
 	
-    if ((superuser_loc = p_stab("mongo_location_topic")) == NULL){
+    if ((superuser_loc = p_stab("mongo_location_superuser")) == NULL){
         conf->superuser_loc = "superuser";
     }else{
         conf->superuser_loc = superuser_loc;
