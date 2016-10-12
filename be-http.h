@@ -34,7 +34,7 @@
 #define METHOD_ACLCHECK  3
 
 struct http_backend {
-	char *ip;
+	char *hostname;
 	int port;
 	char *hostheader;
 	char *getuser_uri;
