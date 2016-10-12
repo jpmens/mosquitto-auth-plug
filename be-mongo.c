@@ -14,61 +14,117 @@
 #include <mongoc.h>
 #include "hash.h"
 #include "log.h"
-#include "mongoParam.h"
+
 
 struct mongo_backend {
     mongoc_client_t *client;
     char *host;
     int port;
+    char *database;
+    char *users_coll;
+    char *topics_coll;
+    char *password_loc;
+    char *topic_loc;
+    char *topicId_loc;
+    char *superuser_loc;
 };
 
 void *be_mongo_init()
 {
     struct mongo_backend *conf;
     char *host, *p, *user, *password, *authSource;
+    char *database, *users_coll, *topics_coll, *password_loc, *topic_loc;
+    char *topicId_loc, *superuser_loc;
 
-    if ((host = p_stab("mongo_host")) == NULL)
+    conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
+
+    if ((host = p_stab("mongo_host")) == NULL){
         host = "localhost";
-    if ((p = p_stab("mongo_port")) == NULL)
+	}
+	
+    if ((p = p_stab("mongo_port")) == NULL){
         p = "27017";
+	}
+	
+    if ((database = p_stab("mongo_database")) == NULL){
+        conf->database = "mqGate";
+    }else{
+	conf->database = database;
+    }
+	
+    if ((users_coll  = p_stab("mongo_collection_users")) == NULL){
+        conf->users_coll = "users";
+    }else{
+	conf->users_coll = users_coll;
+    }
+	
+    if ((topics_coll = p_stab("mongo_collection_topics")) == NULL){
+        conf->topics_coll = "topics";
+    }else{
+	conf->topics_coll = topics_coll;
+    }
+	
+    if ((password_loc = p_stab("mongo_location_password")) == NULL){
+        conf->password_loc = "password";
+    }else{
+	conf->password_loc = password_loc;
+    }
+	
+    if ((topic_loc = p_stab("mongo_location_topic")) == NULL){
+        conf->topic_loc = "topics";
+    }else{
+        conf->topic_loc = topic_loc;
+    }
+	
+    if ((topicId_loc = p_stab("mongo_location_topicId")) == NULL){
+        conf->topicId_loc = "_id";
+    }else{
+        conf->topicId_loc = topicId_loc;
+    }
+	
+    if ((superuser_loc = p_stab("mongo_location_superuser")) == NULL){
+        conf->superuser_loc = "superuser";
+    }else{
+        conf->superuser_loc = superuser_loc;
+    }
+	
     user = p_stab("mongo_user");
     password = p_stab("mongo_password");
     authSource = p_stab("mongo_authSource");
 
-     char uristr[128] = {0};
-     strcpy(uristr, "mongodb://");
-     if (user != NULL) {
-        strcat(uristr, user);
+    char uristr[128] = {0};
+    strcpy(uristr, "mongodb://");
+    if (user != NULL) {
+	strcat(uristr, user);
         if (password != NULL) {
-           strcat(uristr, ":");
-           strcat(uristr, password);
-        }
-        strcat(uristr, "@");
-     }
-     strcat(uristr, host);
-     strcat(uristr, ":");
-     strcat(uristr, p);
-     if (authSource != NULL) {
+	   strcat(uristr, ":");
+	   strcat(uristr, password);
+	}
+	   strcat(uristr, "@");
+    }
+    strcat(uristr, host);
+    strcat(uristr, ":");
+    strcat(uristr, p);
+    if (authSource != NULL) {
         strcat(uristr, "?authSource=");
         strcat(uristr, authSource);
-     }
-     printf("mongo: [%s]\n", uristr);
+    }
+    
+    mongoc_init ();
+    conf->client = mongoc_client_new (uristr);
 
-    conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
-   mongoc_init ();
-
-   conf->client = mongoc_client_new (uristr);
-
-   if (!conf->client) {
-      fprintf (stderr, "Failed to parse URI.\n");
-      return NULL;
-   }
-    return (conf);
+    if (!conf->client) {
+        fprintf (stderr, "Failed to parse URI.\n");
+        return NULL;
+    }
+    
+	return (conf);
 }
 
 char *be_mongo_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
-    struct mongo_backend *conf = (struct mongo_backend *)handle;
+   
+   struct mongo_backend *conf = (struct mongo_backend *)handle;
    mongoc_collection_t *collection;
    mongoc_cursor_t *cursor;
    bson_error_t error;
@@ -81,7 +137,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
    bson_append_utf8 (&query, "username", -1, username, -1);
 
-   collection = mongoc_client_get_collection (conf->client, dbName, colName);
+   collection = mongoc_client_get_collection (conf->client, conf->database, conf->users_coll);
    cursor = mongoc_collection_find (collection,
                                     MONGOC_QUERY_NONE,
                                     0,
@@ -97,7 +153,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
       if (mongoc_cursor_next (cursor, &doc)) {
 
          bson_iter_init(&iter, doc);
-         bson_iter_find(&iter, passLoc);
+         bson_iter_find(&iter, conf->password_loc);
 
          char *src = (char *)bson_iter_utf8(&iter, NULL);
 		 size_t tmp = strlen(src);
@@ -109,8 +165,8 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
    if (mongoc_cursor_error (cursor, &error)) {
       fprintf (stderr, "Cursor Failure: %s\n", error.message);
-      return result;
    }
+   
    bson_destroy (&query);
    mongoc_cursor_destroy (cursor);
    mongoc_collection_destroy (collection);
@@ -123,6 +179,15 @@ void be_mongo_destroy(void *handle)
     struct mongo_backend *conf = (struct mongo_backend *)handle;
 
     if (conf != NULL) {
+		/* Free Settings */
+		free(conf->database);
+		free(conf->users_coll);
+		free(conf->topics_coll);
+		free(conf->password_loc);
+		free(conf->topic_loc);
+		free(conf->topicId_loc);
+		free(conf->superuser_loc);
+		
         mongoc_client_destroy(conf->client);
         conf->client = NULL;
     }
@@ -142,7 +207,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	bson_init (&query);
 	bson_append_utf8(&query, "username", -1, username, -1);
 
-	collection = mongoc_client_get_collection(handle->client, dbName, colName);
+	collection = mongoc_client_get_collection(handle->client, handle->database, handle->users_coll);
 
 	cursor = mongoc_collection_find(collection,
 									MONGOC_QUERY_NONE,
@@ -157,25 +222,20 @@ int be_mongo_superuser(void *conf, const char *username)
 			mongoc_cursor_more (cursor)) {
 		if (mongoc_cursor_next (cursor, &doc)) {
 				bson_iter_init(&iter, doc);
-				bson_iter_find(&iter, superUser);
+				bson_iter_find(&iter, handle->superuser_loc);
 
 				result = (int64_t) bson_iter_as_int64(&iter);
-
-				//_log(LOG_NOTICE, "SUPERUSER: %d", result);
 
 		}
 	}
 
 	if (mongoc_cursor_error (cursor, &error)) {
       	fprintf (stderr, "Cursor Failure: %s\n", error.message);
-    	  return result;
    	}
 
 	bson_destroy (&query);
 	mongoc_cursor_destroy (cursor);
    	mongoc_collection_destroy (collection);
-
-
 
 	return result;
 }
@@ -197,7 +257,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	bson_init(&query);
 	bson_append_utf8(&query, "username", -1, username, -1);
 
-	collection = mongoc_client_get_collection(handle->client, dbName, colName);
+	collection = mongoc_client_get_collection(handle->client, handle->database, handle->users_coll);
 
 	cursor = mongoc_collection_find(collection,
 									MONGOC_QUERY_NONE,
@@ -212,7 +272,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			mongoc_cursor_more (cursor)) {
 		if (foundFlag == 0 && mongoc_cursor_next (cursor, &doc)) {
 				bson_iter_init(&iter, doc);
-				bson_iter_find(&iter, topicLoc);
+				bson_iter_find(&iter, handle->topic_loc);
 
 				int64_t topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
 
@@ -221,8 +281,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 				mongoc_collection_destroy(collection);
 
 				bson_init(&query);
-				bson_append_int64(&query, topicID, -1, topId);
-				collection = mongoc_client_get_collection(handle->client, dbName, topicLoc);
+				bson_append_int64(&query, handle->topicId_loc, -1, topId);
+				collection = mongoc_client_get_collection(handle->client, handle->database, handle->topics_coll);
 				cursor = mongoc_collection_find(collection,
 												MONGOC_QUERY_NONE,
 												0,
@@ -236,7 +296,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		if (foundFlag == 1 && mongoc_cursor_next(cursor, &doc)) {
 
 			bson_iter_init(&iter, doc);
-			bson_iter_find(&iter, topicLoc);
+			bson_iter_find(&iter, handle->topic_loc);
 			uint32_t len;
 			const uint8_t *arr;
 			bson_iter_array(&iter, &len, &arr);
@@ -263,23 +323,15 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		}
 
 	}
-
-
-	if (mongoc_cursor_error (cursor, &error)) {
+	
+	if ( (mongoc_cursor_error (cursor, &error)) && (match != 1) ) {
 			fprintf (stderr, "Cursor Failure: %s\n", error.message);
-			return 0;
 	}
-
-
+	
 	bson_destroy(&query);
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy(collection);
-
-
-
-
-
-
 	return match;
+
 }
 #endif /* BE_MONGO */

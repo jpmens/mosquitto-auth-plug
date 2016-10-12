@@ -91,6 +91,8 @@ ifneq ($(BACKEND_MONGO), no)
 	BACKENDSTR += MongoDB
 
 	BE_CFLAGS += -I/usr/local/include/
+	BE_CFLAGS += -I/usr/local/include/libmongoc-1.0/
+	BE_CFLAGS += -I/usr/local/include/libbson-1.0/
 	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lmongoc-1.0 -lbson-1.0
 	OBJS += be-mongo.o
