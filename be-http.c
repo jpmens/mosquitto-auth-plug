@@ -124,7 +124,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 
-	url = (char *)malloc(strlen(conf->ip) + strlen(uri) + 20);
+	url = (char *)malloc(strlen(conf->hostname) + strlen(uri) + 20);
 	if (url == NULL) {
 		_fatal("ENOMEM");
 		return (FALSE);
@@ -132,9 +132,9 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	// enable the https
 	if (strcmp(conf->with_tls, "true") == 0){
-		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
+		sprintf(url, "https://%s:%d%s", conf->hostname, conf->port, uri);
 	}else{
-		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
+		sprintf(url, "http://%s:%d%s", conf->hostname, conf->port, uri);
 	}
 
 	char* escaped_username = curl_easy_escape(curl, username, 0);
@@ -223,7 +223,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 void *be_http_init()
 {
 	struct http_backend *conf;
-	char *ip;
+	char *hostname;
 	char *getuser_uri;
 	char *superuser_uri;
 	char *aclcheck_uri;
@@ -233,8 +233,8 @@ void *be_http_init()
 		return (NULL);
 	}
 
-	if ((ip = p_stab("http_ip")) == NULL) {
-		_fatal("Mandatory parameter `http_ip' missing");
+	if ((hostname = p_stab("http_ip")) == NULL && (hostname = p_stab("http_hostname")) == NULL) {
+		_fatal("Mandatory parameter: one of either `http_ip' or `http_hostname' required");
 		return (NULL);
 	}
 	if ((getuser_uri = p_stab("http_getuser_uri")) == NULL) {
@@ -251,7 +251,7 @@ void *be_http_init()
 	}
 
 	conf = (struct http_backend *)malloc(sizeof(struct http_backend));
-	conf->ip = ip;
+	conf->hostname = hostname;
 	conf->port = p_stab("http_port") == NULL ? 80 : atoi(p_stab("http_port"));
 	if (p_stab("http_hostname") != NULL) {
 		conf->hostheader = (char *)malloc(128);
