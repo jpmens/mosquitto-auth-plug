@@ -156,10 +156,10 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
          bson_iter_find(&iter, conf->password_loc);
 
          char *src = (char *)bson_iter_utf8(&iter, NULL);
-		 size_t tmp = strlen(src);
+		 size_t tmp = strlen(src) + 1;
 		 result = (char *) malloc(tmp);
 		 memset(result, 0, tmp);
-         memcpy(result, src, tmp);
+		 memcpy(result, src, tmp);
       }
    }
 
