@@ -45,12 +45,12 @@ static unsigned int sha_hash(const char *data, size_t size, unsigned char *out)
 	const EVP_MD *md = EVP_get_digestbyname("SHA1");
 
 	if (md != NULL) {
-		EVP_MD_CTX mdctx;
-		EVP_MD_CTX_init(&mdctx);
-		EVP_DigestInit_ex(&mdctx, md, NULL);
-		EVP_DigestUpdate(&mdctx, data, size);
-		EVP_DigestFinal_ex(&mdctx, out, &md_len);
-		EVP_MD_CTX_cleanup(&mdctx);
+		EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+		EVP_MD_CTX_init(mdctx);
+		EVP_DigestInit_ex(mdctx, md, NULL);
+		EVP_DigestUpdate(mdctx, data, size);
+		EVP_DigestFinal_ex(mdctx, out, &md_len);
+		EVP_MD_CTX_free(mdctx);
 	}
 	return md_len;
 }
