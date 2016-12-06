@@ -531,7 +531,7 @@ topics = {
 		 }
 ```
 
-The following `auth_opt_mongo_` options are supported by the mysql back-end:
+The following `auth_opt_mongo_` options are supported by the mongo back-end:
 
 | Option             | default           | Meaning               |
 | ------------------ | ----------------- | --------------------- |
