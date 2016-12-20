@@ -15,3 +15,5 @@ MOSQUITTO_SRC =
 # Specify the path the OpenSSL here
 OPENSSLDIR = /usr
 
+# Specify optional/additional linker flags here
+LDFLAGS =
