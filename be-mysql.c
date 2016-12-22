@@ -115,12 +115,12 @@ void *be_mysql_init()
     }
 
 	if (!mysql_real_connect(conf->mysql, host, user, pass, dbname, port, NULL, 0)) {
-		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
-        if (!conf->auto_connect && !reconnect) {
-            free(conf);
-            mysql_close(conf->mysql);
-            return (NULL);
-        }
+		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));
+		if (!conf->auto_connect && !reconnect) {
+		    free(conf);
+		    mysql_close(conf->mysql);
+		    return (NULL);
+		}
 	}
 
 	return ((void *)conf);
