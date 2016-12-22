@@ -587,7 +587,7 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
 		if (!strcmp(database, b->name)) {
-			psk_key = b->getuser(b->conf, username);
+			psk_key = b->getuser(b->conf, username, NULL, 0);
 			break;
 		}
 
