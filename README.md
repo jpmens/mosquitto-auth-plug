@@ -545,7 +545,7 @@ The following `auth_opt_mongo_` options are supported by the mongo back-end:
 | collection_topics  | topics            | Collection for Topic Documents
 | location_password  | password          | Password field name in User Document
 | location_topic     | topics            | Topic Document pointer field name in User Document
-| lotcation_topicId  | _id               | Field name that location_topic points to in Topic Document
+| location_topicId  | _id               | Field name that location_topic points to in Topic Document
 | location_superuser | superuser         | Superuser field name in User Document
 
 Mosquitto configuration for the `mongo` back-end:
