@@ -247,7 +247,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	bson_iter_t iter;
 
 	bool check = false, foundFlag = false;
-	int match = 0;
+	int match = 0, topId = 0; 
 
 	bson_t query;
 
