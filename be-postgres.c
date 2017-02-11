@@ -65,8 +65,8 @@ void *be_pg_init()
 	pass   = p_stab("pass");
 	dbname = p_stab("dbname");
 
-	host = (host) ? host : strdup("localhost");
-	port = (p) ? p : strdup("5432");
+	host = (host) ? host : strdup("");
+	port = (p) ? p : strdup("");
 
 	userquery = p_stab("userquery");
 
