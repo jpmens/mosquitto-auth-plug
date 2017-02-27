@@ -270,8 +270,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 
             bson_iter_init(&iter, doc);
             bson_iter_find(&iter, handle->topic_loc);
-
-            topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
+            //http://mongoc.org/libbson/1.0.2/bson_oid_t.html
+            //topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
+            topId = (bson_oid_t) bson_iter_oid(&iter);//, NULL);
             foundFlag = true;
     }
 	
@@ -287,7 +288,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 
     if (foundFlag) {
         bson_init(&query);
-        bson_append_int64(&query, handle->topicId_loc, -1, topId);
+        bson_append_oid(&query, handle->topicId_loc, -1, topId);
         collection = mongoc_client_get_collection(handle->client, handle->database, handle->topics_coll);
         cursor = mongoc_collection_find(collection,
                                         MONGOC_QUERY_NONE,
