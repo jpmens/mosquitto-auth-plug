@@ -273,7 +273,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
             bson_iter_find(&iter, handle->topic_loc);
             //http://mongoc.org/libbson/1.0.2/bson_oid_t.html
             //topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
-            topId = (bson_oid_t) bson_iter_oid(&iter);//, NULL);
+            topId = bson_iter_oid(&iter);//, NULL);
             foundFlag = true;
     }
 	
