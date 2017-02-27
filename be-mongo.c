@@ -289,7 +289,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 
     if (foundFlag) {
         bson_init(&query);
-        bson_append_oid(&query, handle->topicId_loc, -1, &topId);
+        bson_append_oid(&query, handle->topicId_loc, -1, topId);
         collection = mongoc_client_get_collection(handle->client, handle->database, handle->topics_coll);
         cursor = mongoc_collection_find(collection,
                                         MONGOC_QUERY_NONE,
