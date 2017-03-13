@@ -31,6 +31,7 @@ struct mongo_backend {
 };
 
 bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
+bool check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access);
 
 void *be_mongo_init()
 {
@@ -291,6 +292,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			bson_type_t embedded_prop_type = bson_iter_type(&iter);
 			if (embedded_prop_type == BSON_TYPE_ARRAY) {
 				match = check_acl_topics_array(&iter, topic);
+			} else if (embedded_prop_type == BSON_TYPE_DOCUMENT) {
+				match = check_acl_topics_map(&iter, topic, acc);
 			}
 		}
 	}
@@ -330,6 +333,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 				bson_type_t loc_prop_type = bson_iter_type(&iter);
 				if (loc_prop_type == BSON_TYPE_ARRAY) {
 					match = check_acl_topics_array(&iter, topic);
+				} else if (loc_prop_type == BSON_TYPE_DOCUMENT) {
+					match = check_acl_topics_map(&iter, topic, acc);
 				}
 			} else {
 				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topics_coll);
@@ -364,6 +369,36 @@ bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
 		}
 	}
 	return false;
+}
+
+// Check an embedded document of the form { "article/#": "r", "article/?/comments": "rw", "ballotbox": "w" }
+bool check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access)
+{
+	bson_iter_t iter;
+	bson_iter_recurse(topics, &iter);
+	bool granted = false;
+
+	// Loop through mapped topics, allowing for the fact that a two different ACLs may have complementary permissions.
+	while (bson_iter_next(&iter) && !granted) {
+		const char *permitted_topic = bson_iter_key(&iter);
+		bool topic_matches = false;
+
+		mosquitto_topic_matches_sub(permitted_topic, req_topic, &topic_matches);
+		if (topic_matches) {
+			bson_type_t val_type = bson_iter_type(&iter);
+			if (val_type == BSON_TYPE_UTF8) {
+				const char *permission = bson_iter_utf8(&iter, NULL);
+				if (strcmp(permission, "r") == 0) {
+					granted = (req_access & 1) > 0;
+				} else if (strcmp(permission, "w") == 0) {
+					granted = (req_access & 2) > 0;
+				} else if (strcmp(permission, "rw") == 0) {
+					granted = true;
+				}
+			}
+		}
+	}
+	return granted;
 }
 
 #endif /* BE_MONGO */
