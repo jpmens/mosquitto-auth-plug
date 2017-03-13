@@ -151,7 +151,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
 		bson_iter_init(&iter, doc);
 		if (bson_iter_find(&iter, conf->password_loc)) {
-			char *password_src = (char *)bson_iter_utf8(&iter, NULL);
+			const char *password_src = bson_iter_utf8(&iter, NULL);
 			size_t password_len = strlen(password_src) + 1;
 			result = (char *) malloc(password_len);
 			memcpy(result, password_src, password_len);
@@ -274,9 +274,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			if (loc_id_type == BSON_TYPE_OID) {
 				topic_lookup_oid = bson_iter_oid(&iter);
 			} else if (loc_id_type == BSON_TYPE_INT32 || loc_id_type == BSON_TYPE_INT64) {
-				topic_lookup_int64 = (int64_t)bson_iter_as_int64(&iter);
+				topic_lookup_int64 = bson_iter_as_int64(&iter);
 			} else if (loc_id_type == BSON_TYPE_UTF8) {
-				topic_lookup_utf8 = (const char *)bson_iter_utf8(&iter, NULL);
+				topic_lookup_utf8 = bson_iter_utf8(&iter, NULL);
 			}
 		}
 	}
