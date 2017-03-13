@@ -193,6 +193,7 @@ void be_mongo_destroy(void *handle)
 		free(conf->topic_loc);
 		free(conf->topicId_loc);
 		free(conf->superuser_loc);
+		free(conf->user_embedded_topics_prop);
 
 		mongoc_client_destroy(conf->client);
 		conf->client = NULL;
