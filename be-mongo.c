@@ -150,13 +150,14 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 		mongoc_cursor_next (cursor, &doc)) {
 
 		bson_iter_init(&iter, doc);
-		bson_iter_find(&iter, conf->password_loc);
-
-		char *src = (char *)bson_iter_utf8(&iter, NULL);
-		size_t tmp = strlen(src) + 1;
-		result = (char *) malloc(tmp);
-		memset(result, 0, tmp);
-		memcpy(result, src, tmp);
+		if (bson_iter_find(&iter, conf->password_loc)) {
+			char *password_src = (char *)bson_iter_utf8(&iter, NULL);
+			size_t password_len = strlen(password_src) + 1;
+			result = (char *) malloc(password_len);
+			memcpy(result, password_src, password_len);
+		} else {
+			_log(LOG_NOTICE, "[mongo] (%s) missing for user (%s)", conf->password_loc, username);
+		}
 	}
 
 	if (mongoc_cursor_error (cursor, &error)) {
@@ -196,7 +197,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	mongoc_cursor_t *cursor;
 	bson_error_t error;
 	const bson_t *doc;
-	int result;
+	int result = 0;
 
 	bson_t query;
 	bson_iter_t iter;
@@ -217,9 +218,9 @@ int be_mongo_superuser(void *conf, const char *username)
 	if (!mongoc_cursor_error (cursor, &error) &&
 		mongoc_cursor_next (cursor, &doc)) {
 		bson_iter_init(&iter, doc);
-		bson_iter_find(&iter, handle->superuser_loc);
-
-		result = (int64_t) bson_iter_as_int64(&iter);
+		if (bson_iter_find(&iter, handle->superuser_loc)) {
+			result = bson_iter_as_bool(&iter) ? 1 : 0;
+		}
 	}
 
 	if (mongoc_cursor_error (cursor, &error)) {
@@ -241,10 +242,13 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	bson_error_t error;
 	const bson_t *doc;
 	bson_iter_t iter;
+	bson_type_t loc_id_type;
 
-	bool check = false, foundFlag = false;
+	bool check = false;
 	int match = 0;
-	const bson_oid_t *topId;
+	const bson_oid_t *topic_lookup_oid = NULL;
+	const char *topic_lookup_utf8 = NULL;
+	int64_t topic_lookup_int64 = 0;
 
 	bson_t query;
 
@@ -265,11 +269,16 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next (cursor, &doc)) {
 
 		bson_iter_init(&iter, doc);
-		bson_iter_find(&iter, handle->topic_loc);
-		//http://mongoc.org/libbson/1.0.2/bson_oid_t.html
-		//topId = (int64_t) bson_iter_as_int64(&iter);//, NULL);
-		topId = bson_iter_oid(&iter);//, NULL);
-		foundFlag = true;
+		if (bson_iter_find(&iter, handle->topic_loc)) {
+			loc_id_type = bson_iter_type(&iter);
+			if (loc_id_type == BSON_TYPE_OID) {
+				topic_lookup_oid = bson_iter_oid(&iter);
+			} else if (loc_id_type == BSON_TYPE_INT32 || loc_id_type == BSON_TYPE_INT64) {
+				topic_lookup_int64 = (int64_t)bson_iter_as_int64(&iter);
+			} else if (loc_id_type == BSON_TYPE_UTF8) {
+				topic_lookup_utf8 = (const char *)bson_iter_utf8(&iter, NULL);
+			}
+		}
 	}
 
 	if ((mongoc_cursor_error (cursor, &error)) && (match != 1)) {
@@ -280,9 +289,15 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy(collection);
 
-	if (foundFlag) {
+	if (topic_lookup_oid != NULL || topic_lookup_int64 != 0 || topic_lookup_utf8 != NULL) {
 		bson_init(&query);
-		bson_append_oid(&query, handle->topicId_loc, -1, topId);
+		if (topic_lookup_oid != NULL) {
+			bson_append_oid(&query, handle->topicId_loc, -1, topic_lookup_oid);
+		} else if (topic_lookup_int64 != 0) {
+			bson_append_int64(&query, handle->topicId_loc, -1, topic_lookup_int64);
+		} else if (topic_lookup_utf8 != NULL) {
+			bson_append_utf8(&query, handle->topicId_loc, -1, topic_lookup_utf8, -1);
+		}
 		collection = mongoc_client_get_collection(handle->client, handle->database, handle->topics_coll);
 		cursor = mongoc_collection_find(collection,
 								MONGOC_QUERY_NONE,
@@ -297,25 +312,25 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next(cursor, &doc)) {
 
 			bson_iter_init(&iter, doc);
-			bson_iter_find(&iter, handle->topic_loc);
-			uint32_t len;
-			const uint8_t *arr;
-			bson_iter_array(&iter, &len, &arr);
-			bson_t b;
+			if (bson_iter_find(&iter, handle->topic_loc)) {
+				uint32_t len;
+				const uint8_t *arr;
+				bson_iter_array(&iter, &len, &arr);
+				bson_t b;
 
-			if (bson_init_static(&b, arr, len)) {
-				bson_iter_init(&iter, &b);
-				while (bson_iter_next(&iter)) {
-
-					char *str = bson_iter_dup_utf8(&iter, &len);
-					mosquitto_topic_matches_sub(str, topic, &check);
-					if (check) {
+				if (bson_init_static(&b, arr, len)) {
+					bson_iter_init(&iter, &b);
+					while (bson_iter_next(&iter)) {
+						const char *str = bson_iter_utf8(&iter, NULL);
+						mosquitto_topic_matches_sub(str, topic, &check);
+						if (check) {
 							match = 1;
-							bson_free(str);
 							break;
+						}
 					}
-					bson_free(str);
 				}
+			} else {
+				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topics_coll);
 			}
 		}
 
@@ -326,6 +341,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		bson_destroy(&query);
 		mongoc_cursor_destroy(cursor);
 		mongoc_collection_destroy(collection);
+	} else {
+		_log(LOG_NOTICE, "[mongo] ACL check error - user (%s) does not have a topic list", username);
 	}
 
 	return match;
