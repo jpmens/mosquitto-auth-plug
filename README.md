@@ -521,12 +521,12 @@ The `mongo` back-end works with superuser and ACL checks with the following coll
 users = {
          username: "user",
 	     password: "PBKDF_string"
-	     topics: int (topicID location)
-	     superuser: int (1 true, 0 false)
+	     topics: int | oid | string (reference to a document in collection_topics)
+	     superuser: int | boolean (optional, superuser if truthy)
         }
 
 topics = {
-           _id: int,
+           _id: int | oid | string (as referenced by users.topics),
 		   topics: ["xx/xx/#", "yy/#", ...]
 		 }
 ```
@@ -545,7 +545,7 @@ The following `auth_opt_mongo_` options are supported by the mongo back-end:
 | collection_topics  | topics            | Collection for Topic Documents
 | location_password  | password          | Password field name in User Document
 | location_topic     | topics            | Topic Document pointer field name in User Document
-| location_topicId  | _id               | Field name that location_topic points to in Topic Document
+| location_topicId   | _id               | Field name that location_topic points to in Topic Document
 | location_superuser | superuser         | Superuser field name in User Document
 
 Mosquitto configuration for the `mongo` back-end:
