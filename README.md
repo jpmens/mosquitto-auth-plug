@@ -532,7 +532,7 @@ You may use any combination of these options; authorisation will be granted if a
     username: string,
     [location_password]: string, // A PBKDF2 hash, see 'Passwords' section
     [location_topics]: int | oid | string, // reference to a document in collection_topics)
-    [user_embedded_topics_prop]: string[], // optional list of permitted topics eg ["xx/xx/#", "yy/#", ...]
+    [user_embedded_topics_prop]: string[] | { [topic: string]: "r"|"w"|"rw" }, // see 'ACL format'
     [location_superuser]: int | boolean // optional, superuser if truthy
 }
 ```
@@ -544,9 +544,15 @@ If the user document references a separate topics document, that document should
 ```
 {
     [location_topicId]: int | oid | string, // unique id, as referenced by users[location_topics],
-    [location_topics]: string[] // topics with full access eg ["xx/xx/#", "yy/#", ...]
+    [location_topics]: string[] | { [topic: string]: "r"|"w"|"rw" } // see 'ACL format'
 }
 ```
+
+#### ACL format
+
+Topics may be given as either an array of topic strings, eg `["topic1/#", "topic2/+"]`, in which case all topics will 
+be read-write, or as a sub-document mapping topic names to the strings `"r"`, `"w"`, `"rw"`, eg 
+`{ "article/#":"r", "article/+/comments":"rw", "ballotbox":"w" }`.
 
 #### Configuration
 
@@ -574,8 +580,6 @@ auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
 auth_opt_mongo_host localhost
 auth_opt_mongo_port 27017
 ```
-currently no readwrite checks on ACL, all topics will be readwrite, do not add a flag to the array of topics in db.
-
 
 ## Passwords
 
