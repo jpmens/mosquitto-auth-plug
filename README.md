@@ -550,9 +550,9 @@ If the user document references a separate topics document, that document should
 
 #### ACL format
 
-Topics may be given as either an array of topic strings, eg `["topic1/#", "topic2/?"]`, in which case all topics will 
+Topics may be given as either an array of topic strings, eg `["topic1/#", "topic2/+"]`, in which case all topics will 
 be read-write, or as a sub-document mapping topic names to the strings `"r"`, `"w"`, `"rw"`, eg 
-`{ "article/#":"r", "article/?/comments":"rw", "ballotbox":"w" }`.
+`{ "article/#":"r", "article/+/comments":"rw", "ballotbox":"w" }`.
 
 #### Configuration
 

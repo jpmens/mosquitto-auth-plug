@@ -371,7 +371,7 @@ bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
 	return false;
 }
 
-// Check an embedded document of the form { "article/#": "r", "article/?/comments": "rw", "ballotbox": "w" }
+// Check an embedded document of the form { "article/#": "r", "article/+/comments": "rw", "ballotbox": "w" }
 bool check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access)
 {
 	bson_iter_t iter;
