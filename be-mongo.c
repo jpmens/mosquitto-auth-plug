@@ -27,14 +27,17 @@ struct mongo_backend {
 	char *topic_loc;
 	char *topicId_loc;
 	char *superuser_loc;
+	char *user_embedded_topics_prop;
 };
+
+bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
 
 void *be_mongo_init()
 {
 	struct mongo_backend *conf;
 	char *host, *p, *user, *password, *authSource;
 	char *database, *users_coll, *topics_coll, *password_loc, *topic_loc;
-	char *topicId_loc, *superuser_loc;
+	char *topicId_loc, *superuser_loc, *user_embedded_topics_prop;
 
 	conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
 
@@ -74,6 +77,12 @@ void *be_mongo_init()
 		conf->topic_loc = "topics";
 	} else {
 		conf->topic_loc = topic_loc;
+	}
+
+	if ((user_embedded_topics_prop = p_stab("mongo_user_embedded_topics_prop")) == NULL) {
+		conf->user_embedded_topics_prop = "topics";
+	} else {
+		conf->user_embedded_topics_prop = user_embedded_topics_prop;
 	}
 
 	if ((topicId_loc = p_stab("mongo_location_topicId")) == NULL) {
@@ -151,7 +160,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
 		bson_iter_init(&iter, doc);
 		if (bson_iter_find(&iter, conf->password_loc)) {
-			char *password_src = (char *)bson_iter_utf8(&iter, NULL);
+			const char *password_src = bson_iter_utf8(&iter, NULL);
 			size_t password_len = strlen(password_src) + 1;
 			result = (char *) malloc(password_len);
 			memcpy(result, password_src, password_len);
@@ -184,6 +193,7 @@ void be_mongo_destroy(void *handle)
 		free(conf->topic_loc);
 		free(conf->topicId_loc);
 		free(conf->superuser_loc);
+		free(conf->user_embedded_topics_prop);
 
 		mongoc_client_destroy(conf->client);
 		conf->client = NULL;
@@ -242,9 +252,6 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	bson_error_t error;
 	const bson_t *doc;
 	bson_iter_t iter;
-	bson_type_t loc_id_type;
-
-	bool check = false;
 	int match = 0;
 	const bson_oid_t *topic_lookup_oid = NULL;
 	const char *topic_lookup_utf8 = NULL;
@@ -267,16 +274,23 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 							NULL);
 
 	if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next (cursor, &doc)) {
-
-		bson_iter_init(&iter, doc);
-		if (bson_iter_find(&iter, handle->topic_loc)) {
-			loc_id_type = bson_iter_type(&iter);
+		// First find any user[handle->topic_loc]
+		if (bson_iter_init_find(&iter, doc, handle->topic_loc)) {
+			bson_type_t loc_id_type = bson_iter_type(&iter);
 			if (loc_id_type == BSON_TYPE_OID) {
 				topic_lookup_oid = bson_iter_oid(&iter);
 			} else if (loc_id_type == BSON_TYPE_INT32 || loc_id_type == BSON_TYPE_INT64) {
-				topic_lookup_int64 = (int64_t)bson_iter_as_int64(&iter);
+				topic_lookup_int64 = bson_iter_as_int64(&iter);
 			} else if (loc_id_type == BSON_TYPE_UTF8) {
-				topic_lookup_utf8 = (const char *)bson_iter_utf8(&iter, NULL);
+				topic_lookup_utf8 = bson_iter_utf8(&iter, NULL);
+			}
+		}
+
+		// Look through the props from the beginning for user[handle->user_embedded_topics_prop]
+		if (bson_iter_init_find(&iter, doc, handle->user_embedded_topics_prop)) {
+			bson_type_t embedded_prop_type = bson_iter_type(&iter);
+			if (embedded_prop_type == BSON_TYPE_ARRAY) {
+				match = check_acl_topics_array(&iter, topic);
 			}
 		}
 	}
@@ -289,7 +303,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy(collection);
 
-	if (topic_lookup_oid != NULL || topic_lookup_int64 != 0 || topic_lookup_utf8 != NULL) {
+	if (!match && (topic_lookup_oid != NULL || topic_lookup_int64 != 0 || topic_lookup_utf8 != NULL)) {
 		bson_init(&query);
 		if (topic_lookup_oid != NULL) {
 			bson_append_oid(&query, handle->topicId_loc, -1, topic_lookup_oid);
@@ -313,21 +327,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 
 			bson_iter_init(&iter, doc);
 			if (bson_iter_find(&iter, handle->topic_loc)) {
-				uint32_t len;
-				const uint8_t *arr;
-				bson_iter_array(&iter, &len, &arr);
-				bson_t b;
-
-				if (bson_init_static(&b, arr, len)) {
-					bson_iter_init(&iter, &b);
-					while (bson_iter_next(&iter)) {
-						const char *str = bson_iter_utf8(&iter, NULL);
-						mosquitto_topic_matches_sub(str, topic, &check);
-						if (check) {
-							match = 1;
-							break;
-						}
-					}
+				bson_type_t loc_prop_type = bson_iter_type(&iter);
+				if (loc_prop_type == BSON_TYPE_ARRAY) {
+					match = check_acl_topics_array(&iter, topic);
 				}
 			} else {
 				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topics_coll);
@@ -341,10 +343,27 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		bson_destroy(&query);
 		mongoc_cursor_destroy(cursor);
 		mongoc_collection_destroy(collection);
-	} else {
-		_log(LOG_NOTICE, "[mongo] ACL check error - user (%s) does not have a topic list", username);
 	}
 
 	return match;
 }
+
+// Check an embedded array of the form [ "public/#", "private/myid/#" ]
+bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
+{
+	bson_iter_t iter;
+	bson_iter_recurse(topics, &iter);
+
+	while (bson_iter_next(&iter)) {
+		const char *permitted_topic = bson_iter_utf8(&iter, NULL);
+		bool topic_matches = false;
+
+		mosquitto_topic_matches_sub(permitted_topic, req_topic, &topic_matches);
+		if (topic_matches) {
+			return true;
+		}
+	}
+	return false;
+}
+
 #endif /* BE_MONGO */
