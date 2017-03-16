@@ -558,27 +558,27 @@ be read-write, or as a sub-document mapping topic names to the strings `"r"`, `"
 
 The following `auth_opt_mongo_` options are supported by the mongo back-end:
 
-| Option                     | default           | Meaning               |
-| -------------------------- | ----------------- | --------------------- |
-| host                       | localhost         | Hostname/Address
-| port                       | 27017             | TCP port
-| user                       |                   | MongoDB connection username
-| password                   |                   | MongoDB connection password
-| authSource                 |                   | MongoDB connection auth source
-| database                   | mqGate            | Database Name
-| collection_users           | users             | Collection for User Documents
-| collection_topics          | topics            | Collection for Topic Documents (optional if embedded topics are used)
-| location_password          | password          | Password field name in User Document
-| location_topic             | topics            | Topic Document pointer field name in User Document
-| location_topicId           | _id               | Field name that location_topic points to in Topic Document
-| location_superuser         | superuser         | Superuser field name in User Document
-| user_embedded_topics_prop  | topics            | Name of property on user doc containing an embedded topic list
+| Option                     | default                   | Meaning               |
+| -------------------------- | ------------------------- | --------------------- |
+| uri                        | mongodb://localhost:27107 | MongoDB connection string
+| host                       | localhost                 | Hostname/Address
+| port                       | 27017                     | TCP port
+| user                       |                           | MongoDB connection username
+| password                   |                           | MongoDB connection password
+| authSource                 |                           | MongoDB connection auth source
+| database                   | mqGate                    | Database Name
+| collection_users           | users                     | Collection for User Documents
+| collection_topics          | topics                    | Collection for Topic Documents (optional if embedded topics are used)
+| location_password          | password                  | Password field name in User Document
+| location_topic             | topics                    | Topic Document pointer field name in User Document
+| location_topicId           | _id                       | Field name that location_topic points to in Topic Document
+| location_superuser         | superuser                 | Superuser field name in User Document
+| user_embedded_topics_prop  | topics                    | Name of property on user doc containing an embedded topic list
 
 Mosquitto configuration for the `mongo` back-end:
 ```
 auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
-auth_opt_mongo_host localhost
-auth_opt_mongo_port 27017
+auth_opt_mongo_uri mongodb://localhost:2017
 ```
 
 ## Passwords

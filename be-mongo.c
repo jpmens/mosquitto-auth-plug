@@ -18,8 +18,6 @@
 
 struct mongo_backend {
 	mongoc_client_t *client;
-	char *host;
-	int port;
 	char *database;
 	char *users_coll;
 	char *topics_coll;
@@ -30,25 +28,17 @@ struct mongo_backend {
 	char *user_embedded_topics_prop;
 };
 
-bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
-bool check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access);
+bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
+bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access);
+mongoc_uri_t *be_mongo_new_uri_from_options();
 
 void *be_mongo_init()
 {
 	struct mongo_backend *conf;
-	char *host, *p, *user, *password, *authSource;
 	char *database, *users_coll, *topics_coll, *password_loc, *topic_loc;
 	char *topicId_loc, *superuser_loc, *user_embedded_topics_prop;
 
 	conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
-
-	if ((host = p_stab("mongo_host")) == NULL) {
-		host = "localhost";
-	}
-
-	if ((p = p_stab("mongo_port")) == NULL) {
-		p = "27017";
-	}
 
 	if ((database = p_stab("mongo_database")) == NULL) {
 		conf->database = "mqGate";
@@ -98,37 +88,53 @@ void *be_mongo_init()
 		conf->superuser_loc = superuser_loc;
 	}
 
-	user = p_stab("mongo_user");
-	password = p_stab("mongo_password");
-	authSource = p_stab("mongo_authSource");
-
-	char uristr[128] = {0};
-	strcpy(uristr, "mongodb://");
-	if (user != NULL) {
-		strcat(uristr, user);
-		if (password != NULL) {
-		   strcat(uristr, ":");
-		   strcat(uristr, password);
-		}
-		strcat(uristr, "@");
-	}
-	strcat(uristr, host);
-	strcat(uristr, ":");
-	strcat(uristr, p);
-	if (authSource != NULL) {
-		strcat(uristr, "?authSource=");
-		strcat(uristr, authSource);
-	}
-
 	mongoc_init();
-	conf->client = mongoc_client_new(uristr);
-
-	if (!conf->client) {
-		fprintf (stderr, "Failed to parse URI.\n");
-		return NULL;
+	mongoc_uri_t *uri = be_mongo_new_uri_from_options();
+	if (!uri) {
+		_fatal("MongoDB connection options invalid");
 	}
+	conf->client = mongoc_client_new_from_uri(uri);
+	mongoc_uri_destroy(uri);
 
 	return (conf);
+}
+
+// Return a new mongoc_uri_t which should be freed with mongoc_uri_destroy
+mongoc_uri_t *be_mongo_new_uri_from_options() {
+	const char *uristr = p_stab("mongo_uri");
+	const char *host = p_stab("mongo_host");
+	const char *port = p_stab("mongo_port");
+	const char *user = p_stab("mongo_user");
+	const char *password = p_stab("mongo_password");
+	const char *authSource = p_stab("mongo_authSource");
+	mongoc_uri_t *uri;
+
+	if (uristr) {
+		// URI string trumps everything else. Let the driver parse it.
+		uri = mongoc_uri_new(uristr);
+	} else if (host || port || user || password || authSource) {
+		// Using legacy piecemeal connection options. Assemble the URI.
+		uri = mongoc_uri_new_for_host_port(
+			host ? host : "localhost",
+			(port && atoi(port)) ? atoi(port) : 27017
+		);
+
+		// NB: Option setters require mongo-c-driver >= 1.4.0 (Aug 2016)
+		if (user != NULL) {
+			mongoc_uri_set_username(uri, user);
+			if (password != NULL) {
+				mongoc_uri_set_password(uri, password);
+			}
+		}
+		if (authSource != NULL) {
+			mongoc_uri_set_auth_source(uri, authSource);
+		}
+	} else {
+		// No connection options given at all, use defaults.
+		uri = mongoc_uri_new_for_host_port("localhost", 27017);
+	}
+
+	return uri;
 }
 
 char *be_mongo_getuser(void *handle, const char *username, const char *password, int *authenticated)
@@ -291,9 +297,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		if (bson_iter_init_find(&iter, doc, handle->user_embedded_topics_prop)) {
 			bson_type_t embedded_prop_type = bson_iter_type(&iter);
 			if (embedded_prop_type == BSON_TYPE_ARRAY) {
-				match = check_acl_topics_array(&iter, topic);
+				match = be_mongo_check_acl_topics_array(&iter, topic);
 			} else if (embedded_prop_type == BSON_TYPE_DOCUMENT) {
-				match = check_acl_topics_map(&iter, topic, acc);
+				match = be_mongo_check_acl_topics_map(&iter, topic, acc);
 			}
 		}
 	}
@@ -332,9 +338,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			if (bson_iter_find(&iter, handle->topic_loc)) {
 				bson_type_t loc_prop_type = bson_iter_type(&iter);
 				if (loc_prop_type == BSON_TYPE_ARRAY) {
-					match = check_acl_topics_array(&iter, topic);
+					match = be_mongo_check_acl_topics_array(&iter, topic);
 				} else if (loc_prop_type == BSON_TYPE_DOCUMENT) {
-					match = check_acl_topics_map(&iter, topic, acc);
+					match = be_mongo_check_acl_topics_map(&iter, topic, acc);
 				}
 			} else {
 				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topics_coll);
@@ -354,7 +360,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 }
 
 // Check an embedded array of the form [ "public/#", "private/myid/#" ]
-bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
+bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
 {
 	bson_iter_t iter;
 	bson_iter_recurse(topics, &iter);
@@ -372,7 +378,7 @@ bool check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
 }
 
 // Check an embedded document of the form { "article/#": "r", "article/+/comments": "rw", "ballotbox": "w" }
-bool check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access)
+bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access)
 {
 	bson_iter_t iter;
 	bson_iter_recurse(topics, &iter);
