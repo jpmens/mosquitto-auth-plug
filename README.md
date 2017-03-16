@@ -529,22 +529,22 @@ You may use any combination of these options; authorisation will be granted if a
 
 ```
 {
-    username: string,
-    [location_password]: string, // A PBKDF2 hash, see 'Passwords' section
-    [location_topics]: int | oid | string, // reference to a document in collection_topics)
-    [user_embedded_topics_prop]: string[] | { [topic: string]: "r"|"w"|"rw" }, // see 'ACL format'
-    [location_superuser]: int | boolean // optional, superuser if truthy
+    [user_username_prop]: string, // Username as given in the MQTT connect request
+    [user_password_prop]: string, // A PBKDF2 hash, see 'Passwords' section
+    [user_topiclist_fk_prop]: int | oid | string, // reference to a document in collection_topics)
+    [user_topics_prop]: string[] | { [topic: string]: "r"|"w"|"rw" }, // see 'ACL format'
+    [user_superuser_prop]: int | boolean // optional, superuser if truthy
 }
 ```
 
-#### Topic groups collection (optional)
+#### Topic lists collection (optional)
 
 If the user document references a separate topics document, that document should exist and must have the format:
 
 ```
 {
-    [location_topicId]: int | oid | string, // unique id, as referenced by users[location_topics],
-    [location_topics]: string[] | { [topic: string]: "r"|"w"|"rw" } // see 'ACL format'
+    [topiclist_key_prop]: int | oid | string, // unique id, as referenced by users[location_topics],
+    [topiclist_topics_prop]: string[] | { [topic: string]: "r"|"w"|"rw" } // see 'ACL format'
 }
 ```
 
@@ -558,22 +558,19 @@ be read-write, or as a sub-document mapping topic names to the strings `"r"`, `"
 
 The following `auth_opt_mongo_` options are supported by the mongo back-end:
 
-| Option                     | default                   | Meaning               |
-| -------------------------- | ------------------------- | --------------------- |
-| uri                        | mongodb://localhost:27107 | MongoDB connection string
-| host                       | localhost                 | Hostname/Address
-| port                       | 27017                     | TCP port
-| user                       |                           | MongoDB connection username
-| password                   |                           | MongoDB connection password
-| authSource                 |                           | MongoDB connection auth source
-| database                   | mqGate                    | Database Name
-| collection_users           | users                     | Collection for User Documents
-| collection_topics          | topics                    | Collection for Topic Documents (optional if embedded topics are used)
-| location_password          | password                  | Password field name in User Document
-| location_topic             | topics                    | Topic Document pointer field name in User Document
-| location_topicId           | _id                       | Field name that location_topic points to in Topic Document
-| location_superuser         | superuser                 | Superuser field name in User Document
-| user_embedded_topics_prop  | topics                    | Name of property on user doc containing an embedded topic list
+| Option                 | default       | Meaning               |
+| ---------------------- | ------------- | --------------------- |
+| uri                    | mongodb://localhost:27107 | MongoDB connection string
+| database               | mqGate                    | Name of the database containing users (and topiclists)
+| user_coll              | users                     | Collection for user documents
+| topiclist_coll         | topics                    | Collection for topiclist documents (optional if embedded topics are used)
+| user_username_prop     | username                  | Username property name in the user document
+| user_password_prop     | password                  | Password property name in the user document
+| user_superuser_prop    | superuser                 | Superuser property name in the user document
+| user_topics_prop       | topics                    | Name of a property on the user document containing an embedded topic list
+| user_topiclist_fk_prop | topics                    | Property used as a foreign key to reference a topiclist document
+| topiclist_key_prop     | _id                       | Unique key in the topiclist document pointed to by user_topiclist_fk_prop
+| topiclist_topics_prop  | topics                    | Property containing topics within the topiclist document
 
 Mosquitto configuration for the `mongo` back-end:
 ```

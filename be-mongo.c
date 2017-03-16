@@ -19,74 +19,37 @@
 struct mongo_backend {
 	mongoc_client_t *client;
 	char *database;
-	char *users_coll;
-	char *topics_coll;
-	char *password_loc;
-	char *topic_loc;
-	char *topicId_loc;
-	char *superuser_loc;
-	char *user_embedded_topics_prop;
+	char *user_coll;
+	char *topiclist_coll;
+	char *user_username_prop;
+	char *user_password_prop;
+	char *user_superuser_prop;
+	char *user_topics_prop;
+	char *user_topiclist_fk_prop;
+	char *topiclist_key_prop;
+	char *topiclist_topics_prop;
 };
 
+const char *be_mongo_get_option(const char *opt_name, const char *dep_opt_name, const char *default_val);
+mongoc_uri_t *be_mongo_new_uri_from_options();
 bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
 bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access);
-mongoc_uri_t *be_mongo_new_uri_from_options();
 
 void *be_mongo_init()
 {
 	struct mongo_backend *conf;
-	char *database, *users_coll, *topics_coll, *password_loc, *topic_loc;
-	char *topicId_loc, *superuser_loc, *user_embedded_topics_prop;
-
 	conf = (struct mongo_backend *)malloc(sizeof(struct mongo_backend));
 
-	if ((database = p_stab("mongo_database")) == NULL) {
-		conf->database = "mqGate";
-	} else {
-		conf->database = database;
-	}
-
-	if ((users_coll  = p_stab("mongo_collection_users")) == NULL) {
-		conf->users_coll = "users";
-	} else {
-		conf->users_coll = users_coll;
-	}
-
-	if ((topics_coll = p_stab("mongo_collection_topics")) == NULL) {
-		conf->topics_coll = "topics";
-	} else {
-		conf->topics_coll = topics_coll;
-	}
-
-	if ((password_loc = p_stab("mongo_location_password")) == NULL) {
-		conf->password_loc = "password";
-	} else {
-		conf->password_loc = password_loc;
-	}
-
-	if ((topic_loc = p_stab("mongo_location_topic")) == NULL) {
-		conf->topic_loc = "topics";
-	} else {
-		conf->topic_loc = topic_loc;
-	}
-
-	if ((user_embedded_topics_prop = p_stab("mongo_user_embedded_topics_prop")) == NULL) {
-		conf->user_embedded_topics_prop = "topics";
-	} else {
-		conf->user_embedded_topics_prop = user_embedded_topics_prop;
-	}
-
-	if ((topicId_loc = p_stab("mongo_location_topicId")) == NULL) {
-		conf->topicId_loc = "_id";
-	} else {
-		conf->topicId_loc = topicId_loc;
-	}
-
-	if ((superuser_loc = p_stab("mongo_location_superuser")) == NULL) {
-		conf->superuser_loc = "superuser";
-	} else {
-		conf->superuser_loc = superuser_loc;
-	}
+	conf->database = strdup(be_mongo_get_option("mongo_database", NULL, "mqGate"));
+	conf->user_coll = strdup(be_mongo_get_option("mongo_user_coll", "mongo_collection_users", "users"));
+	conf->topiclist_coll = strdup(be_mongo_get_option("mongo_topiclist_coll", "mongo_collection_topics", "topics"));
+	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_username_prop", NULL, "username"));
+	conf->user_password_prop = strdup(be_mongo_get_option("mongo_user_password_prop", "mongo_location_password", "password"));
+	conf->user_superuser_prop = strdup(be_mongo_get_option("mongo_user_superuser_prop", "mongo_location_superuser", "superuser"));
+	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_topics_prop", NULL, "topics"));
+	conf->user_topiclist_fk_prop = strdup(be_mongo_get_option("mongo_user_topiclist_fk_prop", "mongo_location_topic", "topics"));
+	conf->topiclist_key_prop = strdup(be_mongo_get_option("mongo_topiclist_key_prop", "mongo_location_superuser", "_id"));
+	conf->topiclist_topics_prop = strdup(be_mongo_get_option("mongo_topiclist_topics_prop", "mongo_location_topic", "topics"));
 
 	mongoc_init();
 	mongoc_uri_t *uri = be_mongo_new_uri_from_options();
@@ -97,6 +60,19 @@ void *be_mongo_init()
 	mongoc_uri_destroy(uri);
 
 	return (conf);
+}
+
+// Get an option value via p_stab, fallback to a deprecated option (log a warning if present), fallback to a default
+const char *be_mongo_get_option(const char *opt_name, const char *dep_opt_name, const char *default_val) {
+	const char *value;
+	if ((value = p_stab(opt_name)) == NULL) {
+		if (dep_opt_name == NULL || (value = p_stab(dep_opt_name)) == NULL) {
+			value = default_val;
+		} else {
+			_log(LOG_NOTICE, "[mongo] Warning: Option '%s' is deprecated. Use '%s' instead.", opt_name, dep_opt_name);
+		}
+	}
+	return value;
 }
 
 // Return a new mongoc_uri_t which should be freed with mongoc_uri_destroy
@@ -152,7 +128,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
 	bson_append_utf8 (&query, "username", -1, username, -1);
 
-	collection = mongoc_client_get_collection (conf->client, conf->database, conf->users_coll);
+	collection = mongoc_client_get_collection (conf->client, conf->database, conf->user_coll);
 	cursor = mongoc_collection_find(collection,
 							MONGOC_QUERY_NONE,
 							0,
@@ -166,13 +142,13 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 		mongoc_cursor_next (cursor, &doc)) {
 
 		bson_iter_init(&iter, doc);
-		if (bson_iter_find(&iter, conf->password_loc)) {
+		if (bson_iter_find(&iter, conf->user_password_prop)) {
 			const char *password_src = bson_iter_utf8(&iter, NULL);
 			size_t password_len = strlen(password_src) + 1;
 			result = (char *) malloc(password_len);
 			memcpy(result, password_src, password_len);
 		} else {
-			_log(LOG_NOTICE, "[mongo] (%s) missing for user (%s)", conf->password_loc, username);
+			_log(LOG_NOTICE, "[mongo] (%s) missing for user (%s)", conf->user_password_prop, username);
 		}
 	}
 
@@ -194,16 +170,19 @@ void be_mongo_destroy(void *handle)
 	if (conf != NULL) {
 		/* Free Settings */
 		free(conf->database);
-		free(conf->users_coll);
-		free(conf->topics_coll);
-		free(conf->password_loc);
-		free(conf->topic_loc);
-		free(conf->topicId_loc);
-		free(conf->superuser_loc);
-		free(conf->user_embedded_topics_prop);
+		free(conf->user_coll);
+		free(conf->topiclist_coll);
+		free(conf->user_username_prop);
+		free(conf->user_password_prop);
+		free(conf->user_superuser_prop);
+		free(conf->user_topics_prop);
+		free(conf->user_topiclist_fk_prop);
+		free(conf->topiclist_key_prop);
+		free(conf->topiclist_topics_prop);
 
 		mongoc_client_destroy(conf->client);
 		conf->client = NULL;
+		free(conf);
 	}
 }
 
@@ -221,7 +200,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	bson_init (&query);
 	bson_append_utf8(&query, "username", -1, username, -1);
 
-	collection = mongoc_client_get_collection(handle->client, handle->database, handle->users_coll);
+	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
 	cursor = mongoc_collection_find(collection,
 							MONGOC_QUERY_NONE,
@@ -235,7 +214,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	if (!mongoc_cursor_error (cursor, &error) &&
 		mongoc_cursor_next (cursor, &doc)) {
 		bson_iter_init(&iter, doc);
-		if (bson_iter_find(&iter, handle->superuser_loc)) {
+		if (bson_iter_find(&iter, handle->user_superuser_prop)) {
 			result = bson_iter_as_bool(&iter) ? 1 : 0;
 		}
 	}
@@ -267,9 +246,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	bson_t query;
 
 	bson_init(&query);
-	bson_append_utf8(&query, "username", -1, username, -1);
+	bson_append_utf8(&query, handle->user_username_prop, -1, username, -1);
 
-	collection = mongoc_client_get_collection(handle->client, handle->database, handle->users_coll);
+	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
 	cursor = mongoc_collection_find(collection,
 							MONGOC_QUERY_NONE,
@@ -281,8 +260,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 							NULL);
 
 	if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next (cursor, &doc)) {
-		// First find any user[handle->topic_loc]
-		if (bson_iter_init_find(&iter, doc, handle->topic_loc)) {
+		// First find any user[handle->user_topiclist_fk_prop]
+		if (bson_iter_init_find(&iter, doc, handle->user_topiclist_fk_prop)) {
 			bson_type_t loc_id_type = bson_iter_type(&iter);
 			if (loc_id_type == BSON_TYPE_OID) {
 				topic_lookup_oid = bson_iter_oid(&iter);
@@ -293,8 +272,8 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			}
 		}
 
-		// Look through the props from the beginning for user[handle->user_embedded_topics_prop]
-		if (bson_iter_init_find(&iter, doc, handle->user_embedded_topics_prop)) {
+		// Look through the props from the beginning for user[handle->user_topics_prop]
+		if (bson_iter_init_find(&iter, doc, handle->user_topics_prop)) {
 			bson_type_t embedded_prop_type = bson_iter_type(&iter);
 			if (embedded_prop_type == BSON_TYPE_ARRAY) {
 				match = be_mongo_check_acl_topics_array(&iter, topic);
@@ -315,13 +294,13 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 	if (!match && (topic_lookup_oid != NULL || topic_lookup_int64 != 0 || topic_lookup_utf8 != NULL)) {
 		bson_init(&query);
 		if (topic_lookup_oid != NULL) {
-			bson_append_oid(&query, handle->topicId_loc, -1, topic_lookup_oid);
+			bson_append_oid(&query, handle->topiclist_key_prop, -1, topic_lookup_oid);
 		} else if (topic_lookup_int64 != 0) {
-			bson_append_int64(&query, handle->topicId_loc, -1, topic_lookup_int64);
+			bson_append_int64(&query, handle->topiclist_key_prop, -1, topic_lookup_int64);
 		} else if (topic_lookup_utf8 != NULL) {
-			bson_append_utf8(&query, handle->topicId_loc, -1, topic_lookup_utf8, -1);
+			bson_append_utf8(&query, handle->topiclist_key_prop, -1, topic_lookup_utf8, -1);
 		}
-		collection = mongoc_client_get_collection(handle->client, handle->database, handle->topics_coll);
+		collection = mongoc_client_get_collection(handle->client, handle->database, handle->topiclist_coll);
 		cursor = mongoc_collection_find(collection,
 								MONGOC_QUERY_NONE,
 								0,
@@ -335,7 +314,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next(cursor, &doc)) {
 
 			bson_iter_init(&iter, doc);
-			if (bson_iter_find(&iter, handle->topic_loc)) {
+			if (bson_iter_find(&iter, handle->topiclist_topics_prop)) {
 				bson_type_t loc_prop_type = bson_iter_type(&iter);
 				if (loc_prop_type == BSON_TYPE_ARRAY) {
 					match = be_mongo_check_acl_topics_array(&iter, topic);
@@ -343,7 +322,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 					match = be_mongo_check_acl_topics_map(&iter, topic, acc);
 				}
 			} else {
-				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topics_coll);
+				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topiclist_coll);
 			}
 		}
 
