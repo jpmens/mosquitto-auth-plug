@@ -78,7 +78,7 @@ void p_freeall()
  * Returned value MUST NOT be freed by caller.
  */
 
-char *p_stab(char *key)
+char *p_stab(const char *key)
 {
 	struct my_opts *mo;
 
