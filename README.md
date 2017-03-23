@@ -23,13 +23,13 @@ and authorization (ACL). Currently not all back-ends have the same capabilities
 | Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB |
 | -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: |
 | authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      |
-| superusers                 |   Y   |       |       |        |      |  2  |    Y     |  Y   |  Y  |  Y      |
-| acl checking               |   Y   |   Y   |   1   |   1    |      |  2  |    Y     |  Y   |  Y  |  Y      |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  2  |    Y     |  Y   |  Y  |  Y      |
+| superusers                 |   Y   |       |       |        |      |  3  |    Y     |  Y   |  Y  |  Y      |
+| acl checking               |   Y   |   1   |   2   |   2    |      |  3  |    Y     |  Y   |  Y  |  Y      |
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  3  |    Y     |  Y   |  Y  |  Y      |
 
- 1. Currently not implemented; back-end returns TRUE
- 2. Dependent on the database used by PSK
-
+ 1. Topic wildcards (+/#) are not supported
+ 2. Currently not implemented; back-end returns TRUE
+ 3. Dependent on the database used by PSK
 
 Multiple back-ends can be configured simultaneously for authentication, and they're attempted in
 the order you specify. Once a user has been authenticated, the _same_ back-end is used to
@@ -295,7 +295,7 @@ auth_opt_redis_userquery GET %s
 auth_opt_redis_aclquery GET %s-%s
 ```
 
-In `auth_opt_redis_userquery` the parameter is the _username_, whereas in `auth_opt_redis_aclquery`, the first parameter is the _username_ and the second is the _topic_.
+In `auth_opt_redis_userquery` the parameter is the _username_, whereas in `auth_opt_redis_aclquery`, the first parameter is the _username_ and the second is the _topic_. When using ACLS _topic_ must be an exact match - wildcards are not supported.
 
 If no options are provided then it will default to not using an ACL and using the above userquery.
 
