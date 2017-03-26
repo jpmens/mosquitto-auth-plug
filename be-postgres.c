@@ -256,13 +256,14 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 	if (!conf || !conf->aclquery)
 		return (FALSE);
 
-	int localacc = htonl(acc);
+	const int buflen = 11; // 10 for 2^32 + 1
+	char accbuffer[buflen];
+	snprintf(accbuffer, buflen, "%d", acc);
 
-	const char *values[2] = {username,(char*)&localacc};
-	int lengths[2] = {strlen(username),sizeof(localacc)};
-	int binary[2] = {0,1};
+	const char *values[2] = {username, accbuffer};
+	int lengths[2] = {strlen(username), buflen};
 
-	res = PQexecParams(conf->conn, conf->aclquery, 2, NULL, values, lengths, binary, 0);
+	res = PQexecParams(conf->conn, conf->aclquery, 2, NULL, values, lengths, NULL, 0);
 
 	if ( PQresultStatus(res) != PGRES_TUPLES_OK )
 	{
