@@ -126,7 +126,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
 	bson_init (&query);
 
-	bson_append_utf8 (&query, "username", -1, username, -1);
+	bson_append_utf8 (&query, conf->user_username_prop, -1, username, -1);
 
 	collection = mongoc_client_get_collection (conf->client, conf->database, conf->user_coll);
 	cursor = mongoc_collection_find(collection,
@@ -198,7 +198,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	bson_t query;
 	bson_iter_t iter;
 	bson_init (&query);
-	bson_append_utf8(&query, "username", -1, username, -1);
+	bson_append_utf8(&query, handle->user_username_prop, -1, username, -1);
 
 	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
