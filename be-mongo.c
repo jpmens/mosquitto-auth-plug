@@ -43,7 +43,7 @@ void *be_mongo_init()
 	conf->database = strdup(be_mongo_get_option("mongo_database", NULL, "mqGate"));
 	conf->user_coll = strdup(be_mongo_get_option("mongo_user_coll", "mongo_collection_users", "users"));
 	conf->topiclist_coll = strdup(be_mongo_get_option("mongo_topiclist_coll", "mongo_collection_topics", "topics"));
-	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_username_prop", NULL, "username"));
+	conf->user_username_prop = strdup(be_mongo_get_option("mongo_user_username_prop", NULL, "username"));
 	conf->user_password_prop = strdup(be_mongo_get_option("mongo_user_password_prop", "mongo_location_password", "password"));
 	conf->user_superuser_prop = strdup(be_mongo_get_option("mongo_user_superuser_prop", "mongo_location_superuser", "superuser"));
 	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_topics_prop", NULL, "topics"));
