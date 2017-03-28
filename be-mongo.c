@@ -43,7 +43,7 @@ void *be_mongo_init()
 	conf->database = strdup(be_mongo_get_option("mongo_database", NULL, "mqGate"));
 	conf->user_coll = strdup(be_mongo_get_option("mongo_user_coll", "mongo_collection_users", "users"));
 	conf->topiclist_coll = strdup(be_mongo_get_option("mongo_topiclist_coll", "mongo_collection_topics", "topics"));
-	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_username_prop", NULL, "username"));
+	conf->user_username_prop = strdup(be_mongo_get_option("mongo_user_username_prop", NULL, "username"));
 	conf->user_password_prop = strdup(be_mongo_get_option("mongo_user_password_prop", "mongo_location_password", "password"));
 	conf->user_superuser_prop = strdup(be_mongo_get_option("mongo_user_superuser_prop", "mongo_location_superuser", "superuser"));
 	conf->user_topics_prop = strdup(be_mongo_get_option("mongo_user_topics_prop", NULL, "topics"));
@@ -126,7 +126,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 
 	bson_init (&query);
 
-	bson_append_utf8 (&query, "username", -1, username, -1);
+	bson_append_utf8 (&query, conf->user_username_prop, -1, username, -1);
 
 	collection = mongoc_client_get_collection (conf->client, conf->database, conf->user_coll);
 	cursor = mongoc_collection_find(collection,
@@ -198,7 +198,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	bson_t query;
 	bson_iter_t iter;
 	bson_init (&query);
-	bson_append_utf8(&query, "username", -1, username, -1);
+	bson_append_utf8(&query, handle->user_username_prop, -1, username, -1);
 
 	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
