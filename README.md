@@ -515,17 +515,22 @@ the beginning of the line indicating a _superuser_)
 ```
 
 ## MongoDB
-The `mongo` back-end works with superuser and ACL checks with the following collections format.
+The `mongo` back-end works with superuser and ACL checks. Additional build dependencies are https://github.com/mongodb/mongo-c-driver `>=1.4.0`
+and https://github.com/mongodb/libbson `>=1.4.0`.
+
+You should set up a users collection (required) and a topic lists collection (optional) with the following format:
 
 #### Users collection
 
 Each user document must have a username, a hashed password, and at least one of:
 
  - A superuser prop, allowing full access to all topics
- - An embedded array containing a list of topics with full access
- - A foreign key pointing to another document containing a list of topics
+ - An embedded array or sub-document to use as an ACL (see 'ACL format')
+ - A foreign key pointing to another document containing an ACL (see 'ACL format')
  
 You may use any combination of these options; authorisation will be granted if any check passes.
+
+The user document has the following format (note that the property names are configurable variables, see 'Configuration').
 
 ```
 {
@@ -537,16 +542,32 @@ You may use any combination of these options; authorisation will be granted if a
 }
 ```
 
+As an example using default options, a user document with an embedded ACL might look like:
+
+```json
+{
+    "username": "user1",
+    "password": "PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu",
+    "superuser": false,
+    "topics": {
+        "public/#": "r",
+	"client/user1/#": "rw"
+    }
+}
+```
+
 #### Topic lists collection (optional)
 
 If the user document references a separate topics document, that document should exist and must have the format:
 
 ```
 {
-    [topiclist_key_prop]: int | oid | string, // unique id, as referenced by users[location_topics],
+    [topiclist_key_prop]: int | oid | string, // unique id, as referenced by users[user_topiclist_fk_prop],
     [topiclist_topics_prop]: string[] | { [topic: string]: "r"|"w"|"rw" } // see 'ACL format'
 }
 ```
+
+This strategy will be especially suitable if you have a complex ACL shared between many users.
 
 #### ACL format
 
@@ -560,7 +581,7 @@ The following `auth_opt_mongo_` options are supported by the mongo back-end:
 
 | Option                 | default       | Meaning               |
 | ---------------------- | ------------- | --------------------- |
-| uri                    | mongodb://localhost:27107 | MongoDB connection string
+| uri                    | mongodb://localhost:27107 | [MongoDB connection string] (database part is ignored)
 | database               | mqGate                    | Name of the database containing users (and topiclists)
 | user_coll              | users                     | Collection for user documents
 | topiclist_coll         | topics                    | Collection for topiclist documents (optional if embedded topics are used)
@@ -727,6 +748,7 @@ Received DISCONNECT from mosqpub/90759-tiggr.ww.
  [1]: https://exyr.org/2011/hashing-passwords/
  [hiredis]: https://github.com/redis/hiredis
  [uthash]: http://troydhanson.github.io/uthash/
+ [MongoDB connection string]: https://docs.mongodb.com/manual/reference/connection-string/
 
 ## Possibly related
 
