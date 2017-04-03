@@ -129,14 +129,7 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 	bson_append_utf8 (&query, conf->user_username_prop, -1, username, -1);
 
 	collection = mongoc_client_get_collection (conf->client, conf->database, conf->user_coll);
-	cursor = mongoc_collection_find(collection,
-							MONGOC_QUERY_NONE,
-							0,
-							0,
-							0,
-							&query,
-							NULL,  /* Fields, NULL for all. */
-							NULL); /* Read Prefs, NULL for default */
+	cursor = mongoc_collection_find_with_opts(collection, &query, NULL, NULL);
 
 	if (!mongoc_cursor_error (cursor, &error) &&
 		mongoc_cursor_next (cursor, &doc)) {
@@ -202,14 +195,7 @@ int be_mongo_superuser(void *conf, const char *username)
 
 	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
-	cursor = mongoc_collection_find(collection,
-							MONGOC_QUERY_NONE,
-							0,
-							0,
-							0,
-							&query,
-							NULL,
-							NULL);
+	cursor = mongoc_collection_find_with_opts(collection, &query, NULL, NULL);
 
 	if (!mongoc_cursor_error (cursor, &error) &&
 		mongoc_cursor_next (cursor, &doc)) {
@@ -250,14 +236,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 
 	collection = mongoc_client_get_collection(handle->client, handle->database, handle->user_coll);
 
-	cursor = mongoc_collection_find(collection,
-							MONGOC_QUERY_NONE,
-							0,
-							0,
-							0,
-							&query,
-							NULL,
-							NULL);
+	cursor = mongoc_collection_find_with_opts(collection, &query, NULL, NULL);
 
 	if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next (cursor, &doc)) {
 		// First find any user[handle->user_topiclist_fk_prop]
@@ -301,14 +280,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			bson_append_utf8(&query, handle->topiclist_key_prop, -1, topic_lookup_utf8, -1);
 		}
 		collection = mongoc_client_get_collection(handle->client, handle->database, handle->topiclist_coll);
-		cursor = mongoc_collection_find(collection,
-								MONGOC_QUERY_NONE,
-								0,
-								0,
-								0,
-								&query,
-								NULL,
-								NULL);
+		cursor = mongoc_collection_find_with_opts(collection, &query, NULL, NULL);
 
 
 		if (!mongoc_cursor_error (cursor, &error) && mongoc_cursor_next(cursor, &doc)) {
