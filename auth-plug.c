@@ -101,7 +101,7 @@ int mosquitto_auth_plugin_version(void)
 int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_opts, int auth_opt_count)
 {
 	int i;
-	char *backends = NULL, *p, *q;
+	char *backends = NULL, *p, *_p, *q;
 	struct mosquitto_auth_opt *o;
 	struct userdata *ud;
 	int ret = MOSQ_ERR_SUCCESS;
@@ -172,7 +172,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		_fatal("No backends configured.");
 	}
 
-        p = strdup(backends);
+        _p = p = strdup(backends);
 
         _log(LOG_NOTICE, "** Configured order: %s\n", p);
 
@@ -382,7 +382,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		bep++;
         }
 
-        free(p);
+        free(_p);
 
 	return (ret);
 }
