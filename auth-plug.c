@@ -404,6 +404,18 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 		}
 	}
 
+	if (ud->be_list) {
+		struct backend_p **bep;
+
+		for (bep = ud->be_list; bep && *bep; bep++) {
+			(*bep)->kill((*bep)->conf);
+			free((*bep)->name);
+			free((*bep)->conf);
+			free(*bep);
+		}
+		free(ud->be_list);
+	}
+
 	free(ud);
 
 	return MOSQ_ERR_SUCCESS;
