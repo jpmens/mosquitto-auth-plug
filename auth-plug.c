@@ -59,6 +59,7 @@
 #include "be-http.h"
 #include "be-jwt.h"
 #include "be-mongo.h"
+#include "be-files.h"
 
 #include "userdata.h"
 #include "cache.h"
@@ -374,6 +375,25 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			PSKSETUP;
 		}
 #endif		
+
+#if BE_FILES
+		if (!strcmp(q, "files"))
+		   {
+         *bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+         memset(*bep, 0, sizeof(struct backend_p));
+         (*bep)->name = strdup("files");
+         (*bep)->conf = be_files_init();
+         if ((*bep)->conf == NULL) {
+            _fatal("%s init returns NULL", q);
+         }
+         (*bep)->kill =  be_files_destroy;
+         (*bep)->getuser =  be_files_getuser;
+         (*bep)->superuser =  be_files_superuser;
+         (*bep)->aclcheck =  be_files_aclcheck;
+         found = 1;
+         PSKSETUP;
+		   }
+#endif
                 if (!found) {
                         _fatal("ERROR: configured back-end `%s' is not compiled in this plugin", q);
                 }
