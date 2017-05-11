@@ -17,5 +17,8 @@ MOSQUITTO_SRC =
 OPENSSLDIR = /usr
 
 # Specify optional/additional linker/compiler flags here
+# On macOS, add 
+#	CFG_LDFLAGS = -undefined dynamic_lookup
+# as described in https://github.com/eclipse/mosquitto/issues/244
 CFG_LDFLAGS =
 CFG_CFLAGS =
