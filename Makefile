@@ -159,6 +159,7 @@ cache.o: cache.c cache.h uthash.h Makefile
 be-http.o: be-http.c be-http.h Makefile backends.h
 be-jwt.o: be-jwt.c be-jwt.h Makefile backends.h
 be-mongo.o: be-mongo.c be-mongo.h Makefile
+be-files.o: be-files.c be-files.h Makefile
 
 np: np.c base64.o
 	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)
