@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef BE_FILES
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -420,7 +422,7 @@ int be_files_aclcheck(void *handle,
 {
    be_files*const conf = (be_files*)handle;
    pwd_entry* pwd = find_pwd(conf, username);
-   int ret;
+   int ret = 0;
    if(!conf->acl_checks) return 1;
    if(pwd != NULL)
       {
@@ -443,3 +445,5 @@ int be_files_aclpatterns_check(const char *clientid,
 {
    return do_aclcheck(&acl_entries, clientid, username, topic, access);
 }
+
+#endif // BE_FILES
