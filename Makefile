@@ -98,6 +98,13 @@ ifneq ($(BACKEND_MONGO), no)
 	OBJS += be-mongo.o
 endif
 
+ifneq ($(BACKEND_FILES), no)
+	BACKENDS+= -DBE_FILES
+	BACKENDSTR += Files
+
+	OBJS += be-files.o
+endif
+
 OSSLINC = -I$(OPENSSLDIR)/include
 OSSLIBS = -L$(OPENSSLDIR)/lib -lcrypto
 
