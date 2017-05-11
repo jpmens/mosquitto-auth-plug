@@ -35,11 +35,21 @@
 #include "be-sqlite.h"
 #include "hash.h"
 #include "log.h"
+#include <mosquitto.h>
+
+static bool prepareStatement(struct sqlite_backend* conf)
+{
+	bool ret;
+	const char* userquery = p_stab("sqliteuserquery");
+	ret = sqlite3_prepare(conf->sq, userquery, strlen(userquery), &conf->stmt, NULL) == SQLITE_OK;
+	if(!ret)
+      _log(MOSQ_LOG_WARNING, "Can't prepare: %s\n", sqlite3_errmsg(conf->sq));
+   return ret;
+}
 
 void *be_sqlite_init()
 {
 	struct sqlite_backend *conf;
-	int res;
 	int flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE;
 	char *dbpath, *userquery;
 
@@ -54,19 +64,15 @@ void *be_sqlite_init()
 	}
 
 	conf = (struct sqlite_backend *)malloc(sizeof(struct sqlite_backend));
+	conf->stmt = NULL;
 
 	if (sqlite3_open_v2(dbpath, &conf->sq, flags, NULL) != SQLITE_OK) {
-		perror(dbpath);
+		_log(MOSQ_LOG_ERR, "failed to open: %s", dbpath);
 		free(conf);
 		return (NULL);
 	}
 
-	if ((res = sqlite3_prepare(conf->sq, userquery, strlen(userquery), &conf->stmt, NULL)) != SQLITE_OK) {
-		fprintf(stderr, "Can't prepare: %s\n", sqlite3_errmsg(conf->sq));
-		sqlite3_close(conf->sq);
-		free(conf);
-		return (NULL);
-	}
+	prepareStatement(conf);
 
 	return (conf);
 }
@@ -85,28 +91,52 @@ void be_sqlite_destroy(void *handle)
 char *be_sqlite_getuser(void *handle, const char *username, const char *password, int *authenticated)
 {
 	struct sqlite_backend *conf = (struct sqlite_backend *)handle;
-	int res;
+	int res, retries;
 	char *value = NULL, *v;
 
 	if (!conf)
 		return (NULL);
 
-	sqlite3_reset(conf->stmt);
-	sqlite3_clear_bindings(conf->stmt);
+	for (retries = 5; --retries > 0 && value == NULL; ) {
+      if (conf->stmt == NULL)
+         if (!prepareStatement(conf))
+            return (NULL);
 
-	res = sqlite3_bind_text(conf->stmt, 1, username, -1, SQLITE_STATIC);
-	if (res != SQLITE_OK) {
-		puts("Can't bind");
-		goto out;
-	}
+      res = sqlite3_reset(conf->stmt);
+      if (res != SQLITE_OK) {
+         _log(MOSQ_LOG_ERR, "statement reset: %s", sqlite3_errmsg(conf->sq));
+         goto out;
+      }
 
-	res = sqlite3_step(conf->stmt);
+      res = sqlite3_clear_bindings(conf->stmt);
+      if (res != SQLITE_OK) {
+         _log(MOSQ_LOG_ERR, "bindings clear: %s", sqlite3_errmsg(conf->sq));
+         goto out;
+      }
 
-	if (res == SQLITE_ROW) {
-		v = (char *)sqlite3_column_text(conf->stmt, 0);
-		if (v)
-			value = strdup(v);
-	}
+      res = sqlite3_bind_text(conf->stmt, 1, username, -1, SQLITE_STATIC);
+      if (res != SQLITE_OK) {
+         _log(MOSQ_LOG_ERR, "Can't bind: %s", sqlite3_errmsg(conf->sq));
+         goto out;
+      }
+
+      res = sqlite3_step(conf->stmt);
+
+      switch (res) {
+         case SQLITE_ROW:
+            v = (char *)sqlite3_column_text(conf->stmt, 0);
+            if (v)
+               value = strdup(v);
+            break;
+         case SQLITE_ERROR:
+            sqlite3_finalize(conf->stmt);
+            conf->stmt = NULL;
+            break;
+         default:
+            _log(MOSQ_LOG_ERR, "step: %s", sqlite3_errmsg(conf->sq));
+            break;
+      }
+   }
 
     out:
 	sqlite3_reset(conf->stmt);
