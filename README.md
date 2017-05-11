@@ -13,6 +13,7 @@ of several distinct back-ends:
 * HTTP (custom HTTP API)
 * JWT
 * MongoDB
+* Files
 
 ## Introduction
 
@@ -20,12 +21,12 @@ This plugin can perform authentication (check username / password)
 and authorization (ACL). Currently not all back-ends have the same capabilities
 (the the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: |
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      |
-| superusers                 |   Y   |       |       |        |      |  3  |    Y     |  Y   |  Y  |  Y      |
-| acl checking               |   Y   |   1   |   2   |   2    |      |  3  |    Y     |  Y   |  Y  |  Y      |
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  3  |    Y     |  Y   |  Y  |  Y      |
+| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB | Files |
+| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: | :----: 
+| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      | Y
+| superusers                 |   Y   |       |       |        |      |  3  |    Y     |  Y   |  Y  |  Y      | N
+| acl checking               |   Y   |   1   |   2   |   2    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
+| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
 
  1. Topic wildcards (+/#) are not supported
  2. Currently not implemented; back-end returns TRUE
@@ -598,6 +599,40 @@ Mosquitto configuration for the `mongo` back-end:
 auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
 auth_opt_mongo_uri mongodb://localhost:2017
 ```
+## Files
+
+The files backend attempts to re-implement the files behavior in vanilla Mosquitto, however the user's password file contains PBKDF2 passwords instead of passwords hashed with the `mosquitto-passwd` program; you would use our `np` utility or similar to create the PBKDF2 hashes.
+
+The configuration directives for the `Files` backend are as follows:
+
+```
+auth_opt_backends files
+auth_opt_password_file file.pw
+auth_opt_acl_file file.acl
+```
+
+with examples of these files being:
+
+#### `password_file`
+
+```
+# comment
+jpm:PBKDF2$sha256$901$UGfDz79cAaydRsEF$XvYwauPeviFd1NfbGL+dxcn1K7BVfMeW
+jane:PBKDF2$sha256$901$wvvH0fe7Ftszt8nR$NZV6XWWg01dCRiPOheVNsgMJDX1mzd2v
+```
+
+#### `acl_file`
+
+```
+user jane
+topic read #
+
+user jpm
+topic dd
+
+```
+
+The syntax for the ACL file is that as described in `mosquitto.conf(5)`.
 
 ## Passwords
 
