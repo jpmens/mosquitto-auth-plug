@@ -45,9 +45,9 @@ struct ldap_backend {
 	char *connstr;		/* ldap_initialize() wants scheme://host:port  only */
 	LDAPURLDesc *lud;	
 	LDAP *ld;
-        char *user_uri;
-        char *superquery;
-        char *aclquery;
+	char *user_uri;
+	char *superquery;
+	char *aclquery;
 };
 
 void *be_ldap_init()

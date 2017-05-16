@@ -44,7 +44,7 @@
 
 int main(int argc, char **argv)
 {
-        int iterations = 901, rc, saltlen, blen;
+	int iterations = 901, rc, saltlen, blen;
 	unsigned char	saltbytes[SALTLEN];
 	char *salt, *b64;
 	unsigned char key[128];
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	saltlen = strlen(salt);
 
 	PKCS5_PBKDF2_HMAC(password, strlen(password),
-                (unsigned char *)salt, saltlen,
+		(unsigned char *)salt, saltlen,
 		iterations,
 		EVP_sha256(), KEY_LENGTH, key);
 

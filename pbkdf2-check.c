@@ -80,15 +80,15 @@ static int detoken(char *pbkstr, char **sha, int *iter, char **salt, char **key)
 
 int pbkdf2_check(char *password, char *hash)
 {
-        char *sha, *salt, *h_pw;
-        int iterations, saltlen, blen;
+	char *sha, *salt, *h_pw;
+	int iterations, saltlen, blen;
 	char *b64, *keybuf;
 	unsigned char *out;
 	int match = FALSE;
 	const EVP_MD *evpmd;
 	int keylen, rc;
 
-        if (detoken(hash, &sha, &iterations, &salt, &h_pw) != 0)
+	if (detoken(hash, &sha, &iterations, &salt, &h_pw) != 0)
 		return match;
 
 	/* Determine key length by decoding base64 */
@@ -126,7 +126,7 @@ int pbkdf2_check(char *password, char *hash)
 	}
 
 	rc = PKCS5_PBKDF2_HMAC(password, strlen(password),
-                (unsigned char *)salt, saltlen,
+		(unsigned char *)salt, saltlen,
 		iterations,
 		evpmd, keylen, out);
 	if (rc != 1) {
@@ -164,7 +164,7 @@ int pbkdf2_check(char *password, char *hash)
 #if TEST
 int main()
 {
-        char password[] = "password";
+	char password[] = "password";
 	char pbkstr[] = "PBKDF2$sha1$98$XaIs9vQgmLujKHZG4/B3dNTbeP2PyaVKySTirZznBrE=$2DX/HZDTojVbfgAIdozBi6CihjWP1+akYnh/h9uQfIVl6pLoAiwJe1ey2WW2BnT+";
 	int match;
 

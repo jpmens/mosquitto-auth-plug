@@ -173,9 +173,9 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 		_fatal("No backends configured.");
 	}
 
-        _p = p = strdup(backends);
+	_p = p = strdup(backends);
 
-        _log(LOG_NOTICE, "** Configured order: %s\n", p);
+	_log(LOG_NOTICE, "** Configured order: %s\n", p);
 
 	ud->be_list = (struct backend_p **)malloc((sizeof (struct backend_p *)) * (NBACKENDS + 1));
 
@@ -204,8 +204,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	nord++;
 #endif /* BE_PSK */
 
-        for (q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
-                int found = 0;
+	for (q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
+		int found = 0;
 #if BE_MYSQL
 		if (!strcmp(q, "mysql")) {
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
@@ -341,21 +341,21 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 
 #if BE_JWT
 		if (!strcmp(q, "jwt")) {
- 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
- 			memset(*bep, 0, sizeof(struct backend_p));
- 			(*bep)->name = strdup("jwt");
- 			(*bep)->conf = be_jwt_init();
- 			if ((*bep)->conf == NULL) {
- 				_fatal("%s init returns NULL", q);
- 			}
- 			(*bep)->kill =  be_jwt_destroy;
- 			(*bep)->getuser =  be_jwt_getuser;
- 			(*bep)->superuser =  be_jwt_superuser;
- 			(*bep)->aclcheck =  be_jwt_aclcheck;
- 			found = 1;
- 			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
- 			PSKSETUP;
- 		}
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("jwt");
+			(*bep)->conf = be_jwt_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_jwt_destroy;
+			(*bep)->getuser =  be_jwt_getuser;
+			(*bep)->superuser =  be_jwt_superuser;
+			(*bep)->aclcheck =  be_jwt_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
 #endif
 
 #if BE_MONGO
@@ -393,15 +393,15 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			PSKSETUP;
 		}
 #endif
-                if (!found) {
-                        _fatal("ERROR: configured back-end `%s' is not compiled in this plugin", q);
-                }
+		if (!found) {
+			_fatal("ERROR: configured back-end `%s' is not compiled in this plugin", q);
+		}
 
 		ud->be_list[++nord] = NULL;
 		bep++;
-        }
+	}
 
-        free(_p);
+	free(_p);
 
 	return (ret);
 }

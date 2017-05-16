@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com> wendal <wendal1985()gmai.com>
- * All rights reserved.
- *
+ * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com> wendal
+ * <wendal1985()gmai.com> All rights reserved.
+ * 
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
  * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of mosquitto nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
+ * this list of conditions and the following disclaimer. 2. Redistributions
+ * in binary form must reproduce the above copyright notice, this list of
+ * conditions and the following disclaimer in the documentation and/or other
+ * materials provided with the distribution. 3. Neither the name of mosquitto
+ * nor the names of its contributors may be used to endorse or promote
+ * products derived from this software without specific prior written
+ * permission.
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -38,7 +39,7 @@
 #include "envs.h"
 #include <curl/curl.h>
 
-static int get_string_envs(CURL *curl, const char *required_env, char *querystring)
+static int get_string_envs(CURL * curl, const char *required_env, char *querystring)
 {
 	char *data = NULL;
 	char *escaped_key = NULL;
@@ -52,7 +53,7 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 
 	//_log(LOG_DEBUG, "sys_envs=%s", sys_envs);
 
-	env_string = (char *)malloc( strlen(required_env) + 20);
+	env_string = (char *)malloc(strlen(required_env) + 20);
 	if (env_string == NULL) {
 		_fatal("ENOMEM");
 		return (-1);
@@ -63,7 +64,7 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 
 	num = get_sys_envs(env_string, ",", "=", params_key, env_names, env_value);
 	//sprintf(querystring, "");
-	for( i = 0; i < num; i++ ){
+	for (i = 0; i < num; i++) {
 		escaped_key = curl_easy_escape(curl, params_key[i], 0);
 		escaped_val = curl_easy_escape(curl, env_value[i], 0);
 
@@ -72,21 +73,24 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 		//_log(LOG_DEBUG, "escaped_val=%s", escaped_envvalue);
 
 		data = (char *)malloc(strlen(escaped_key) + strlen(escaped_val) + 1);
-		if ( data == NULL ) {
+		if (data == NULL) {
 			_fatal("ENOMEM");
 			return (-1);
 		}
 		sprintf(data, "%s=%s&", escaped_key, escaped_val);
-		if ( i == 0 ) {
+		if (i == 0) {
 			sprintf(querystring, "%s", data);
 		} else {
 			strcat(querystring, data);
 		}
 	}
 
-	if (data) free(data);
-	if (escaped_key) free(escaped_key);
-	if (escaped_val) free(escaped_val);
+	if (data)
+		free(data);
+	if (escaped_key)
+		free(escaped_key);
+	if (escaped_val)
+		free(escaped_val);
 	free(env_string);
 	return (num);
 }
@@ -95,7 +99,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 {
 	struct jwt_backend *conf = (struct jwt_backend *)handle;
 	CURL *curl;
-	struct curl_slist *headerlist=NULL;
+	struct curl_slist *headerlist = NULL;
 	int re;
 	int respCode = 0;
 	int ok = FALSE;
@@ -105,9 +109,8 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	if (token == NULL) {
 		return (FALSE);
 	}
-
 	clientid = (clientid && *clientid) ? clientid : "";
-	topic    = (topic && *topic) ? topic : "";
+	topic = (topic && *topic) ? topic : "";
 
 	if ((curl = curl_easy_init()) == NULL) {
 		_fatal("create curl_easy_handle fails");
@@ -124,17 +127,16 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-
-	// enable the https
-	if (strcmp(conf->with_tls, "true") == 0){
+	//enable the https
+		if (strcmp(conf->with_tls, "true") == 0) {
 		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
-	}else{
+	} else {
 		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
 	}
 
-	char* escaped_token = curl_easy_escape(curl, token, 0);
-	char* escaped_topic = curl_easy_escape(curl, topic, 0);
-	char* escaped_clientid = curl_easy_escape(curl, clientid, 0);
+	char *escaped_token = curl_easy_escape(curl, token, 0);
+	char *escaped_topic = curl_easy_escape(curl, topic, 0);
+	char *escaped_clientid = curl_easy_escape(curl, clientid, 0);
 
 	char string_acc[20];
 	snprintf(string_acc, 20, "%d", acc);
@@ -144,24 +146,23 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
-
 	memset(string_envs, 0, MAXPARAMSLEN);
 
 	//get the sys_env from here
-	int env_num = 0;
-	if ( method == METHOD_GETUSER && conf->getuser_envs != NULL ){
+		int env_num = 0;
+	if (method == METHOD_GETUSER && conf->getuser_envs != NULL) {
 		env_num = get_string_envs(curl, conf->getuser_envs, string_envs);
-	}else if ( method == METHOD_SUPERUSER && conf->superuser_envs != NULL ){
+	} else if (method == METHOD_SUPERUSER && conf->superuser_envs != NULL) {
 		env_num = get_string_envs(curl, conf->superuser_envs, string_envs);
-	} else if ( method == METHOD_ACLCHECK && conf->aclcheck_envs != NULL ){
+	} else if (method == METHOD_ACLCHECK && conf->aclcheck_envs != NULL) {
 		env_num = get_string_envs(curl, conf->aclcheck_envs, string_envs);
 	}
-	if( env_num == -1 ){
+	if (env_num == -1) {
 		return (FALSE);
 	}
-	//---- over ----
+	//----over-- --
 
-	data = (char *)malloc(strlen(string_envs) + strlen(escaped_topic) + strlen(string_acc) + strlen(escaped_clientid) + 30);
+		data = (char *)malloc(strlen(string_envs) + strlen(escaped_topic) + strlen(string_acc) + strlen(escaped_clientid) + 30);
 	if (data == NULL) {
 		_fatal("ENOMEM");
 		return (FALSE);
@@ -174,15 +175,15 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	_log(LOG_DEBUG, "url=%s", url);
 	_log(LOG_DEBUG, "data=%s", data);
-	// curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-    char *token_header = (char *)malloc(strlen(escaped_token) + 22);
+	char *token_header = (char *)malloc(strlen(escaped_token) + 22);
 	if (token_header == NULL) {
 		_fatal("ENOMEM");
 		return (FALSE);
 	}
 	sprintf(token_header, "Authorization: Bearer %s", escaped_token);
-    headerlist = curl_slist_append(headerlist, token_header);
+	headerlist = curl_slist_append(headerlist, token_header);
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -206,7 +207,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	}
 
 	curl_easy_cleanup(curl);
-	curl_slist_free_all (headerlist);
+	curl_slist_free_all(headerlist);
 	free(url);
 	free(data);
 	free(string_envs);
@@ -229,7 +230,6 @@ void *be_jwt_init()
 		_fatal("init curl fail");
 		return (NULL);
 	}
-
 	if ((ip = p_stab("http_ip")) == NULL) {
 		_fatal("Mandatory parameter `http_ip' missing");
 		return (NULL);
@@ -246,7 +246,6 @@ void *be_jwt_init()
 		_fatal("Mandatory parameter `http_aclcheck_uri' missing");
 		return (NULL);
 	}
-
 	conf = (struct jwt_backend *)malloc(sizeof(struct jwt_backend));
 	conf->ip = ip;
 	conf->port = p_stab("http_port") == NULL ? 80 : atoi(p_stab("http_port"));
@@ -290,17 +289,18 @@ void be_jwt_destroy(void *handle)
 	}
 };
 
-char *be_jwt_getuser(void *handle, const char *token, const char *pass, int *authenticated) {
-   struct jwt_backend *conf = (struct jwt_backend *)handle;
-   int re;
-   if (token == NULL) {
-   		return NULL;
-   }
-   re = http_post(handle, conf->getuser_uri, NULL, token, NULL, -1, METHOD_GETUSER);
-   if (re == 1) {
-   		*authenticated = 1;
-   }
-   return NULL;
+char *be_jwt_getuser(void *handle, const char *token, const char *pass, int *authenticated)
+{
+	struct jwt_backend *conf = (struct jwt_backend *)handle;
+	int re;
+	if (token == NULL) {
+		return NULL;
+	}
+	re = http_post(handle, conf->getuser_uri, NULL, token, NULL, -1, METHOD_GETUSER);
+	if (re == 1) {
+		*authenticated = 1;
+	}
+	return NULL;
 };
 
 int be_jwt_superuser(void *handle, const char *token)
@@ -315,4 +315,5 @@ int be_jwt_aclcheck(void *handle, const char *clientid, const char *token, const
 	struct jwt_backend *conf = (struct jwt_backend *)handle;
 	return http_post(conf, conf->aclcheck_uri, clientid, token, topic, acc, METHOD_ACLCHECK);
 };
+
 #endif /* BE_JWT */

@@ -1,18 +1,19 @@
 /*
- * Copyright (c) 2013, 2014 Jan-Piet Mens <jpmens()gmail.com>
- * All rights reserved.
+ * Copyright (c) 2013, 2014 Jan-Piet Mens <jpmens()gmail.com> All rights
+ * reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted provided that the following conditions are
+ * met:
  * 
  * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of mosquitto nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ * this list of conditions and the following disclaimer. 2. Redistributions
+ * in binary form must reproduce the above copyright notice, this list of
+ * conditions and the following disclaimer in the documentation and/or other
+ * materials provided with the distribution. 3. Neither the name of mosquitto
+ * nor the names of its contributors may be used to endorse or promote
+ * products derived from this software without specific prior written
+ * permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -39,27 +40,27 @@
 #include "backends.h"
 
 struct mysql_backend {
-        MYSQL *mysql;
+	MYSQL *mysql;
 	char *host;
 	int port;
 	char *dbname;
 	char *user;
 	char *pass;
-        bool auto_connect;
-        char *userquery;        // MUST return 1 row, 1 column
-        char *superquery;       // MUST return 1 row, 1 column, [0, 1]
-        char *aclquery;         // MAY return n rows, 1 column, string
+	bool auto_connect;
+	char *userquery; //MUST return 1 row, 1 column
+	char *superquery; //MUST return 1 row, 1 column,[0, 1]
+	char *aclquery; //MAY return n rows, 1 column, string
 };
 
 static char *get_bool(char *option, char *defval)
 {
-    char *flag = p_stab(option);
-    flag = flag ? flag : defval;
-    if(!strcmp("true", flag) || !strcmp("false", flag)) {
-       return flag;
-    }
-    _log(LOG_NOTICE, "WARN: %s is unexpected value -> %s", option, flag);
-    return defval;
+	char *flag = p_stab(option);
+	flag = flag ? flag : defval;
+	if (!strcmp("true", flag) || !strcmp("false", flag)) {
+		return flag;
+	}
+	_log(LOG_NOTICE, "WARN: %s is unexpected value -> %s", option, flag);
+	return defval;
 }
 
 void *be_mysql_init()
@@ -67,17 +68,17 @@ void *be_mysql_init()
 	struct mysql_backend *conf;
 	char *host, *user, *pass, *dbname, *p;
 	char *userquery;
-    char *opt_flag;
+	char *opt_flag;
 	int port;
-    my_bool reconnect = false;
+	my_bool reconnect = false;
 
 	_log(LOG_DEBUG, "}}}} MYSQL");
 
-	host		= p_stab("host");
-	p		= p_stab("port");
-	user		= p_stab("user");
-	pass		= p_stab("pass");
-	dbname		= p_stab("dbname");
+	host = p_stab("host");
+	p = p_stab("port");
+	user = p_stab("user");
+	pass = p_stab("pass");
+	dbname = p_stab("dbname");
 
 	host = (host) ? host : strdup("localhost");
 	port = (!p) ? 3306 : atoi(p);
@@ -88,41 +89,37 @@ void *be_mysql_init()
 		_fatal("Mandatory option 'userquery' is missing");
 		return (NULL);
 	}
-
 	if ((conf = (struct mysql_backend *)malloc(sizeof(struct mysql_backend))) == NULL)
 		return (NULL);
 
-	conf->mysql		= mysql_init(NULL);
-	conf->host		= host;
-	conf->port		= port;
-	conf->user		= user;
-	conf->pass		= pass;
-    conf->auto_connect  = false;
-	conf->dbname		= dbname;
-	conf->userquery		= userquery;
-	conf->superquery	= p_stab("superquery");
-	conf->aclquery		= p_stab("aclquery");
+	conf->mysql = mysql_init(NULL);
+	conf->host = host;
+	conf->port = port;
+	conf->user = user;
+	conf->pass = pass;
+	conf->auto_connect = false;
+	conf->dbname = dbname;
+	conf->userquery = userquery;
+	conf->superquery = p_stab("superquery");
+	conf->aclquery = p_stab("aclquery");
 
-    opt_flag = get_bool("mysql_auto_connect", "true");
-    if (!strcmp("true", opt_flag)) {
-        conf->auto_connect = true;
-    }
-
-    opt_flag = get_bool("mysql_opt_reconnect", "true");
-    if (!strcmp("true", opt_flag)) {
-        reconnect = true;
-        mysql_options(conf->mysql, MYSQL_OPT_RECONNECT, &reconnect);
-    }
-
+	opt_flag = get_bool("mysql_auto_connect", "true");
+	if (!strcmp("true", opt_flag)) {
+		conf->auto_connect = true;
+	}
+	opt_flag = get_bool("mysql_opt_reconnect", "true");
+	if (!strcmp("true", opt_flag)) {
+		reconnect = true;
+		mysql_options(conf->mysql, MYSQL_OPT_RECONNECT, &reconnect);
+	}
 	if (!mysql_real_connect(conf->mysql, host, user, pass, dbname, port, NULL, 0)) {
 		_log(LOG_NOTICE, "%s", mysql_error(conf->mysql));
 		if (!conf->auto_connect && !reconnect) {
-		    free(conf);
-		    mysql_close(conf->mysql);
-		    return (NULL);
+			free(conf);
+			mysql_close(conf->mysql);
+			return (NULL);
 		}
 	}
-
 	return ((void *)conf);
 }
 
@@ -156,14 +153,14 @@ static char *escape(void *handle, const char *value, long *vlen)
 
 static bool auto_connect(struct mysql_backend *conf)
 {
-    if (conf->auto_connect) {
-        if (!mysql_real_connect(conf->mysql, conf->host, conf->user, conf->pass, conf->dbname, conf->port, NULL, 0)) {
-            fprintf(stderr, "do auto_connect but %s\n", mysql_error(conf->mysql));
-            return false;
-        }
-        return true;
+	if (conf->auto_connect) {
+		if (!mysql_real_connect(conf->mysql, conf->host, conf->user, conf->pass, conf->dbname, conf->port, NULL, 0)) {
+			fprintf(stderr, "do auto_connect but %s\n", mysql_error(conf->mysql));
+			return false;
+		}
+		return true;
 	}
-    return false;
+	return false;
 }
 
 char *be_mysql_getuser(void *handle, const char *username, const char *password, int *authenticated)
@@ -177,13 +174,12 @@ char *be_mysql_getuser(void *handle, const char *username, const char *password,
 	if (!conf || !conf->userquery || !username || !*username)
 		return (NULL);
 
-    if (mysql_ping(conf->mysql)) {
-        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
-        if (!auto_connect(conf)) {
-            return (NULL);
-        }
-    }
-
+	if (mysql_ping(conf->mysql)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		if (!auto_connect(conf)) {
+			return (NULL);
+		}
+	}
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (NULL);
 
@@ -194,33 +190,27 @@ char *be_mysql_getuser(void *handle, const char *username, const char *password,
 	sprintf(query, conf->userquery, u);
 	free(u);
 
-	// DEBUG puts(query);
-
 	if (mysql_query(conf->mysql, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		goto out;
 	}
-
 	res = mysql_store_result(conf->mysql);
 	if ((nrows = mysql_num_rows(res)) != 1) {
-		// DEBUG fprintf(stderr, "rowcount = %ld; not ok\n", nrows);
+		//DEBUG fprintf(stderr, "rowcount = %ld; not ok\n", nrows);
 		goto out;
 	}
-
 	if (mysql_num_fields(res) != 1) {
-		// DEBUG fprintf(stderr, "numfields not ok\n");
+		//DEBUG fprintf(stderr, "numfields not ok\n");
 		goto out;
 	}
-
 	if ((rowdata = mysql_fetch_row(res)) == NULL) {
 		goto out;
 	}
-
 	v = rowdata[0];
 	value = (v) ? strdup(v) : NULL;
 
 
-   out:
+out:
 
 	mysql_free_result(res);
 	free(query);
@@ -245,13 +235,12 @@ int be_mysql_superuser(void *handle, const char *username)
 	if (!conf || !conf->superquery)
 		return (FALSE);
 
-    if (mysql_ping(conf->mysql)) {
-        fprintf(stderr, "%s\n", mysql_error(conf->mysql));
-        if (!auto_connect(conf)) {
-            return (BACKEND_ERROR);
-        }
-    }
-
+	if (mysql_ping(conf->mysql)) {
+		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
+		if (!auto_connect(conf)) {
+			return (BACKEND_ERROR);
+		}
+	}
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (BACKEND_ERROR);
 
@@ -262,31 +251,25 @@ int be_mysql_superuser(void *handle, const char *username)
 	sprintf(query, conf->superquery, u);
 	free(u);
 
-	// puts(query);
-
 	if (mysql_query(conf->mysql, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		issuper = BACKEND_ERROR;
 		goto out;
 	}
-
 	res = mysql_store_result(conf->mysql);
 	if ((nrows = mysql_num_rows(res)) != 1) {
 		goto out;
 	}
-
 	if (mysql_num_fields(res) != 1) {
-		// DEBUG fprintf(stderr, "numfields not ok\n");
+		//DEBUG fprintf(stderr, "numfields not ok\n");
 		goto out;
 	}
-
 	if ((rowdata = mysql_fetch_row(res)) == NULL) {
 		goto out;
 	}
-
 	issuper = atoi(rowdata[0]);
 
-   out:
+out:
 
 	mysql_free_result(res);
 	free(query);
@@ -295,17 +278,14 @@ int be_mysql_superuser(void *handle, const char *username)
 }
 
 /*
- * Check ACL.
- * username is the name of the connected user attempting
- * to access
- * topic is the topic user is trying to access (may contain
- * wildcards)
- * acc is desired type of access: read/write
- *	for subscriptions (READ) (1)
- *	for publish (WRITE) (2)
- *
- * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)		// may user SUB or PUB topic?
- * SELECT topic FROM table WHERE username = '%s'              		// ignore ACC
+ * Check ACL. username is the name of the connected user attempting to access
+ * topic is the topic user is trying to access (may contain wildcards) acc is
+ * desired type of access: read/write for subscriptions (READ) (1) for
+ * publish (WRITE) (2)
+ * 
+ * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)		//
+ * may user SUB or PUB topic? SELECT topic FROM table WHERE username = '%s'
+ * / ignore ACC
  */
 
 int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
@@ -327,7 +307,6 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 			return (BACKEND_ERROR);
 		}
 	}
-
 	if ((u = escape(conf, username, &ulen)) == NULL)
 		return (BACKEND_ERROR);
 
@@ -345,18 +324,18 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 		match = BACKEND_ERROR;
 		goto out;
 	}
-
 	res = mysql_store_result(conf->mysql);
 	if (mysql_num_fields(res) != 1) {
 		fprintf(stderr, "numfields not ok\n");
 		goto out;
 	}
-
 	while (match == 0 && (rowdata = mysql_fetch_row(res)) != NULL) {
 		if ((v = rowdata[0]) != NULL) {
 
-			/* Check mosquitto_match_topic. If true,
-			 * if true, set match and break out of loop. */
+			/*
+			 * Check mosquitto_match_topic. If true, if true, set
+			 * match and break out of loop.
+			 */
 
 			char *expanded;
 
@@ -365,18 +344,18 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 				mosquitto_topic_matches_sub(expanded, topic, &bf);
 				match |= bf;
 				_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
-					expanded, v, bf);
+				     expanded, v, bf);
 
 				free(expanded);
 			}
 		}
 	}
 
-   out:
+out:
 
 	mysql_free_result(res);
 	free(query);
 
 	return (match);
 }
-#endif /* BE_MYSQL */
+#endif  /* BE_MYSQL */
