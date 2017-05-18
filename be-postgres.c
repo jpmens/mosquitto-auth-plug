@@ -185,9 +185,8 @@ int be_pg_superuser(void *handle, const char *username)
 	if (!conf || !conf->superquery || !username || !*username)
 		return (FALSE);
 
-	//query for postgres
-		$1 instead of % s
-		const char *values[1] = {username};
+	//query for postgres $1 instead of % s
+	const char *values[1] = {username};
 	int lengths[1] = {strlen(username)};
 	int binary[1] = {0};
 
@@ -225,9 +224,11 @@ out:
  * desired type of access: read/write for subscriptions (READ) (1) for
  * publish (WRITE) (2)
  * 
- * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)		//
- * may user SUB or PUB topic? SELECT topic FROM table WHERE username = '%s'
- * / ignore ACC
+ * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)
+ * may user SUB or PUB topic?
+ *
+ * SELECT topic FROM table WHERE username = '%s'
+ * ignore ACC
  */
 
 int be_pg_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
@@ -245,9 +246,8 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 		return (FALSE);
 
 	const int buflen = 11;
-	//10 for 2
-		^32 + 1
-			char accbuffer[buflen];
+	//10 for 2^32 + 1
+	char accbuffer[buflen];
 	snprintf(accbuffer, buflen, "%d", acc);
 
 	const char *values[2] = {username, accbuffer};
