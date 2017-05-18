@@ -132,6 +132,7 @@ void be_redis_destroy(void *handle)
 	if (conf != NULL) {
 		redisFree(conf->redis);
 		conf->redis = NULL;
+		free(conf);
 	}
 }
 
