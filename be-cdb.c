@@ -80,6 +80,7 @@ void be_cdb_destroy(void *handle)
 	if (conf) {
 		cdb_free(conf->cdb);
 		free(conf->cdbname);
+		free(conf);
 	}
 }
 

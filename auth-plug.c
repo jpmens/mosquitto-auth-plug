@@ -429,7 +429,6 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 		for (bep = ud->be_list; bep && *bep; bep++) {
 			(*bep)->kill((*bep)->conf);
 			free((*bep)->name);
-			free((*bep)->conf);
 			free(*bep);
 		}
 		free(ud->be_list);
