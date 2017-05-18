@@ -126,8 +126,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->superusers	= NULL;
 	ud->fallback_be = -1;
 	ud->anonusername = strdup("anonymous");
-	ud->cacheseconds = 300;
+	ud->acl_cacheseconds = 300;
+	ud->auth_cacheseconds = 0;
 	ud->aclcache = NULL;
+	ud->authcache = NULL;
 
 	/*
 	 * Shove all options Mosquitto gives the plugin into a hash,
@@ -146,8 +148,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			free(ud->anonusername);
 			ud->anonusername = strdup(o->value);
 		}
-		if (!strcmp(o->key, "cacheseconds"))
-			ud->cacheseconds = atol(o->value);
+		if (!strcmp(o->key, "cacheseconds") || !strcmp(o->key, "acl_cacheseconds"))
+			ud->acl_cacheseconds = atol(o->value);
+		if (!strcmp(o->key, "auth_cacheseconds"))
+			ud->auth_cacheseconds = atol(o->value);
 		if (!strcmp(o->key, "log_quiet")) {
 			if(!strcmp(o->value, "false") || !strcmp(o->value, "0")){
 				log_quiet = 0;
@@ -415,10 +419,19 @@ int mosquitto_auth_plugin_cleanup(void *userdata, struct mosquitto_auth_opt *aut
 	if (ud->anonusername)
 		free(ud->anonusername);
 	if (ud->aclcache != NULL) {
-		struct aclcache *a, *tmp;
+		struct cacheentry *a, *tmp;
 
 		HASH_ITER(hh, ud->aclcache, a, tmp) {
 			HASH_DEL(ud->aclcache, a);
+			free(a);
+		}
+	}
+
+	if (ud->authcache != NULL) {
+		struct cacheentry *a, *tmp;
+
+		HASH_ITER(hh, ud->authcache, a, tmp) {
+			HASH_DEL(ud->authcache, a);
 			free(a);
 		}
 	}
@@ -455,12 +468,19 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *phash = NULL, *backend_name = NULL;
-	int match, authenticated = FALSE, nord;
+	int match, authenticated = FALSE, nord, granted;
 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_DENY_AUTH;
 
 	_log(LOG_DEBUG, "mosquitto_auth_unpwd_check(%s)", (username) ? username : "<nil>");
+
+	granted = auth_cache_q(username, password, userdata);
+	if (granted != MOSQ_ERR_UNKNOWN) {
+		_log(LOG_DEBUG, "getuser(%s) CACHEDAUTH: %d",
+			username, (granted == MOSQ_ERR_SUCCESS) ? TRUE : FALSE);
+		return granted;
+	}
 
 	for (nord = 0, bep = ud->be_list; bep && *bep; bep++, nord++) {
 		struct backend_p *b = *bep;
@@ -499,7 +519,9 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 		free(phash);
 	}
 
-	return (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
+	granted = (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
+	auth_cache(username, password, granted, userdata);
+	return granted;
 }
 
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
@@ -521,7 +543,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		access == MOSQ_ACL_READ ? "MOSQ_ACL_READ" : "MOSQ_ACL_WRITE" );
 
 
-	granted = cache_q(clientid, username, topic, access, userdata);
+	granted = acl_cache_q(clientid, username, topic, access, userdata);
 	if (granted != MOSQ_ERR_UNKNOWN) {
 		_log(LOG_DEBUG, "aclcheck(%s, %s, %d) CACHEDAUTH: %d",
 			username, topic, access, granted);

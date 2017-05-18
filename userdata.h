@@ -39,8 +39,10 @@ struct userdata {
 	char *superusers;		/* Static glob list */
 	int fallback_be;		/* Backend to use for anonymous connections */
 	char *anonusername;		/* Configured name of anonymous MQTT user */
-	time_t cacheseconds;		/* number of seconds to cache ACL lookups */
-	struct aclcache *aclcache;
+	time_t acl_cacheseconds;		/* number of seconds to cache ACL lookups */
+	struct cacheentry *aclcache;
+	time_t auth_cacheseconds;		/* number of seconds to cache AUTH lookups */
+	struct cacheentry *authcache;
 };
 
 #endif
