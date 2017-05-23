@@ -66,6 +66,14 @@ The plugin supports so-called _superusers_. These are usernames exempt
 from ACL checking. In other words, if a user is a _superuser_, that user
 doesn't require ACLs.
 
+A static superuser is one configured with the _fnmatch(3)_ `auth_opt_superusers`
+option. The other 'superusers' are configured (i.e. enabled) from within the
+particular database back-end. Effectively both are identical in that ACL
+checking is disabled if a user is a superuser.
+
+Note that not all back-ends currently have 'superuser' queries implemented.
+todo. At that point the `auth_opt_superusers` will probably disappear.
+
 ## Building the plugin
 
 In order to compile the plugin you'll require a copy of the [Mosquitto] source
