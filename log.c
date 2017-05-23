@@ -32,6 +32,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <mosquitto.h>
+#include <mosquitto_plugin.h>
 #include "log.h"
 
 int log_quiet=0;
@@ -45,17 +47,21 @@ void _log(int priority, const char *fmt, ...)
 		return;
 
 	/* FIXME: use new log function when @ralight is ready */
-	/* interim solution - link with -rdynamic then #include <mosquitto_broker.h> and use _mosquitto_log_printf(). */
 
 	time(&now);
 
 	va_start(va, fmt);
+
+// #if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
+#if (0)
+	mosquitto_log_printf(priority, fmt, va);
+#else
 	fprintf(stderr, "%ld: |-- ", now);
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	fflush(stderr);
-	//FIXME: does this work? _mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "NOPE");
 	va_end(va);
+#endif
 }	
 
 void _fatal(const char *fmt, ...)
