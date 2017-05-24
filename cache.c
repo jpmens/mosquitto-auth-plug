@@ -45,7 +45,7 @@ static unsigned int sha_hash(const char *data, size_t size, unsigned char *out)
 	const EVP_MD *md = EVP_get_digestbyname("SHA1");
 
 	if (md != NULL) {
-#if OPENSSL_VERSION_NUMBER < 0x10100000
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || defined(LIBRESSL_VERSION_NUMBER)
 		EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
 #else
 		EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -54,7 +54,7 @@ static unsigned int sha_hash(const char *data, size_t size, unsigned char *out)
 		EVP_DigestInit_ex(mdctx, md, NULL);
 		EVP_DigestUpdate(mdctx, data, size);
 		EVP_DigestFinal_ex(mdctx, out, &md_len);
-#if OPENSSL_VERSION_NUMBER < 0x10100000
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || defined(LIBRESSL_VERSION_NUMBER)
 		EVP_MD_CTX_destroy(mdctx);
 #else
 		EVP_MD_CTX_free(mdctx);
