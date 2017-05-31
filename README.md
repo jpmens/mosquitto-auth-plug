@@ -661,6 +661,12 @@ PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
   +------------------------------------------------ : marker
 ```
 
+Note that the `salt` by default will be taken as-is (thus it will not be
+base64 decoded before the validation). In case your own implementation uses
+the raw bytes when hashing the password and base64 is only used for display
+purpose, compile this project with the `-DRAW_SALT` flag (you could add this
+in the `config.mk` file to `CFG_CFLAGS`).
+
 ## Creating a user
 
 A trivial utility to generate hashes is included as `np`. Copy and paste the

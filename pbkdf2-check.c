@@ -108,15 +108,35 @@ int pbkdf2_check(char *password, char *hash)
 		return (FALSE);
 	}
 
+#ifdef RAW_SALT
+	char *rawSalt;
+
+	if ((rawSalt = malloc(strlen(salt) + 1)) == NULL) {
+		fprintf(stderr, "Out of memory\n");
+		return FALSE;
+	}
+
+	saltlen = base64_decode(salt, rawSalt);
+	if (saltlen < 1) {
+		return (FALSE);
+	}
+
+	free(salt);
+	salt = strdup(rawSalt);
+	free(rawSalt);
+#else
+	saltlen = strlen((char *)salt);
+#endif
+
 #ifdef PWDEBUG
 	fprintf(stderr, "sha        =[%s]\n", sha);
 	fprintf(stderr, "iterations =%d\n", iterations);
 	fprintf(stderr, "salt       =[%s]\n", salt);
+	fprintf(stderr, "salt len   =[%d]\n", saltlen);
 	fprintf(stderr, "h_pw       =[%s]\n", h_pw);
 	fprintf(stderr, "kenlen     =[%d]\n", keylen);
 #endif
 
-	saltlen = strlen((char *)salt);
 
 	evpmd = EVP_sha256();
 	if (strcmp(sha, "sha1") == 0) {
