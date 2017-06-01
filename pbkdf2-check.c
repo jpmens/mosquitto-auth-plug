@@ -122,8 +122,8 @@ int pbkdf2_check(char *password, char *hash)
 	}
 
 	free(salt);
-	salt = strdup(rawSalt);
-	free(rawSalt);
+	salt = rawSalt;
+	rawSalt = NULL;
 #else
 	saltlen = strlen((char *)salt);
 #endif
