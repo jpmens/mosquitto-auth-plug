@@ -44,7 +44,7 @@
 
 int main(int argc, char **argv)
 {
-	int iterations = 901, rc, saltlen, blen;
+	int iterations = 901, rc, blen;
 	unsigned char	saltbytes[SALTLEN];
 	char *salt, *b64;
 	unsigned char key[128];
@@ -96,12 +96,22 @@ int main(int argc, char **argv)
 	}
 
 	base64_encode(saltbytes, SALTLEN, &salt);
+
+#ifdef RAW_SALT
+	PKCS5_PBKDF2_HMAC(password, strlen(password),
+		(unsigned char *)saltbytes, SALTLEN,
+		iterations,
+		EVP_sha256(), KEY_LENGTH, key);
+#else
+	int saltlen;
 	saltlen = strlen(salt);
 
 	PKCS5_PBKDF2_HMAC(password, strlen(password),
 		(unsigned char *)salt, saltlen,
 		iterations,
 		EVP_sha256(), KEY_LENGTH, key);
+#endif
+
 
 	blen = base64_encode(key, KEY_LENGTH, &b64);
 	if (blen > 0) {
