@@ -536,6 +536,23 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		username = ud->anonusername;
 	}
 
+	/* We are using pattern based acls. Check whether the username or
+	 * client id contains a +, # or / and if so deny access.
+	 *
+	 * Without this, a malicious client may configure its username/client
+	 * id to bypass ACL checks (or have a username/client id that cannot
+	 * publish or receive messages to its own place in the hierarchy).
+	 */
+	if(username && strpbrk(username, "+#/")){
+		_log(MOSQ_LOG_NOTICE, "ACL denying access to client with dangerous username \"%s\"", username);
+		return MOSQ_DENY_ACL;
+	}
+
+	if(clientid && strpbrk(clientid, "+#/")){
+		_log(MOSQ_LOG_NOTICE, "ACL denying access to client with dangerous client id \"%s\"", clientid);
+		return MOSQ_DENY_ACL;
+	}
+
 	_log(LOG_DEBUG, "mosquitto_auth_acl_check(..., %s, %s, %s, %s)",
 		clientid ? clientid : "NULL",
 		username ? username : "NULL",
