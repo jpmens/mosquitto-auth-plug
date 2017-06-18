@@ -162,7 +162,7 @@ be-mongo.o: be-mongo.c be-mongo.h Makefile
 be-files.o: be-files.c be-files.h Makefile
 
 np: np.c base64.o
-	$(CC) $(CFLAGS) $^ -o $@ $(OSSLIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(OSSLIBS)
 
 $(CDBLIB):
 	(cd $(CDBDIR); make libcdb.a cdb )
