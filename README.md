@@ -298,6 +298,12 @@ auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=
 | dbpath          |                   |     Y       | path to database |
 | sqliteuserquery |                   |     Y       | SQL for users |
 
+Example:
+
+```
+auth_opt_sqliteuserquery SELECT pw FROM users WHERE username = ?
+```
+
 ### Redis
 
 
