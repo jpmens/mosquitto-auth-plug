@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com> wendal <wendal1985()gmai.com>
+ * Copyright (c) 2013 Jan-Piet Mens <jp@mens.de> wendal <wendal1985()gmai.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

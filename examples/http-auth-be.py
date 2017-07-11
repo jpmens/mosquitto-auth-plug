@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__    = 'Jan-Piet Mens <jpmens()gmail.com>'
+__author__    = 'Jan-Piet Mens <jp@mens.de>'
 __copyright__ = 'Copyright 2014 Jan-Piet Mens'
 
 import sys

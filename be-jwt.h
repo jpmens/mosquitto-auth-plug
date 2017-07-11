@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan-Piet Mens <jpmens()gmail.com>
+ * Copyright (c) 2013 Jan-Piet Mens <jp@mens.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
