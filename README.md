@@ -472,14 +472,14 @@ auth_opt_port 5432
 auth_opt_dbname test
 auth_opt_user jjj
 auth_opt_pass supersecret
-auth_opt_userquery SELECT password FROM account WHERE username = $1 limit 1
+auth_opt_userquery SELECT pw FROM account WHERE username = $1 limit 1
 auth_opt_superquery SELECT COALESCE(COUNT(*),0) FROM account WHERE username = $1 AND mosquitto_super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE (username = $1) AND (rw & $2) > 0```
 ```
 Assuming the following database tables:
 
 ```
-mysql> SELECT * FROM users;
+=> SELECT * FROM account;
 +----+----------+---------------------------------------------------------------------+-------+
 | id | username | pw                                                                  | super |
 +----+----------+---------------------------------------------------------------------+-------+
@@ -488,7 +488,7 @@ mysql> SELECT * FROM users;
 |  3 | su1      | PBKDF2$sha256$901$chEZ4HcSmKtlV0kf$yRh2N62uq6cHoAB6FIrxIN2iihYqNIJp |     1 |
 +----+----------+---------------------------------------------------------------------+-------+
 
-mysql> SELECT * FROM acls;
+=> SELECT * FROM acls;
 +----+----------+-------------------+----+
 | id | username | topic             | rw |
 +----+----------+-------------------+----+
