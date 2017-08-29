@@ -613,7 +613,7 @@ The following `auth_opt_mongo_` options are supported by the mongo back-end:
 Mosquitto configuration for the `mongo` back-end:
 ```
 auth_plugin /home/jpm/mosquitto-auth-plug/auth-plug.so
-auth_opt_mongo_uri mongodb://localhost:2017
+auth_opt_mongo_uri mongodb://localhost:27017
 ```
 ## Files
 
