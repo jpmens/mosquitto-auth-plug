@@ -136,7 +136,7 @@ void be_redis_destroy(void *handle)
 	}
 }
 
-char *be_redis_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_redis_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct redis_backend *conf = (struct redis_backend *)handle;
 
@@ -144,7 +144,7 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 	char *pwhash = NULL;
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
-		return (NULL);
+		return BACKEND_DEFER;
 
 	if (strlen(conf->userquery) == 0) {
 		conf->userquery = "GET %s";
@@ -155,7 +155,7 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 	r = redisCommand(conf->redis, query);
 	if (r == NULL || conf->redis->err != REDIS_OK) {
 		be_redis_reconnect(conf);
-		return (NULL);
+		return BACKEND_ERROR;
 	}
 	free(query);
 
@@ -164,12 +164,13 @@ char *be_redis_getuser(void *handle, const char *username, const char *password,
 	}
 	freeReplyObject(r);
 
-	return (pwhash);
+	*phash = pwhash;
+	return BACKEND_DEFER;
 }
 
 int be_redis_superuser(void *conf, const char *username)
 {
-	return 0;
+	return BACKEND_DEFER;
 }
 
 int be_redis_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
@@ -179,10 +180,10 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 	redisReply *r;
 
 	if (conf == NULL || conf->redis == NULL || username == NULL)
-		return 0;
+		return BACKEND_DEFER;
 
 	if (strlen(conf->aclquery) == 0) {
-		return 1;
+		return BACKEND_ALLOW;
 	}
 	char *query = malloc(strlen(conf->aclquery) + strlen(username) + strlen(topic) + 128);
 	sprintf(query, conf->aclquery, username, topic);
@@ -202,6 +203,6 @@ int be_redis_aclcheck(void *handle, const char *clientid, const char *username, 
 			answer = 1;
 	}
 	freeReplyObject(r);
-	return answer;
+	return (answer) ? BACKEND_ALLOW : BACKEND_DEFER;
 }
 #endif /* BE_REDIS */

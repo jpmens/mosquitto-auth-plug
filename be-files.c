@@ -39,6 +39,7 @@
 #include <mosquitto_plugin.h>
 #include "log.h"
 #include "hash.h"
+#include "backends.h"
 #include "be-files.h"
 
 #if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
@@ -330,15 +331,16 @@ void be_files_destroy(void *handle)
 	free(conf);
 }
 
-char *be_files_getuser(void *handle,
+int be_files_getuser(void *handle,
 		            const char *username,
 		            const char *password,
-		            int *authenticated)
+		            char **phash)
 {
 	be_files *const conf = (be_files *) handle;
 	pwd_entry *entry = find_pwd(conf, username);
 
-	return (entry == NULL || entry->password == NULL) ? NULL : strdup(entry->password);
+	*phash = (entry == NULL || entry->password == NULL) ? NULL : strdup(entry->password);
+	return BACKEND_DEFER;
 }
 
 int be_files_superuser(void *handle, const char *username)
@@ -389,10 +391,10 @@ static int do_aclcheck(dllist * acl_list,
 		if (mosquitto_topic_matches_sub(buf, topic, &ret) != MOSQ_ERR_SUCCESS) {
 			LOG(MOSQ_LOG_ERR, "invalid topic '%s'", buf);
 		} else if (ret && (access & acl->access) != 0) {
-			return 1;
+			return BACKEND_ALLOW;
 		}
 	}
-	return 0;
+	return BACKEND_DEFER;
 }
 
 int be_files_aclcheck(void *handle,
@@ -406,13 +408,13 @@ int be_files_aclcheck(void *handle,
 	int ret = 0;
 
 	if (!conf->acl_checks)
-		return 1;
+		return BACKEND_ALLOW;
 
 	if (pwd != NULL) {
 		ret = do_aclcheck(&pwd->acl_entries, clientid, username, topic, access);
 	}
 
-	if (!ret)
+	if (ret == BACKEND_DEFER)
 		ret = do_aclcheck(&acl_entries, clientid, username, topic, access);
 	return ret;
 }

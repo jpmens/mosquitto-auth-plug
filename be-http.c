@@ -98,12 +98,12 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	struct curl_slist *headerlist=NULL;
 	int re;
 	int respCode = 0;
-	int ok = FALSE;
+	int ok = BACKEND_DEFER;
 	char *url;
 	char *data;
 
 	if (username == NULL) {
-		return (FALSE);
+		return BACKEND_DEFER;
 	}
 
 	clientid = (clientid && *clientid) ? clientid : "";
@@ -112,7 +112,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	if ((curl = curl_easy_init()) == NULL) {
 		_fatal("create curl_easy_handle fails");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	if (conf->hostheader != NULL)
 		headerlist = curl_slist_append(headerlist, conf->hostheader);
@@ -127,7 +127,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	url = (char *)malloc(strlen(conf->hostname) + strlen(uri) + 20);
 	if (url == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 
 	// enable the https
@@ -148,7 +148,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	char *string_envs = (char *)malloc(MAXPARAMSLEN);
 	if (string_envs == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 
 	memset(string_envs, 0, MAXPARAMSLEN);
@@ -163,14 +163,14 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		env_num = get_string_envs(curl, conf->aclcheck_envs, string_envs);
 	}
 	if( env_num == -1 ){
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	//---- over ----
 
 	data = (char *)malloc(strlen(string_envs) + strlen(escaped_username) + strlen(escaped_password) + strlen(escaped_topic) + strlen(string_acc) + strlen(escaped_clientid) + 50);
 	if (data == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	sprintf(data, "%susername=%s&password=%s&topic=%s&acc=%s&clientid=%s",
 		string_envs,
@@ -197,7 +197,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	if (re == CURLE_OK) {
 		re = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &respCode);
 		if (re == CURLE_OK && respCode >= 200 && respCode < 300) {
-			ok = TRUE;
+			ok = BACKEND_ALLOW;
 		} else if (re == CURLE_OK && respCode >= 500) {
 			ok = BACKEND_ERROR;
 		} else {
@@ -300,11 +300,11 @@ void be_http_destroy(void *handle)
 	}
 };
 
-char *be_http_getuser(void *handle, const char *username, const char *password, int *authenticated) {
+int be_http_getuser(void *handle, const char *username, const char *password, char **phash) {
 	struct http_backend *conf = (struct http_backend *)handle;
 	int re, try;
 	if (username == NULL) {
-		return NULL;
+		return BACKEND_DEFER;
 	}
 
 	re = BACKEND_ERROR;
@@ -314,10 +314,7 @@ char *be_http_getuser(void *handle, const char *username, const char *password, 
 		try++;
 		re = http_post(handle, conf->getuser_uri, NULL, username, password, NULL, -1, METHOD_GETUSER);
 	}
-	if (re == 1) {
-		*authenticated = 1;
-	}
-	return NULL;
+	return re;
 };
 
 int be_http_superuser(void *handle, const char *username)

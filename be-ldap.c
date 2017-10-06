@@ -35,10 +35,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mosquitto.h>
+#include "backends.h"
 #include "be-ldap.h"
 #include "log.h"
 #include "hash.h"
-#include "backends.h"
 
 struct ldap_backend {
 	char *ldap_uri;
@@ -169,7 +169,7 @@ static int user_bind(char *connstr, char *dn, const char *password)
 
 }
 
-char *be_ldap_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_ldap_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct ldap_backend *conf = (struct ldap_backend *)handle;
 	LDAPMessage *msg,*entry;
@@ -177,8 +177,6 @@ char *be_ldap_getuser(void *handle, const char *username, const char *password, 
 	char *filter, *bp, *fp, *up, *dn;
 
 	// printf("+++++++++++ GET %s USERNAME [%s] (%s)\n", conf->ldap_uri, username, password);
-
-	*authenticated = FALSE;
 
 	/*
 	 * Replace '@' in filter with `username'
@@ -208,27 +206,30 @@ char *be_ldap_getuser(void *handle, const char *username, const char *password, 
 		&msg);
 	if (rc != LDAP_SUCCESS) {
 		_fatal("Cannot search LDAP for user %s: %s", username, ldap_err2string(rc));
-		return (NULL);
+		return BACKEND_ERROR;
 	}
 
 	free(filter);
 
 	if (ldap_count_entries(conf->ld, msg) != 1) {
 		_log(1, "LDAP search for %s returns != 1 entry", username);
-		return (NULL);
+		return BACKEND_DEFER;
 	}
 
+	rc = BACKEND_DEFER;
 	if ((entry = ldap_first_entry(conf->ld, msg)) != NULL) {
 		dn = ldap_get_dn(conf->ld, entry);
 
 		_log(1, "Attempt to bind as %s\n", dn);
 
-		*authenticated = user_bind(conf->connstr, dn, password);
+		if (user_bind(conf->connstr, dn, password)) {
+			rc = BACKEND_ALLOW;
+		}
 
 		ldap_memfree(dn);
 	}
 	
-	return (NULL);
+	return rc;
 }
 
 /*
@@ -240,7 +241,7 @@ int be_ldap_superuser(void *handle, const char *username)
 	struct ldap_backend *conf = (struct ldap_backend *)handle;
 	printf("%s\n", conf->ldap_uri);
 
-	return (0);
+	return BACKEND_DEFER;
 }
 
 /*
@@ -259,6 +260,6 @@ int be_ldap_superuser(void *handle, const char *username)
 
 int be_ldap_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
-	return (TRUE);
+	return BACKEND_ALLOW;
 }
 #endif /* BE_LDAP */

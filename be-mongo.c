@@ -14,6 +14,7 @@
 #include <mongoc.h>
 #include "hash.h"
 #include "log.h"
+#include "backends.h"
 
 
 struct mongo_backend {
@@ -113,7 +114,7 @@ mongoc_uri_t *be_mongo_new_uri_from_options() {
 	return uri;
 }
 
-char *be_mongo_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_mongo_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct mongo_backend *conf = (struct mongo_backend *)handle;
 	mongoc_collection_t *collection;
@@ -152,7 +153,9 @@ char *be_mongo_getuser(void *handle, const char *username, const char *password,
 	bson_destroy (&query);
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy (collection);
-	return result;
+
+	*phash = result;
+	return BACKEND_DEFER;
 }
 
 
@@ -213,7 +216,7 @@ int be_mongo_superuser(void *conf, const char *username)
 	mongoc_cursor_destroy (cursor);
 	mongoc_collection_destroy (collection);
 
-	return result;
+	return (result) ? BACKEND_ALLOW : BACKEND_DEFER;
 }
 
 int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc)
@@ -307,7 +310,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		mongoc_collection_destroy(collection);
 	}
 
-	return match;
+	return (match) ? BACKEND_ALLOW : BACKEND_DEFER;
 }
 
 // Check an embedded array of the form [ "public/#", "private/myid/#" ]

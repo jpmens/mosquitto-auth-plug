@@ -126,7 +126,7 @@ void be_pg_destroy(void *handle)
 	}
 }
 
-char *be_pg_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_pg_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct pg_backend *conf = (struct pg_backend *)handle;
 	char *value = NULL, *v = NULL;
@@ -136,7 +136,7 @@ char *be_pg_getuser(void *handle, const char *username, const char *password, in
 	_log(LOG_DEBUG, "GETTING USERS: %s", username);
 
 	if (!conf || !conf->userquery || !username || !*username)
-		return (NULL);
+		return BACKEND_DEFER;
 
 	const char *values[1] = {username};
 	int lengths[1] = {strlen(username)};
@@ -166,7 +166,8 @@ out:
 
 	PQclear(res);
 
-	return (value);
+	*phash = value;
+	return BACKEND_DEFER;
 }
 
 /*
@@ -178,13 +179,13 @@ int be_pg_superuser(void *handle, const char *username)
 	struct pg_backend *conf = (struct pg_backend *)handle;
 	char *v = NULL;
 	long nrows;
-	int issuper = FALSE;
+	int issuper = BACKEND_DEFER;
 	PGresult *res = NULL;
 
 	_log(LOG_DEBUG, "SUPERUSER: %s", username);
 
 	if (!conf || !conf->superquery || !username || !*username)
-		return (FALSE);
+		return BACKEND_DEFER;
 
 	//query for postgres $1 instead of % s
 	const char *values[1] = {username};
@@ -208,7 +209,7 @@ int be_pg_superuser(void *handle, const char *username)
 	if ((v = PQgetvalue(res, 0, 0)) == NULL) {
 		goto out;
 	}
-	issuper = atoi(v);
+	issuper = (atoi(v)) ? BACKEND_ALLOW : BACKEND_DEFER;
 
 
 out:
@@ -236,7 +237,7 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 {
 	struct pg_backend *conf = (struct pg_backend *)handle;
 	char *v = NULL;
-	int match = 0;
+	int match = BACKEND_DEFER;
 	bool bf;
 	PGresult *res = NULL;
 
@@ -244,7 +245,7 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 
 
 	if (!conf || !conf->aclquery)
-		return (FALSE);
+		return BACKEND_DEFER;
 
 	const int buflen = 11;
 	//10 for 2^32 + 1
@@ -280,14 +281,14 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 			t_expand(clientid, username, v, &expanded);
 			if (expanded && *expanded) {
 				mosquitto_topic_matches_sub(expanded, topic, &bf);
-				match |= bf;
+				if (bf) match = BACKEND_ALLOW;
 				_log(LOG_DEBUG, "  postgres: topic_matches(%s, %s) == %d",
 				     expanded, v, bf);
 
 				free(expanded);
 			}
 		}
-		if (match != 0) {
+		if (match != BACKEND_DEFER) {
 			break;
 		}
 	}

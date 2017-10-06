@@ -163,7 +163,7 @@ static bool auto_connect(struct mysql_backend *conf)
 	return false;
 }
 
-char *be_mysql_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_mysql_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *value = NULL, *v;
@@ -172,20 +172,20 @@ char *be_mysql_getuser(void *handle, const char *username, const char *password,
 	MYSQL_ROW rowdata;
 
 	if (!conf || !conf->userquery || !username || !*username)
-		return (NULL);
+		return BACKEND_DEFER;
 
 	if (mysql_ping(conf->mysql)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
 		if (!auto_connect(conf)) {
-			return (NULL);
+			return BACKEND_ERROR;
 		}
 	}
 	if ((u = escape(conf, username, &ulen)) == NULL)
-		return (NULL);
+		return BACKEND_ERROR;
 
 	if ((query = malloc(strlen(conf->userquery) + ulen + 128)) == NULL) {
 		free(u);
-		return (NULL);
+		return BACKEND_ERROR;
 	}
 	sprintf(query, conf->userquery, u);
 	free(u);
@@ -215,7 +215,8 @@ out:
 	mysql_free_result(res);
 	free(query);
 
-	return (value);
+	*phash = value;
+	return BACKEND_DEFER;
 }
 
 /*
@@ -227,13 +228,13 @@ int be_mysql_superuser(void *handle, const char *username)
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL;
 	long nrows, ulen;
-	int issuper = FALSE;
+	int issuper = BACKEND_DEFER;
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
 
 	if (!conf || !conf->superquery)
-		return (FALSE);
+		return BACKEND_DEFER;
 
 	if (mysql_ping(conf->mysql)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
@@ -267,7 +268,7 @@ int be_mysql_superuser(void *handle, const char *username)
 	if ((rowdata = mysql_fetch_row(res)) == NULL) {
 		goto out;
 	}
-	issuper = atoi(rowdata[0]);
+	issuper = (atoi(rowdata[0])) ? BACKEND_ALLOW: BACKEND_DEFER;
 
 out:
 
@@ -293,13 +294,13 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 	struct mysql_backend *conf = (struct mysql_backend *)handle;
 	char *query = NULL, *u = NULL, *v;
 	long ulen;
-	int match = 0;
+	int match = BACKEND_DEFER;
 	bool bf;
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW rowdata;
 
 	if (!conf || !conf->aclquery)
-		return (FALSE);
+		return BACKEND_DEFER;
 
 	if (mysql_ping(conf->mysql)) {
 		fprintf(stderr, "%s\n", mysql_error(conf->mysql));
@@ -342,7 +343,7 @@ int be_mysql_aclcheck(void *handle, const char *clientid, const char *username, 
 			t_expand(clientid, username, v, &expanded);
 			if (expanded && *expanded) {
 				mosquitto_topic_matches_sub(expanded, topic, &bf);
-				match |= bf;
+				if (bf) match = BACKEND_ALLOW;
 				_log(LOG_DEBUG, "  mysql: topic_matches(%s, %s) == %d",
 				     expanded, v, bf);
 

@@ -468,7 +468,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	struct userdata *ud = (struct userdata *)userdata;
 	struct backend_p **bep;
 	char *phash = NULL, *backend_name = NULL;
-	int match, authenticated = FALSE, nord, granted;
+	int match, authenticated = FALSE, nord, granted, rc, has_error = FALSE;
 
 	if (!username || !*username || !password || !*password)
 		return MOSQ_DENY_AUTH;
@@ -488,18 +488,29 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 		_log(LOG_DEBUG, "** checking backend %s", b->name);
 
 		/*
-		 * The ->getuser() routine can decide to authenticate by setting
-		 * either `authenticated = TRUE' or by returning a pointer to
-		 * the user's PBKDF2 password hash
+		 * The ->getuser() routine can decide to authenticate by returning BACKEND_ALLOW
+		 * or by setting phash to the user's PBKDF2 password hash and returning BACKEND_DEFER
+		 * It can also refuse authentication by returning BACKEND_DENY.
 		 */
-
-		phash = b->getuser(b->conf, username, password, &authenticated);
-		if (authenticated == TRUE) {
-			break;
-		}
 		if (phash != NULL) {
+			free(phash);
+			phash = NULL;
+		}
+		rc = b->getuser(b->conf, username, password, &phash);
+		if (rc == BACKEND_ALLOW) {
+			backend_name = (*bep)->name;
+			authenticated = TRUE;
+			break;
+		} else if (rc == BACKEND_DENY) {
+			authenticated = FALSE;
+			backend_name = (*bep)->name;
+			break;
+		} else if (rc == BACKEND_ERROR) {
+			has_error = TRUE;
+		} else if (phash != NULL) {
 			match = pbkdf2_check((char *)password, phash);
 			if (match == 1) {
+				backend_name = (*bep)->name;
 				authenticated = TRUE;
 				/* Mark backend index in userdata so we can check
 				 * authorization in this back-end only.
@@ -509,9 +520,6 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 		}
 	}
 
-	/* Set name of back-end which authenticated */
-	backend_name = (authenticated) ? (*bep)->name : "none";
-
 	_log(LOG_DEBUG, "getuser(%s) AUTHENTICATED=%d by %s",
 		username, authenticated, (backend_name) ? backend_name : "none");
 
@@ -520,6 +528,11 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	}
 
 	granted = (authenticated) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
+	if (granted == MOSQ_DENY_AUTH && has_error) {
+		_log(LOG_DEBUG, "getuser(%s) AUTHENTICATED=N HAS_ERROR=Y => ERR_UNKNOWN",
+			username);
+		granted = MOSQ_ERR_UNKNOWN;
+	}
 	auth_cache(username, password, granted, userdata);
 	return granted;
 }
@@ -588,10 +601,15 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		struct backend_p *b = *bep;
 
 		match = b->superuser(b->conf, username);
-		if (match == 1) {
+		if (match == BACKEND_ALLOW) {
 			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=Y by %s",
 				username, topic, access, b->name);
 			granted = MOSQ_ERR_SUCCESS;
+			goto outout;
+		} else if (match == BACKEND_DENY) {
+			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) SUPERUSER=N by %s",
+				username, topic, access, b->name);
+			granted = MOSQ_DENY_ACL;
 			goto outout;
 		} else if (match == BACKEND_ERROR) {
 			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) HAS_ERROR=Y by %s",
@@ -608,31 +626,35 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 		struct backend_p *b = *bep;
 
 		match = b->aclcheck((*bep)->conf, clientid, username, topic, access);
-		if (match == 1) {
+		if (match == BACKEND_ALLOW) {
 			backend_name = b->name;
 			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) trying to acl with %s",
 				username, topic, access, b->name);
 			authorized = TRUE;
 			break;
+		} else if (match == BACKEND_DENY) {
+			backend_name = b->name;
+			authorized = FALSE;
+			break;
 		} else if (match == BACKEND_ERROR) {
 			_log(LOG_DEBUG, "aclcheck(%s, %s, %d) HAS_ERROR=Y by %s",
 				username, topic, access, b->name);
 			has_error = TRUE;
+		}
 	}
-	}
-
 
 	_log(LOG_DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=%d by %s",
-		username, topic, access, authorized, backend_name);
+		username, topic, access, authorized, (backend_name) ? backend_name : "none");
 
 	granted = (authorized) ?  MOSQ_ERR_SUCCESS : MOSQ_DENY_ACL;
+
+   outout:	/* goto fail goto fail */
+
 	if (granted == MOSQ_DENY_ACL && has_error) {
 		_log(LOG_DEBUG, "aclcheck(%s, %s, %d) AUTHORIZED=N HAS_ERROR=Y => ERR_UNKNOWN",
 			username, topic, access);
 		granted = MOSQ_ERR_UNKNOWN;
 	}
-
-   outout:	/* goto fail goto fail */
 
 	acl_cache(clientid, username, topic, access, granted, userdata);
 	return (granted);
@@ -647,7 +669,7 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	struct backend_p **bep;
 	char *database = p_stab("psk_database");
 	char *psk_key = NULL, *username;
-	int psk_found = FALSE;
+	int psk_found = FALSE, rc, has_error = FALSE;
 
 	// username = malloc(strlen(hint) + strlen(identity) + 12);
 	// sprintf(username, "%s-%s", hint, identity);
@@ -656,24 +678,35 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
 		if (!strcmp(database, b->name)) {
-			psk_key = b->getuser(b->conf, username, NULL, 0);
+			rc = b->getuser(b->conf, username, NULL, &psk_key);
 			break;
 		}
 
 	}
 
-	_log(LOG_DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
-		hint, identity, database,
-		psk_key ? 1 : 0);
+	if (rc == BACKEND_ERROR) {
+		psk_found = FALSE;
+		has_error = TRUE;
+	} else if (rc == BACKEND_DENY) {
+		psk_found = FALSE;
+	} else {
+		_log(LOG_DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
+			hint, identity, database,
+			psk_key ? 1 : 0);
+
+		if (psk_key != NULL) {
+			strncpy(key, psk_key, max_key_len);
+			psk_found = TRUE;
+		}
+	}
 
 	if (psk_key != NULL) {
-		strncpy(key, psk_key, max_key_len);
 		free(psk_key);
-		psk_found = TRUE;
 	}
 
 	// free(username);
 
+	if (has_error) return MOSQ_ERR_UNKNOWN;
 	return (psk_found) ? MOSQ_ERR_SUCCESS : MOSQ_DENY_AUTH;
 
 #else /* !BE_PSK */
