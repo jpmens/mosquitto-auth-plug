@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2014 Jan-Piet Mens <jp@mens.de>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer. 2. Redistributions
  * in binary form must reproduce the above copyright notice, this list of
@@ -14,7 +14,7 @@
  * nor the names of its contributors may be used to endorse or promote
  * products derived from this software without specific prior written
  * permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -53,12 +53,14 @@ struct pg_backend {
 	   //MUST return 1 row, 1 column,[0, 1]
 	char *aclquery;
 	   //MAY return n rows, 1 column, string
+	char *sslcert;
+	char *sslkey;
 };
 
 void *be_pg_init()
 {
 	struct pg_backend *conf;
-	char *host, *user, *pass, *dbname, *p, *port;
+	char *host, *user, *pass, *dbname, *p, *port, *sslcert, *sslkey;
 	char *userquery;
 
 	_log(LOG_DEBUG, "}}}} POSTGRES");
@@ -68,6 +70,8 @@ void *be_pg_init()
 	user = p_stab("user");
 	pass = p_stab("pass");
 	dbname = p_stab("dbname");
+	sslcert = p_stab("sslcert");
+	sslkey = p_stab("sslkey");
 
 	host = (host) ? host : strdup("");
 	port = (p) ? p : strdup("");
@@ -90,22 +94,31 @@ void *be_pg_init()
 	conf->userquery = userquery;
 	conf->superquery = p_stab("superquery");
 	conf->aclquery = p_stab("aclquery");
+	conf->sslcert = sslcert;
+	conf->sslkey = sslkey;
 
 	_log(LOG_DEBUG, "HERE: %s", conf->superquery);
 	_log(LOG_DEBUG, "HERE: %s", conf->aclquery);
 
-
-	char *connect_string = NULL;
-
-	conf->conn = PQsetdbLogin(conf->host, conf->port, NULL, NULL, conf->dbname, conf->user, conf->pass);
+	char conninfo[1024] = "";
+	sprintf(conninfo,
+		"host=%s port=%s dbname=%s user=%s password=%s sslcert=%s sslkey=%s",
+		conf->host ? conf->host : "",
+		conf->port ? conf->port : "",
+		conf->dbname ? conf->dbname : "",
+		conf->user ? conf->user : "",
+		conf->pass ? conf->pass : "",
+		conf->sslcert ? conf->sslcert:"",
+		conf->sslkey ? conf->sslkey : ""
+	);
+	_log(LOG_DEBUG, "conninfo: \'%s\'", conninfo);
+	conf->conn = PQconnectdb(conninfo);
 
 	if (PQstatus(conf->conn) == CONNECTION_BAD) {
 		free(conf);
-		free(connect_string);
 		_fatal("We were unable to connect to the database");
 		return (NULL);
 	}
-	free(connect_string);
 
 	return ((void *)conf);
 }
@@ -224,7 +237,7 @@ out:
  * topic is the topic user is trying to access (may contain wildcards) acc is
  * desired type of access: read/write for subscriptions (READ) (1) for
  * publish (WRITE) (2)
- * 
+ *
  * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)
  * may user SUB or PUB topic?
  *
