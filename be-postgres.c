@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2014 Jan-Piet Mens <jp@mens.de>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer. 2. Redistributions
  * in binary form must reproduce the above copyright notice, this list of
@@ -14,7 +14,7 @@
  * nor the names of its contributors may be used to endorse or promote
  * products derived from this software without specific prior written
  * permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -53,13 +53,20 @@ struct pg_backend {
 	   //MUST return 1 row, 1 column,[0, 1]
 	char *aclquery;
 	   //MAY return n rows, 1 column, string
+	char *sslcert;
+	char *sslkey;
 };
+
+static int addKeyValue(char **keywords, char **values, char *key, char *value,
+		const int MAX_KEYS);
 
 void *be_pg_init()
 {
 	struct pg_backend *conf;
-	char *host, *user, *pass, *dbname, *p, *port;
+	char *host, *user, *pass, *dbname, *p, *port, *sslcert, *sslkey;
 	char *userquery;
+	char **keywords = NULL;
+	char **values = NULL;
 
 	_log(LOG_DEBUG, "}}}} POSTGRES");
 
@@ -68,6 +75,8 @@ void *be_pg_init()
 	user = p_stab("user");
 	pass = p_stab("pass");
 	dbname = p_stab("dbname");
+	sslcert = p_stab("sslcert");
+	sslkey = p_stab("sslkey");
 
 	host = (host) ? host : strdup("");
 	port = (p) ? p : strdup("");
@@ -90,22 +99,49 @@ void *be_pg_init()
 	conf->userquery = userquery;
 	conf->superquery = p_stab("superquery");
 	conf->aclquery = p_stab("aclquery");
+	conf->sslcert = sslcert;
+	conf->sslkey = sslkey;
 
 	_log(LOG_DEBUG, "HERE: %s", conf->superquery);
 	_log(LOG_DEBUG, "HERE: %s", conf->aclquery);
 
+	const uint8_t MAX_KEYS = 7;
+	keywords = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+	values = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
 
-	char *connect_string = NULL;
+	if (conf->host) {
+		addKeyValue(keywords, values, "host", conf->host, MAX_KEYS);
+	}
+	if (conf->port) {
+		addKeyValue(keywords, values, "port", conf->port, MAX_KEYS);
+	}
+	if (conf->dbname) {
+		addKeyValue(keywords, values, "dbname", conf->dbname, MAX_KEYS);
+	}
+	if (conf->user) {
+		addKeyValue(keywords, values, "user", conf->user, MAX_KEYS);
+	}
+	if (conf->pass) {
+		addKeyValue(keywords, values, "password", conf->pass, MAX_KEYS);
+	}
+	if (conf->sslcert) {
+		addKeyValue(keywords, values, "sslcert", conf->sslcert, MAX_KEYS);
+	}
+	if (conf->sslkey) {
+		addKeyValue(keywords, values, "sslkey", conf->sslkey, MAX_KEYS);
+	}
 
-	conf->conn = PQsetdbLogin(conf->host, conf->port, NULL, NULL, conf->dbname, conf->user, conf->pass);
+	conf->conn = PQconnectdbParams(
+		(const char * const *)keywords, (const char * const *)values, 0);
+
+	free(keywords);
+	free(values);
 
 	if (PQstatus(conf->conn) == CONNECTION_BAD) {
 		free(conf);
-		free(connect_string);
 		_fatal("We were unable to connect to the database");
 		return (NULL);
 	}
-	free(connect_string);
 
 	return ((void *)conf);
 }
@@ -224,7 +260,7 @@ out:
  * topic is the topic user is trying to access (may contain wildcards) acc is
  * desired type of access: read/write for subscriptions (READ) (1) for
  * publish (WRITE) (2)
- * 
+ *
  * SELECT topic FROM table WHERE username = '%s' AND (acc & %d)
  * may user SUB or PUB topic?
  *
@@ -298,4 +334,88 @@ out:
 
 	return (match);
 }
+
+/*
+ * addKeyValue - Adds key-value pair to index-linked 'dictionary'.
+ *
+ * - Keys, values and 'dictionary' are zero terminated
+ * - 'Dictionary' must have MAX_KEYS + 1 elements
+ * - 'Dictionary' must be initialized with zeros
+ *
+ * Prototype:
+ * ----------
+ * int addKeyValue(char **keywords, char **values, char *key, char *value,
+ *                 const int MAX_KEYS)
+ *
+ * Arguments:
+ * ----------
+ * 		keywords: Array of strings, zero terminated
+ * 		  values: Array of strings, zero terminated
+ * 		     key: Char array, zero terminated
+ * 		   value: Char array, zero terminated
+ * 		MAX_KEYS: Number of key-value entries the dictionary can hold
+ *
+ * Returns:
+ * --------
+ *    n > 0: Number of keys in dictionary
+ *    n < 0: Error
+ *       -1: Dictionary is not initialized
+ *       -2: Dictionary is not initialized properly or unexpectedly full
+ *
+ * Example:
+ * --------
+ *    char **keys = NULL, **values = NULL;
+ *    const uint8_t MAX_KEYS = 1;
+ *    keys = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+ *    values = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+ *    int n = addKeyValue(keys, values, "foo", "bar", MAX_KEYS);
+ *    for (int i = 0; (i < n) && (n > 0); i++)
+ *    {
+ *       printf("key=%s value=%s\n", keys[i], values[i]);
+ *    }
+ *    free(keys);
+ *    free(values);
+ */
+int addKeyValue(char **keywords, char **values, char *key, char *value,
+		const int MAX_KEYS)
+{
+	int n = 0;
+
+	// Check if dictionary is initialized
+	if ((keywords == NULL) || (values == NULL))
+	{
+		return -1;
+	}
+
+	// Get length of dictionary
+	while (*(keywords + n) != '\0')
+	{
+		n++;
+	}
+
+	// Abort if dictionary is full
+	if (n == MAX_KEYS)
+	{
+		return n;
+	}
+
+	// Check for dictionary end
+	if ((keywords[n] != '\0') || (values[n] != '\0')){
+		// Dictionary wasn't initialized properly or it is the
+		// dictionaries end. --> Abort
+		return -2;
+	}
+
+	// Add pair to dictionary and zero-terminate it
+	keywords[n] = key;
+	values[n] = value;
+	n++;
+
+	// In case of not zero-terminated dictionary
+	keywords[n] = '\0';
+	values[n] = '\0';
+
+	return n;
+}
+
 #endif /* BE_POSTGRES */
