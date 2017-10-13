@@ -57,11 +57,16 @@ struct pg_backend {
 	char *sslkey;
 };
 
+static int addKeyValue(char **keywords, char **values, char *key, char *value,
+		const int MAX_KEYS);
+
 void *be_pg_init()
 {
 	struct pg_backend *conf;
 	char *host, *user, *pass, *dbname, *p, *port, *sslcert, *sslkey;
 	char *userquery;
+	char **keywords = NULL;
+	char **values = NULL;
 
 	_log(LOG_DEBUG, "}}}} POSTGRES");
 
@@ -100,19 +105,37 @@ void *be_pg_init()
 	_log(LOG_DEBUG, "HERE: %s", conf->superquery);
 	_log(LOG_DEBUG, "HERE: %s", conf->aclquery);
 
-	char conninfo[1024] = "";
-	sprintf(conninfo,
-		"host=%s port=%s dbname=%s user=%s password=%s sslcert=%s sslkey=%s",
-		conf->host ? conf->host : "",
-		conf->port ? conf->port : "",
-		conf->dbname ? conf->dbname : "",
-		conf->user ? conf->user : "",
-		conf->pass ? conf->pass : "",
-		conf->sslcert ? conf->sslcert:"",
-		conf->sslkey ? conf->sslkey : ""
-	);
-	_log(LOG_DEBUG, "conninfo: \'%s\'", conninfo);
-	conf->conn = PQconnectdb(conninfo);
+	const uint8_t MAX_KEYS = 7;
+	keywords = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+	values = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+
+	if (conf->host) {
+		addKeyValue(keywords, values, "host", conf->host, MAX_KEYS);
+	}
+	if (conf->port) {
+		addKeyValue(keywords, values, "port", conf->port, MAX_KEYS);
+	}
+	if (conf->dbname) {
+		addKeyValue(keywords, values, "dbname", conf->dbname, MAX_KEYS);
+	}
+	if (conf->user) {
+		addKeyValue(keywords, values, "user", conf->user, MAX_KEYS);
+	}
+	if (conf->pass) {
+		addKeyValue(keywords, values, "password", conf->pass, MAX_KEYS);
+	}
+	if (conf->sslcert) {
+		addKeyValue(keywords, values, "sslcert", conf->sslcert, MAX_KEYS);
+	}
+	if (conf->sslkey) {
+		addKeyValue(keywords, values, "sslkey", conf->sslkey, MAX_KEYS);
+	}
+
+	conf->conn = PQconnectdbParams(
+		(const char * const *)keywords, (const char * const *)values, 0);
+
+	free(keywords);
+	free(values);
 
 	if (PQstatus(conf->conn) == CONNECTION_BAD) {
 		free(conf);
@@ -311,4 +334,88 @@ out:
 
 	return (match);
 }
+
+/*
+ * addKeyValue - Adds key-value pair to index-linked 'dictionary'.
+ *
+ * - Keys, values and 'dictionary' are zero terminated
+ * - 'Dictionary' must have MAX_KEYS + 1 elements
+ * - 'Dictionary' must be initialized with zeros
+ *
+ * Prototype:
+ * ----------
+ * int addKeyValue(char **keywords, char **values, char *key, char *value,
+ *                 const int MAX_KEYS)
+ *
+ * Arguments:
+ * ----------
+ * 		keywords: Array of strings, zero terminated
+ * 		  values: Array of strings, zero terminated
+ * 		     key: Char array, zero terminated
+ * 		   value: Char array, zero terminated
+ * 		MAX_KEYS: Number of key-value entries the dictionary can hold
+ *
+ * Returns:
+ * --------
+ *    n > 0: Number of keys in dictionary
+ *    n < 0: Error
+ *       -1: Dictionary is not initialized
+ *       -2: Dictionary is not initialized properly or unexpectedly full
+ *
+ * Example:
+ * --------
+ *    char **keys = NULL, **values = NULL;
+ *    const uint8_t MAX_KEYS = 1;
+ *    keys = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+ *    values = (char **) calloc(MAX_KEYS + 1, sizeof(char *));
+ *    int n = addKeyValue(keys, values, "foo", "bar", MAX_KEYS);
+ *    for (int i = 0; (i < n) && (n > 0); i++)
+ *    {
+ *       printf("key=%s value=%s\n", keys[i], values[i]);
+ *    }
+ *    free(keys);
+ *    free(values);
+ */
+int addKeyValue(char **keywords, char **values, char *key, char *value,
+		const int MAX_KEYS)
+{
+	int n = 0;
+
+	// Check if dictionary is initialized
+	if ((keywords == NULL) || (values == NULL))
+	{
+		return -1;
+	}
+
+	// Get length of dictionary
+	while (*(keywords + n) != '\0')
+	{
+		n++;
+	}
+
+	// Abort if dictionary is full
+	if (n == MAX_KEYS)
+	{
+		return n;
+	}
+
+	// Check for dictionary end
+	if ((keywords[n] != '\0') || (values[n] != '\0')){
+		// Dictionary wasn't initialized properly or it is the
+		// dictionaries end. --> Abort
+		return -2;
+	}
+
+	// Add pair to dictionary and zero-terminate it
+	keywords[n] = key;
+	values[n] = value;
+	n++;
+
+	// In case of not zero-terminated dictionary
+	keywords[n] = '\0';
+	values[n] = '\0';
+
+	return n;
+}
+
 #endif /* BE_POSTGRES */
