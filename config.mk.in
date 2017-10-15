@@ -17,8 +17,11 @@ MOSQUITTO_SRC =
 # Specify the path the OpenSSL here
 OPENSSLDIR = /usr
 
+# Add support for django hashers algorithm name
+SUPPORT_DJANGO_HASHERS ?= no
+
 # Specify optional/additional linker/compiler flags here
-# On macOS, add 
+# On macOS, add
 #	CFG_LDFLAGS = -undefined dynamic_lookup
 # as described in https://github.com/eclipse/mosquitto/issues/244
 #

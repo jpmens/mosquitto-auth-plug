@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2013 Jan-Piet Mens <jp@mens.de>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  * 3. Neither the name of mosquitto nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -50,10 +50,21 @@ static int detoken(char *pbkstr, char **sha, int *iter, char **salt, char **key)
 
 	save = s = strdup(pbkstr);
 
+#if defined(SUPPORT_DJANGO_HASHERS)
+{
+	if ((p = strsep(&s, "_")) == NULL)
+		goto out;
+	if (strcmp(p, "pbkdf2") != 0)
+		goto out;
+}
+#else
+{
 	if ((p = strsep(&s, SEPARATOR)) == NULL)
 		goto out;
 	if (strcmp(p, "PBKDF2") != 0)
 		goto out;
+}
+#endif
 
 	if ((p = strsep(&s, SEPARATOR)) == NULL)
 		goto out;
@@ -159,7 +170,7 @@ int pbkdf2_check(char *password, char *hash)
 #ifdef PWDEBUG
 		fprintf(stderr, "HMAC b64   =[%s]\n", b64);
 #endif
-		
+
 		/* "manual" strcmp() to ensure constant time */
 		for (i = 0; (i < blen) && (i < hlen); i++) {
 			diff |= h_pw[i] ^ b64[i];
