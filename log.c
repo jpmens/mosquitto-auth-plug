@@ -38,7 +38,7 @@
 
 int log_quiet=0;
 
-void _log(int priority, const char *fmt, ...)
+void __log(int priority, const char *fmt, ...)
 {
 	va_list va;
 	time_t now;
@@ -46,22 +46,14 @@ void _log(int priority, const char *fmt, ...)
 	if (log_quiet && priority <= LOG_DEBUG)
 		return;
 
-	/* FIXME: use new log function when @ralight is ready */
-
 	time(&now);
 
 	va_start(va, fmt);
-
-#if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
-	mosquitto_log_printf(priority, fmt, va);
-	va_end(va);
-#else
 	fprintf(stderr, "%ld: |-- ", now);
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 	va_end(va);
-#endif
 }
 
 void _fatal(const char *fmt, ...)

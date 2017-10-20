@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2013, 2014 Jan-Piet Mens <jp@mens.de>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  * 3. Neither the name of mosquitto nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -90,6 +90,8 @@ struct backend_p {
 	f_aclcheck *aclcheck;
 };
 
+void (*_log)(int priority, const char *fmt, ...);
+
 int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
@@ -111,6 +113,12 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 #ifdef BE_PSK
 	struct backend_p **pskbep;
 	char *psk_database = NULL;
+#endif
+
+#if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
+	_log = mosquitto_log_printf;
+#else
+	_log = __log;
 #endif
 
 	OpenSSL_add_all_algorithms();
@@ -378,7 +386,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			found = 1;
 			PSKSETUP;
 		}
-#endif		
+#endif
 
 #if BE_FILES
 		if (!strcmp(q, "files")) {
@@ -636,7 +644,7 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 
 	acl_cache(clientid, username, topic, access, granted, userdata);
 	return (granted);
-	
+
 }
 
 
