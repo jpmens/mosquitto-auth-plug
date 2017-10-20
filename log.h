@@ -31,6 +31,8 @@
 #define LOG_NOTICE (2)
 
 extern void (*_log)(int priority, const char *fmt, ...);
+
+void log_init(void);
 void __log(int priority, const char *fmt, ...);
 void _fatal(const char *fmt, ...);
 

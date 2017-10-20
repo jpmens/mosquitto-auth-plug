@@ -90,13 +90,12 @@ struct backend_p {
 	f_aclcheck *aclcheck;
 };
 
-void (*_log)(int priority, const char *fmt, ...);
-
 int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
-	__log(LOG_NOTICE, "*** auth-plug: startup");
+	log_init();
+	_log(LOG_NOTICE, "*** auth-plug: startup");
 
 	return MOSQ_AUTH_PLUGIN_VERSION;
 }
@@ -115,11 +114,7 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	char *psk_database = NULL;
 #endif
 
-#if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
-	_log = mosquitto_log_printf;
-#else
-	_log = __log;
-#endif
+	log_init();
 
 	OpenSSL_add_all_algorithms();
 

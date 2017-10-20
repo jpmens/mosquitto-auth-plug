@@ -38,6 +38,17 @@
 
 int log_quiet=0;
 
+void (*_log)(int priority, const char *fmt, ...);
+
+void log_init(void)
+{
+#if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
+	_log = mosquitto_log_printf;
+#else
+	_log = __log;
+#endif
+}
+
 void __log(int priority, const char *fmt, ...)
 {
 	va_list va;
