@@ -96,7 +96,7 @@ int pbkdf2_check(char *password, char *hash);
 
 int mosquitto_auth_plugin_version(void)
 {
-	_log(LOG_NOTICE, "*** auth-plug: startup");
+	__log(LOG_NOTICE, "*** auth-plug: startup");
 
 	return MOSQ_AUTH_PLUGIN_VERSION;
 }
