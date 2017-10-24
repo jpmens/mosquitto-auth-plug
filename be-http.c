@@ -269,6 +269,8 @@ void *be_http_init()
 	if(p_stab("http_basic_auth_key")!= NULL){
 		conf->basic_auth = (char *)malloc( strlen("Authorization: Basic %s") + strlen(p_stab("http_basic_auth_key")));
 		sprintf(conf->basic_auth, "Authorization: Basic %s",p_stab("http_basic_auth_key"));
+	} else {
+		conf->basic_auth = NULL;
 	}
 
 	if (p_stab("http_with_tls") != NULL) {
