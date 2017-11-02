@@ -54,6 +54,7 @@
 #include "be-mysql.h"
 #include "be-sqlite.h"
 #include "be-redis.h"
+#include "be-memcached.h"
 #include "be-postgres.h"
 #include "be-ldap.h"
 #include "be-http.h"
@@ -321,6 +322,25 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			(*bep)->getuser =  be_redis_getuser;
 			(*bep)->superuser =  be_redis_superuser;
 			(*bep)->aclcheck =  be_redis_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_MEMCACHED
+		if (!strcmp(q, "memcached")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("memcached");
+			(*bep)->conf = be_memcached_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_memcached_destroy;
+			(*bep)->getuser =  be_memcached_getuser;
+			(*bep)->superuser =  be_memcached_superuser;
+			(*bep)->aclcheck =  be_memcached_aclcheck;
 			found = 1;
 			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
 			PSKSETUP;
