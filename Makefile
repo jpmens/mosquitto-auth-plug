@@ -105,6 +105,10 @@ ifneq ($(BACKEND_FILES), no)
 	OBJS += be-files.o
 endif
 
+ifeq ($(origin SUPPORT_DJANGO_HASHERS), undefined)
+	SUPPORT_DJANGO_HASHERS = no
+endif
+
 ifneq ($(SUPPORT_DJANGO_HASHERS), no)
 	CFG_CFLAGS += -DSUPPORT_DJANGO_HASHERS
 endif
