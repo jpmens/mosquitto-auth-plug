@@ -82,9 +82,9 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 		} else {
 			strcat(querystring, data);
 		}
+		free(data);
 	}
 
-	if (data) free(data);
 	if (escaped_key) free(escaped_key);
 	if (escaped_val) free(escaped_val);
 	free(env_string);
