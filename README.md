@@ -138,6 +138,12 @@ The following `auth_opt_` options are supported by the mysql back-end:
 | cacheseconds   |                   |             | Deprecated. Alias for acl_cacheseconds
 | acl_cacheseconds  | 300               |             | number of seconds to cache ACL lookups. 0 disables
 | auth_cacheseconds | 0                 |             | number of seconds to cache AUTH lookups. 0 disables
+| ssl_enabled    | false 	     |		   | enable SSL 
+| ssl_key        |   	 	     |		   | path name of client private key file
+| ssl_cert       | 	 	     |		   | path name of client public key certificate file  
+| ssl_ca         | 	 	     |		   | path name of Certificate Authority(CA) certificate file 
+| ssl_capath     | 	 	     |		   | path name of directory that contains trusted SSL CA certifcate files 
+| ssl_cipher     | 	 	     |		   | permitted ciphers for SSL encryption 
 
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
