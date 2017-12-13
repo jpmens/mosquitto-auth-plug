@@ -42,7 +42,7 @@
 struct mysql_backend {
 	MYSQL *mysql;
 	char *host;
-	int port;
+	int port;	
 	char *dbname;
 	char *user;
 	char *pass;
@@ -67,10 +67,13 @@ void *be_mysql_init()
 {
 	struct mysql_backend *conf;
 	char *host, *user, *pass, *dbname, *p;
+	char *ssl_ca, *ssl_capath, *ssl_cert, *ssl_cipher, *ssl_key;
 	char *userquery;
 	char *opt_flag;
 	int port;
+	bool ssl_enabled;	
 	my_bool reconnect = false;
+	
 
 	_log(LOG_DEBUG, "}}}} MYSQL");
 
@@ -79,7 +82,23 @@ void *be_mysql_init()
 	user = p_stab("user");
 	pass = p_stab("pass");
 	dbname = p_stab("dbname");
+	
+	opt_flag = get_bool("ssl_enabled", "false");
+	if (!strcmp("true", opt_flag)) {
+		ssl_enabled = true;
+		_log(LOG_DEBUG, "SSL is enabled");
+	}
+	else{
+		ssl_enabled = false;
+		_log(LOG_DEBUG, "SSL is disabled");
+	}
 
+	ssl_key = p_stab("ssl_key");	
+	ssl_cert = p_stab("ssl_cert");
+	ssl_ca = p_stab("ssl_ca");
+	ssl_capath = p_stab("ssl_capath");
+	ssl_cipher = p_stab("ssl_cipher");
+		
 	host = (host) ? host : strdup("localhost");
 	port = (!p) ? 3306 : atoi(p);
 
@@ -103,6 +122,10 @@ void *be_mysql_init()
 	conf->superquery = p_stab("superquery");
 	conf->aclquery = p_stab("aclquery");
 
+	if(ssl_enabled){
+		mysql_ssl_set(conf->mysql, ssl_key, ssl_cert, ssl_ca, ssl_capath, ssl_cipher);
+	}
+	
 	opt_flag = get_bool("mysql_auto_connect", "true");
 	if (!strcmp("true", opt_flag)) {
 		conf->auto_connect = true;
