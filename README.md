@@ -107,7 +107,7 @@ Options therein with a leading ```auth_opt_``` are handed to the plugin. The fol
 | -------------- | ---------- | :---------: | --------------------- |
 | backends       |            |     Y       | comma-separated list of back-ends to load |
 | superusers     |            |             | fnmatch(3) case-sensitive string
-| log_quiet      | false      |             | don't log DEBUG messages |
+| log_quiet      | false      |             | Only used when build with Mosquitto < 1.4: don't log DEBUG messages. With Mosquitto >= 1.4, configure Mosquitto logger (log_type) |
 
 Individual back-ends have their options described in the sections below.
 
