@@ -107,9 +107,27 @@ Options therein with a leading ```auth_opt_``` are handed to the plugin. The fol
 | -------------- | ---------- | :---------: | --------------------- |
 | backends       |            |     Y       | comma-separated list of back-ends to load |
 | superusers     |            |             | fnmatch(3) case-sensitive string
-| log_quiet      | false      |             | Only used when build with Mosquitto < 1.4: don't log DEBUG messages. With Mosquitto >= 1.4, configure Mosquitto logger (log_type) |
+| log_quiet      | false      |             | don't log DEBUG messages |
+| cacheseconds   |                   |             | Deprecated. Alias for acl_cacheseconds
+| acl_cacheseconds  | 300               |             | number of seconds to cache ACL lookups. 0 disables
+| auth_cacheseconds | 0                 |             | number of seconds to cache AUTH lookups. 0 disables
+| acl_cachejitter   | 0                 |             | maximum number of seconds to add/remove to ACL lookups cache TTL. 0 disables
+| auth_cachejitter  | 0                 |             | maximum number of seconds to add/remove to AUTH lookups cache TTL. 0 disables
+=======
 
 Individual back-ends have their options described in the sections below.
+
+There is two cache, one for ACL and another for authentication. By default only ACL cache is enabled.
+
+After a backend responded (postitively or negatively) for an ACL or AUTH lookup, the result will be kept in cache for
+the configured TTL, the same ACL lookup will be served from the cache as long as the TTL is valid.
+The configured TTL is the auth/acl_cacheseconds combined with a random value between -auth/acl_cachejitter and +auth/acl_cachejitter.
+For example, with an acl_cacheseconds of 300 and acl_cachejitter of 10, ACL lookup TTL are distributed between 290 and 310 seconds.
+
+Settings auth/acl_cachejitter to 0 disable any randomization of cache TTL. Settings auth/acl_cacheseconds to 0 disable caching entierly.
+Caching is useful when your backend lookup is expensive. Remember that ACL lookup will be performed for each messages send/received on a topic.
+Jitter is useful to reduce loopups storm that could occur every auth/acl_cacheseconds if lots of clients connected at the same time (for example
+after a server restart, all your clients may reconnect immediatly and all may cause ACL lookups every acl_cacheseconds).
 
 ### MySQL
 
@@ -135,9 +153,6 @@ The following `auth_opt_` options are supported by the mysql back-end:
 | mysql_opt_reconnect | true         |             | enable MYSQL_OPT_RECONNECT option
 | mysql_auto_connect  | true         |             | enable auto_connect function
 | anonusername   | anonymous         |             | username to use for anonymous connections
-| cacheseconds   |                   |             | Deprecated. Alias for acl_cacheseconds
-| acl_cacheseconds  | 300               |             | number of seconds to cache ACL lookups. 0 disables
-| auth_cacheseconds | 0                 |             | number of seconds to cache AUTH lookups. 0 disables
 | ssl_enabled    | false 	     |		   | enable SSL 
 | ssl_key        |   	 	     |		   | path name of client private key file
 | ssl_cert       | 	 	     |		   | path name of client public key certificate file  

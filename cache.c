@@ -97,6 +97,13 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		return;
 	}
 
+	if (ud->acl_cachejitter > 0) {
+		cacheseconds += rand() * (ud->acl_cachejitter * 2) / RAND_MAX - ud->acl_cachejitter;
+		if (cacheseconds <= 0) {
+			return;
+		}
+	}
+
 	if (!clientid || !username || !topic) {
 		return;
 	}
@@ -112,7 +119,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 	if (a) {
 		a->granted = granted;
 
-		if (time(NULL) > (a->seconds + cacheseconds)) {
+		if (time(NULL) > a->expire_time) {
 			_log(LOG_DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
@@ -121,7 +128,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 		a = (struct cacheentry *)malloc(sizeof(struct cacheentry));
 		strcpy(a->hex, hex);
 		a->granted = granted;
-		a->seconds = now;
+		a->expire_time = now + cacheseconds;
 		HASH_ADD_STR(ud->aclcache, hex, a);
 		_log(LOG_DEBUG, " Cached  [%s] for (%s,%s,%d)", hex, clientid, username, access);
 	}
@@ -132,7 +139,7 @@ void acl_cache(const char *clientid, const char *username, const char *topic, in
 	 */
 
 	HASH_ITER(hh, ud->aclcache, a, tmp) {
-		if (now > (a->seconds + ud->acl_cacheseconds)) {
+		if (now > a->expire_time) {
 			_log(LOG_DEBUG, " Cleanup [%s]", a->hex);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
@@ -146,7 +153,6 @@ int acl_cache_q(const char *clientid, const char *username, const char *topic, i
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct cacheentry *a;
 	struct userdata *ud = (struct userdata *)userdata;
-	time_t cacheseconds = ud->acl_cacheseconds;
 	int granted = MOSQ_ERR_UNKNOWN;
 
 	if (ud->acl_cacheseconds <= 0) {
@@ -166,7 +172,7 @@ int acl_cache_q(const char *clientid, const char *username, const char *topic, i
 	if (a) {
 		// printf("---> CACHED! %d\n", a->granted);
 
-		if (time(NULL) > (a->seconds + cacheseconds)) {
+		if (time(NULL) > a->expire_time) {
 			_log(LOG_DEBUG, " Expired [%s] for (%s,%s,%d)", hex, clientid, username, access);
 			HASH_DEL(ud->aclcache, a);
 			free(a);
@@ -194,6 +200,13 @@ void auth_cache(const char *username, const char *password, int granted, void *u
 		return;
 	}
 
+	if (ud->auth_cachejitter > 0) {
+		cacheseconds += rand() * (ud->auth_cachejitter * 2) / RAND_MAX - ud->auth_cachejitter;
+		if (cacheseconds <= 0) {
+			return;
+		}
+	}
+
 	if (!username || !password) {
 		return;
 	}
@@ -209,7 +222,7 @@ void auth_cache(const char *username, const char *password, int granted, void *u
 	if (a) {
 		a->granted = granted;
 
-		if (time(NULL) > (a->seconds + cacheseconds)) {
+		if (time(NULL) > a->expire_time) {
 			_log(LOG_DEBUG, " Expired [%s] for (%s)", hex, username);
 			HASH_DEL(ud->authcache, a);
 			free(a);
@@ -218,7 +231,7 @@ void auth_cache(const char *username, const char *password, int granted, void *u
 		a = (struct cacheentry *)malloc(sizeof(struct cacheentry));
 		strcpy(a->hex, hex);
 		a->granted = granted;
-		a->seconds = now;
+		a->expire_time = now + cacheseconds;
 
 		HASH_ADD_STR(ud->authcache, hex, a);
 		_log(LOG_DEBUG, " Cached  [%s] for (%s)", hex, username);
@@ -230,7 +243,7 @@ void auth_cache(const char *username, const char *password, int granted, void *u
 	 */
 
 	HASH_ITER(hh, ud->authcache, a, tmp) {
-		if (now > (a->seconds + ud->auth_cacheseconds)) {
+		if (now > a->expire_time) {
 			_log(LOG_DEBUG, " Cleanup [%s]", a->hex);
 			HASH_DEL(ud->authcache, a);
 			free(a);
@@ -245,7 +258,6 @@ int auth_cache_q(const char *username, const char *password, void *userdata)
 	char hex[SHA_DIGEST_LENGTH * 2 + 1];
 	struct cacheentry *a;
 	struct userdata *ud = (struct userdata *)userdata;
-	time_t cacheseconds = ud->auth_cacheseconds;
 	int granted = MOSQ_ERR_UNKNOWN;
 
 	if (ud->auth_cacheseconds <= 0) {
@@ -263,7 +275,7 @@ int auth_cache_q(const char *username, const char *password, void *userdata)
 
 	HASH_FIND_STR(ud->authcache, hex, a);
 	if (a) {
-		if (time(NULL) > (a->seconds + cacheseconds)) {
+		if (time(NULL) > a->expire_time) {
 			_log(LOG_DEBUG, " Expired [%s] for (%s)", hex, username);
 			HASH_DEL(ud->authcache, a);
 			free(a);
