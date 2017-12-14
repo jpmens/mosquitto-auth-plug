@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <mosquitto.h>
+#include "backends.h"
 #include "be-psk.h"
 #include "log.h"
 #include "hash.h"
