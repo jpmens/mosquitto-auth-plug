@@ -113,6 +113,7 @@ Options therein with a leading ```auth_opt_``` are handed to the plugin. The fol
 | auth_cacheseconds | 0                 |             | number of seconds to cache AUTH lookups. 0 disables
 | acl_cachejitter   | 0                 |             | maximum number of seconds to add/remove to ACL lookups cache TTL. 0 disables
 | auth_cachejitter  | 0                 |             | maximum number of seconds to add/remove to AUTH lookups cache TTL. 0 disables
+=======
 
 Individual back-ends have their options described in the sections below.
 

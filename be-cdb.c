@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <cdb.h>
 #include <mosquitto.h>
+#include "backends.h"
 #include "be-cdb.h"
 #include "log.h"
 #include "hash.h"
@@ -84,14 +85,14 @@ void be_cdb_destroy(void *handle)
 	}
 }
 
-char *be_cdb_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_cdb_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct cdb_backend *conf = (struct cdb_backend *)handle;
 	char *k, *v = NULL;
 	unsigned klen;
 
 	if (!conf || !username || !*username)
-		return (NULL);
+		return (FALSE);
 
 	k = (char *)username;
 	klen = strlen(k);
@@ -106,7 +107,8 @@ char *be_cdb_getuser(void *handle, const char *username, const char *password, i
 		}
 	}
 
-	return (v);
+	*phash = v;
+	return BACKEND_DEFER;
 }
 
 /*
@@ -153,13 +155,13 @@ int be_cdb_access(void *handle, const char *username, char *topic)
 
 int be_cdb_superuser(void *handle, const char *username)
 {
-	return 0;
+	return BACKEND_DEFER;
 }
 
 int be_cdb_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
 	/* FIXME: implement. Currently TRUE */
 
-	return 1;
+	return BACKEND_ALLOW;
 }
 #endif /* BE_CDB */

@@ -48,7 +48,7 @@ struct jwt_backend {
 
 void *be_jwt_init();
 void be_jwt_destroy(void *conf);
-char *be_jwt_getuser(void *conf, const char *token, const char *password, int *authenticated);
+int be_jwt_getuser(void *conf, const char *token, const char *password, char **phash);
 int be_jwt_superuser(void *conf, const char *token);
 int be_jwt_aclcheck(void *conf, const char *clientid, const char *token, const char *topic, int acc);
 #endif /* BE_JWT */

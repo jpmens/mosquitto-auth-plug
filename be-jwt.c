@@ -102,19 +102,19 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	struct curl_slist *headerlist = NULL;
 	int re;
 	int respCode = 0;
-	int ok = FALSE;
+	int ok = BACKEND_DEFER;
 	char *url;
 	char *data;
 
 	if (token == NULL) {
-		return (FALSE);
+		return BACKEND_DEFER;
 	}
 	clientid = (clientid && *clientid) ? clientid : "";
 	topic = (topic && *topic) ? topic : "";
 
 	if ((curl = curl_easy_init()) == NULL) {
 		_fatal("create curl_easy_handle fails");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	if (conf->hostheader != NULL)
 		headerlist = curl_slist_append(headerlist, conf->hostheader);
@@ -125,7 +125,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	url = (char *)malloc(strlen(conf->ip) + strlen(uri) + 20);
 	if (url == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	//enable the https
 		if (strcmp(conf->with_tls, "true") == 0) {
@@ -144,7 +144,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	char *string_envs = (char *)malloc(MAXPARAMSLEN);
 	if (string_envs == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	memset(string_envs, 0, MAXPARAMSLEN);
 
@@ -158,14 +158,14 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		env_num = get_string_envs(curl, conf->aclcheck_envs, string_envs);
 	}
 	if (env_num == -1) {
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	//----over-- --
 
 		data = (char *)malloc(strlen(string_envs) + strlen(escaped_topic) + strlen(string_acc) + strlen(escaped_clientid) + 30);
 	if (data == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	sprintf(data, "%stopic=%s&acc=%s&clientid=%s",
 		string_envs,
@@ -180,7 +180,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	char *token_header = (char *)malloc(strlen(escaped_token) + 22);
 	if (token_header == NULL) {
 		_fatal("ENOMEM");
-		return (FALSE);
+		return BACKEND_ERROR;
 	}
 	sprintf(token_header, "Authorization: Bearer %s", escaped_token);
 	headerlist = curl_slist_append(headerlist, token_header);
@@ -195,7 +195,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	if (re == CURLE_OK) {
 		re = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &respCode);
 		if (re == CURLE_OK && respCode >= 200 && respCode < 300) {
-			ok = TRUE;
+			ok = BACKEND_ALLOW;
 		} else if (re == CURLE_OK && respCode >= 500) {
 			ok = BACKEND_ERROR;
 		} else {
@@ -289,18 +289,15 @@ void be_jwt_destroy(void *handle)
 	}
 };
 
-char *be_jwt_getuser(void *handle, const char *token, const char *pass, int *authenticated)
+int be_jwt_getuser(void *handle, const char *token, const char *pass, char **phash)
 {
 	struct jwt_backend *conf = (struct jwt_backend *)handle;
 	int re;
 	if (token == NULL) {
-		return NULL;
+		return BACKEND_DEFER;
 	}
 	re = http_post(handle, conf->getuser_uri, NULL, token, NULL, -1, METHOD_GETUSER);
-	if (re == 1) {
-		*authenticated = 1;
-	}
-	return NULL;
+	return re;
 };
 
 int be_jwt_superuser(void *handle, const char *token)

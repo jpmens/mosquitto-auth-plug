@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "backends.h"
 #include "be-sqlite.h"
 #include "hash.h"
 #include "log.h"
@@ -86,33 +87,37 @@ void be_sqlite_destroy(void *handle)
 	}
 }
 
-char *be_sqlite_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_sqlite_getuser(void *handle, const char *username, const char *password, char **phash)
 {
 	struct sqlite_backend *conf = (struct sqlite_backend *)handle;
 	int res, retries;
 	char *value = NULL, *v;
+	int result = BACKEND_DEFER;
 
 	if (!conf)
-		return (NULL);
+		return BACKEND_DEFER;
 
 	for (retries = 5; --retries > 0 && value == NULL;) {
 		if (conf->stmt == NULL)
 			if (!prepareStatement(conf))
-				return (NULL);
+				return BACKEND_ERROR;
 
 		res = sqlite3_reset(conf->stmt);
 		if (res != SQLITE_OK) {
 			_log(MOSQ_LOG_ERR, "statement reset: %s", sqlite3_errmsg(conf->sq));
+			result = BACKEND_ERROR;
 			goto out;
 		}
 		res = sqlite3_clear_bindings(conf->stmt);
 		if (res != SQLITE_OK) {
 			_log(MOSQ_LOG_ERR, "bindings clear: %s", sqlite3_errmsg(conf->sq));
+			result = BACKEND_ERROR;
 			goto out;
 		}
 		res = sqlite3_bind_text(conf->stmt, 1, username, -1, SQLITE_STATIC);
 		if (res != SQLITE_OK) {
 			_log(MOSQ_LOG_ERR, "Can't bind: %s", sqlite3_errmsg(conf->sq));
+			result = BACKEND_ERROR;
 			goto out;
 		}
 		res = sqlite3_step(conf->stmt);
@@ -126,6 +131,7 @@ char *be_sqlite_getuser(void *handle, const char *username, const char *password
 		case SQLITE_ERROR:
 			sqlite3_finalize(conf->stmt);
 			conf->stmt = NULL;
+			result = BACKEND_ERROR;
 			break;
 		default:
 			_log(MOSQ_LOG_ERR, "step: %s", sqlite3_errmsg(conf->sq));
@@ -136,16 +142,17 @@ char *be_sqlite_getuser(void *handle, const char *username, const char *password
 out:
 	sqlite3_reset(conf->stmt);
 
-	return (value);
+	*phash = value;
+	return result;
 }
 
 int be_sqlite_superuser(void *handle, const char *username)
 {
-	return 0;
+	return BACKEND_DEFER;
 }
 
 int be_sqlite_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
-	return 1;
+	return BACKEND_ALLOW;
 }
 #endif /* BE_SQLITE */
