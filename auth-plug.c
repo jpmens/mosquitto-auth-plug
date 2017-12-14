@@ -131,6 +131,8 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	ud->anonusername = strdup("anonymous");
 	ud->acl_cacheseconds = 300;
 	ud->auth_cacheseconds = 0;
+	ud->acl_cachejitter = 0;
+	ud->auth_cachejitter = 0;
 	ud->aclcache = NULL;
 	ud->authcache = NULL;
 
@@ -155,6 +157,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 			ud->acl_cacheseconds = atol(o->value);
 		if (!strcmp(o->key, "auth_cacheseconds"))
 			ud->auth_cacheseconds = atol(o->value);
+		if (!strcmp(o->key, "acl_cachejitter"))
+			ud->acl_cachejitter = atol(o->value);
+		if (!strcmp(o->key, "auth_cacheijitter"))
+			ud->auth_cachejitter = atol(o->value);
 		if (!strcmp(o->key, "log_quiet")) {
 			if(!strcmp(o->value, "false") || !strcmp(o->value, "0")){
 				log_quiet = 0;
