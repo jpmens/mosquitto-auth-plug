@@ -117,17 +117,17 @@ Options therein with a leading ```auth_opt_``` are handed to the plugin. The fol
 
 Individual back-ends have their options described in the sections below.
 
-There is two cache, one for ACL and another for authentication. By default only ACL cache is enabled.
+There are two caches, one for ACL and another for authentication. By default only the ACL cache is enabled.
 
-After a backend responded (postitively or negatively) for an ACL or AUTH lookup, the result will be kept in cache for
+After a backend responds (postitively or negatively) for an ACL or AUTH lookup, the result will be kept in cache for
 the configured TTL, the same ACL lookup will be served from the cache as long as the TTL is valid.
 The configured TTL is the auth/acl_cacheseconds combined with a random value between -auth/acl_cachejitter and +auth/acl_cachejitter.
 For example, with an acl_cacheseconds of 300 and acl_cachejitter of 10, ACL lookup TTL are distributed between 290 and 310 seconds.
 
-Settings auth/acl_cachejitter to 0 disable any randomization of cache TTL. Settings auth/acl_cacheseconds to 0 disable caching entierly.
-Caching is useful when your backend lookup is expensive. Remember that ACL lookup will be performed for each messages send/received on a topic.
-Jitter is useful to reduce loopups storm that could occur every auth/acl_cacheseconds if lots of clients connected at the same time (for example
-after a server restart, all your clients may reconnect immediatly and all may cause ACL lookups every acl_cacheseconds).
+Set auth/acl_cachejitter to 0 disable any randomization of cache TTL. Settings auth/acl_cacheseconds to 0 disable caching entirely.
+Caching is useful when your backend lookup is expensive. Remember that ACL lookup will be performed for each message which is sent/received on a topic.
+Jitter is useful to reduce lookup storms that could occur every auth/acl_cacheseconds if lots of clients connect at the same time (for example
+after a server restart, all your clients may reconnect immediately and all may cause ACL lookups every acl_cacheseconds).
 
 ### MySQL
 
