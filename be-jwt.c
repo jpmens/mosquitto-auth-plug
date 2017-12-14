@@ -177,7 +177,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	_log(LOG_DEBUG, "data=%s", data);
 	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-	char *token_header = (char *)malloc(strlen(escaped_token) + 22);
+	char *token_header = (char *)malloc(strlen(escaped_token) + 23);
 	if (token_header == NULL) {
 		_fatal("ENOMEM");
 		return BACKEND_ERROR;
