@@ -162,8 +162,8 @@ char *be_memcached_getuser(void *handle, const char *username, const char *passw
     if (rc == MEMCACHED_SUCCESS) {
         pwhash = strdup(value);
     }
-    free(value);
 
+    free(value);
     return (pwhash);
 }
 
@@ -205,6 +205,7 @@ int be_memcached_aclcheck(void *handle, const char *clientid, const char *userna
             answer = 1;
     }
 
+    free(value);
     return answer;
 }
 #endif /* BE_MEMCACHED */
