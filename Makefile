@@ -53,6 +53,16 @@ ifneq ($(BACKEND_REDIS),no)
 	OBJS += be-redis.o
 endif
 
+ifneq ($(BACKEND_MEMCACHED),no)
+	BACKENDS += -DBE_MEMCACHED
+	BACKENDSTR += Memcached
+
+	BE_CFLAGS += -I/usr/local/include/libmemcached
+	BE_LDFLAGS += -L/usr/local/lib
+	BE_LDADD += -lmemcached
+	OBJS += be-memcached.o
+endif
+
 ifneq ($(BACKEND_POSTGRES),no)
 	BACKENDS += -DBE_POSTGRES
 	BACKENDSTR += PostgreSQL
@@ -150,6 +160,7 @@ auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
 
 be-redis.o: be-redis.c be-redis.h log.h hash.h envs.h Makefile
+be-memcached.o: be-memcached.c be-memcached.h log.h hash.h envs.h Makefile
 be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
 auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile cache.h
 be-psk.o: be-psk.c be-psk.h Makefile
