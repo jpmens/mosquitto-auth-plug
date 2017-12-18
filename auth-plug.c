@@ -704,6 +704,7 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	// sprintf(username, "%s-%s", hint, identity);
 	username = (char *)identity;
 
+	rc = BACKEND_DENY;
 	for (bep = ud->be_list; bep && *bep; bep++) {
 		struct backend_p *b = *bep;
 		if (!strcmp(database, b->name)) {
