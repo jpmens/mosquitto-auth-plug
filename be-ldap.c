@@ -48,13 +48,26 @@ struct ldap_backend {
 	char *user_uri;
 	char *superquery;
 	char *aclquery;
+	int acldeny;
 };
+
+static char *get_bool(char *option, char *defval)
+{
+	char *flag = p_stab(option);
+	flag = flag ? flag : defval;
+	if (!strcmp("true", flag) || !strcmp("false", flag)) {
+		return flag;
+	}
+	_log(LOG_NOTICE, "WARN: %s is unexpected value -> %s", option, flag);
+	return defval;
+}
 
 void *be_ldap_init()
 {
 	struct ldap_backend *conf;
 	char *uri;
 	char *binddn, *bindpw;
+	char *opt_flag;
 	int rc, opt, len;
 
 	_log(LOG_DEBUG, "}}}} LDAP");
@@ -83,6 +96,7 @@ void *be_ldap_init()
 	conf->user_uri	= NULL;
 	conf->superquery = NULL;
 	conf->aclquery	= NULL;
+	conf->acldeny = 0;
 
 	conf->ldap_uri = strdup(uri);
 	if (ldap_url_parse(uri, &conf->lud) != 0) {
@@ -120,6 +134,9 @@ void *be_ldap_init()
 	// conf->superquery	= p_stab("superquery");
 	// conf->aclquery		= p_stab("aclquery");
 
+	opt_flag = get_bool("ldap_acl_deny", "false");
+	if (!strcmp("true", opt_flag))
+		conf->acldeny = 1;
 
 	return ((void *)conf);
 }
@@ -260,6 +277,8 @@ int be_ldap_superuser(void *handle, const char *username)
 
 int be_ldap_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc)
 {
-	return BACKEND_ALLOW;
+	struct ldap_backend *conf = (struct ldap_backend *)handle;
+
+	return (conf->acldeny ? BACKEND_DENY : BACKEND_ALLOW);
 }
 #endif /* BE_LDAP */
