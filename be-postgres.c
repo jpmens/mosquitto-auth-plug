@@ -389,7 +389,7 @@ int addKeyValue(char **keywords, char **values, char *key, char *value,
 	}
 
 	// Get length of dictionary
-	while (*(keywords + n) != '\0')
+	while (keywords[n] != NULL)
 	{
 		n++;
 	}
@@ -401,7 +401,7 @@ int addKeyValue(char **keywords, char **values, char *key, char *value,
 	}
 
 	// Check for dictionary end
-	if ((keywords[n] != '\0') || (values[n] != '\0')){
+	if ((keywords[n] != NULL) || (values[n] != NULL)){
 		// Dictionary wasn't initialized properly or it is the
 		// dictionaries end. --> Abort
 		return -2;
