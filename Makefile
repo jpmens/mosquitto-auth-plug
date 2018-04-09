@@ -53,7 +53,7 @@ ifneq ($(BACKEND_REDIS),no)
 	OBJS += be-redis.o
 endif
 
-ifneq ($(BACKEND_MEMCACHED),no)
+ifeq ($(BACKEND_MEMCACHED),yes)
 	BACKENDS += -DBE_MEMCACHED
 	BACKENDSTR += Memcached
 
