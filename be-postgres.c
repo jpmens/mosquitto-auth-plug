@@ -183,6 +183,7 @@ int be_pg_getuser(void *handle, const char *username, const char *password, char
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		_log(LOG_DEBUG, "%s\n", PQresultErrorMessage(res));
 		if(PQstatus(conf->conn) == CONNECTION_BAD){
+			_log(LOG_NOTICE, "Noticed a postgres connection loss. Trying to reconnect ...\n");
 			//try to reinitiate the database connection
 			PQreset(conf->conn);
 		}
@@ -240,6 +241,7 @@ int be_pg_superuser(void *handle, const char *username)
 		issuper = BACKEND_ERROR;
 		//try to reset connection if failing because of database connection lost
 		if(PQstatus(conf->conn) == CONNECTION_BAD){
+			_log(LOG_NOTICE, "Noticed a postgres connection loss. Trying to reconnect ...\n");
 			//try to reinitiate the database connection
 			PQreset(conf->conn);
 		}
@@ -310,6 +312,7 @@ int be_pg_aclcheck(void *handle, const char *clientid, const char *username, con
 
 		//try to reset connection if failing because of database connection lost
 		if(PQstatus(conf->conn) == CONNECTION_BAD){
+			_log(LOG_NOTICE, "Noticed a postgres connection loss. Trying to reconnect ...\n");
 			//try to reinitiate the database connection
 			PQreset(conf->conn);
 		}
