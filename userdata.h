@@ -34,6 +34,13 @@
 #ifndef __USERDATA_H
 # define _USERDATA_H
 
+struct cliententry {
+	void *key;
+	char *username;
+	char *clientid;
+	UT_hash_handle hh;
+};
+
 struct userdata {
 	struct backend_p **be_list;
 	char *superusers;		/* Static glob list */
@@ -45,6 +52,7 @@ struct userdata {
 	time_t auth_cacheseconds;		/* number of seconds to cache AUTH lookups */
 	time_t auth_cachejitter;		/* number of seconds to add/remove to cache AUTH lookups TTL */
 	struct cacheentry *authcache;
+	struct cliententry *clients;
 };
 
 #endif
