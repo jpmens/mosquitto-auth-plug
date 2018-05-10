@@ -1,4 +1,3 @@
-
 var mosquittoPBKDF2 = require('./mosquitto_pbkdf2');
 var prompt = require('prompt');
 
@@ -23,9 +22,8 @@ prompt.get(schema, function (err, result) {
             console.log('Passwords do not match!');
         } else {
             mosquittoPBKDF2.createPasswordAsync(result.pwd1, function(newPBKDF2Password){
-                console.log('New PBKDF2 hash: '+newPBKDF2Password);                
+                console.log('New PBKDF2 hash: '+newPBKDF2Password);
             });
         }
     }
 });
-

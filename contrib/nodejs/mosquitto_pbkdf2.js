@@ -10,9 +10,9 @@
  * ================================================================
  */
 
-var pbkdf2 = require('pbkdf2-sha256');
+var pbkdf2 = require('pbkdf2');
 var crypto = require('crypto');
-// All events are managed by this event manager. 
+// All events are managed by this event manager.
 var EventEmitter = require('events').EventEmitter;
 var localEventEmitter = new EventEmitter();
 localEventEmitter.on('passwordCreationStarted', createNewHash);
@@ -75,12 +75,12 @@ function createNewHash(plainPassword, onNewPassword) {
 		var newHash;
 		try {
 			newSalt = crypto.randomBytes(saltLen).toString('base64');
-			newHash = pbkdf2(pw, newSalt, iterations, keyLen).toString('base64');
+			newHash = pbkdf2.pbkdf2Sync(pw, newSalt, iterations, keyLen, algorithm).toString('base64');
 			newPasswordForMySQL = tag + separator + algorithm + separator + iterations + separator + newSalt + separator + newHash;
 		} catch (err) {
 			console.log('Not enough entropy to generate random salt');
 			newSalt = 'NewDefaultSalt16';
-			newHash = pbkdf2(pw, newSalt, iterations, keyLen).toString('base64');
+			newHash = pbkdf2.pbkdf2Sync(pw, newSalt, iterations, keyLen, algorithm).toString('base64');
 			newPasswordForMySQL = tag + separator + algorithm + separator + iterations + separator + newSalt + separator + newHash;
 		} finally {
 			localEventEmitter.emit('newPasswordGenerated', newPasswordForMySQL, onNewPassword);
@@ -110,15 +110,15 @@ function onNewPasswordCreated(pbkdf2Password, onNewPassword) {
 
 /**
  * ================================================================
- * This function start the process of verifying if a given plain 
- * password match a PBKDF2 hash (in mosquitto-auth-plug format), 
+ * This function start the process of verifying if a given plain
+ * password match a PBKDF2 hash (in mosquitto-auth-plug format),
  * and returns the result of such verification.
  * @description Verify if plain password match the supplied PBKDF2
  * hash.
  * @param plainPassword The plain password to be checked.
  * @param pbkdf2Password A PBKDF2 hash (in mosquitto-auth-plug
  * format) to be compared with the plain password supplied.
- * @param onVerificationFinished Callback function to be called 
+ * @param onVerificationFinished Callback function to be called
  * once the verificaation process has finished. It is passed in to
  * the next callback until it is necessary.
  * @author Manuel Domínguez-Dorado <manuel.dominguez@enzinatec.com>
@@ -133,7 +133,7 @@ function verifyCredentials(plainPassword, pbkdf2Password, onVerificationFinished
  * ================================================================
  * This function is a callback that is launched when a
  * 'passwordRecreationStarted' event is triggered. Creates a new
- * PBKDF2 password using the values specified as parameters and 
+ * PBKDF2 password using the values specified as parameters and
  * those oncluded in a previous PBKDF2 hash. It runs asynchronously
  * and uses the format required by mosquitto-auth-plug. On success,
  * it emits a 'passwordVerificationFinished' event to notify other
@@ -143,7 +143,7 @@ function verifyCredentials(plainPassword, pbkdf2Password, onVerificationFinished
  * @param plainPassword The plain password to be checked.
  * @param pbkdf2Password A PBKDF2 hash (in mosquitto-auth-plug
  * format) to be compared with the plain password supplied.
- * @param onVerificationFinished Callback function to be called 
+ * @param onVerificationFinished Callback function to be called
  * once the verificaation process has finished. It is passed in to
  * the next callback until it is necessary.
  * @author Manuel Domínguez-Dorado <manuel.dominguez@enzinatec.com>
@@ -155,11 +155,11 @@ function recreateExistingHash(plainPassword, pbkdf2Password, onVerificationFinis
 		var pw = plainPassword;
 		var fields = [];
 		fields = pbkdf2Password.split(separator);
-		var storedIterations = fields[2];
+		var storedIterations = Number(fields[2]);
 		var storedSalt = fields[3];
 		var recreatedPasswordForMySQL;
 		var recreatedHash;
-		recreatedHash = pbkdf2(pw, storedSalt, storedIterations, keyLen).toString('base64');
+		recreatedHash = pbkdf2.pbkdf2Sync(pw, storedSalt, storedIterations, keyLen, algorithm).toString('base64');
 		recreatedPasswordForMySQL = tag + separator + algorithm + separator + iterations + separator + storedSalt + separator + recreatedHash;
 		if (pbkdf2Password === recreatedPasswordForMySQL) {
 			localEventEmitter.emit('passwordVerificationFinished', true, onVerificationFinished);
