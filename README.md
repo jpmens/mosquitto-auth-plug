@@ -51,7 +51,7 @@ Passwords are obtained from the back-end as a PBKDF2 string (see section
 on Passwords below). Even if you try and store a clear-text password,
 it simply won't work.
 
-The mysql back-end supports expansion of `%c` and `%u` as clientid and username
+The mysql and mongo back-ends support expansion of `%c` and `%u` as clientid and username
 respectively. This allows ACLs in the database to look like this:
 
 ```
