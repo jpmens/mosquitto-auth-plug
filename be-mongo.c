@@ -33,8 +33,8 @@ struct mongo_backend {
 
 const char *be_mongo_get_option(const char *opt_name, const char *dep_opt_name, const char *default_val);
 mongoc_uri_t *be_mongo_new_uri_from_options();
-bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic);
-bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access);
+bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic, const char *clientid, const char *username);
+bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access, const char *clientid, const char *username);
 
 void *be_mongo_init()
 {
@@ -258,9 +258,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 		if (bson_iter_init_find(&iter, doc, handle->user_topics_prop)) {
 			bson_type_t embedded_prop_type = bson_iter_type(&iter);
 			if (embedded_prop_type == BSON_TYPE_ARRAY) {
-				match = be_mongo_check_acl_topics_array(&iter, topic);
+				match = be_mongo_check_acl_topics_array(&iter, topic, clientid, username);
 			} else if (embedded_prop_type == BSON_TYPE_DOCUMENT) {
-				match = be_mongo_check_acl_topics_map(&iter, topic, acc);
+				match = be_mongo_check_acl_topics_map(&iter, topic, acc, clientid, username);
 			}
 		}
 	}
@@ -292,9 +292,9 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 			if (bson_iter_find(&iter, handle->topiclist_topics_prop)) {
 				bson_type_t loc_prop_type = bson_iter_type(&iter);
 				if (loc_prop_type == BSON_TYPE_ARRAY) {
-					match = be_mongo_check_acl_topics_array(&iter, topic);
+					match = be_mongo_check_acl_topics_array(&iter, topic, clientid, username);
 				} else if (loc_prop_type == BSON_TYPE_DOCUMENT) {
-					match = be_mongo_check_acl_topics_map(&iter, topic, acc);
+					match = be_mongo_check_acl_topics_map(&iter, topic, acc, clientid, username);
 				}
 			} else {
 				_log(LOG_NOTICE, "[mongo] ACL check error - no topic list found for user (%s) in collection (%s)", username, handle->topiclist_coll);
@@ -314,7 +314,7 @@ int be_mongo_aclcheck(void *conf, const char *clientid, const char *username, co
 }
 
 // Check an embedded array of the form [ "public/#", "private/myid/#" ]
-bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic)
+bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_topic, const char *clientid, const char *username)
 {
 	bson_iter_t iter;
 	bson_iter_recurse(topics, &iter);
@@ -323,16 +323,23 @@ bool be_mongo_check_acl_topics_array(const bson_iter_t *topics, const char *req_
 		const char *permitted_topic = bson_iter_utf8(&iter, NULL);
 		bool topic_matches = false;
 
-		mosquitto_topic_matches_sub(permitted_topic, req_topic, &topic_matches);
-		if (topic_matches) {
-			return true;
+		char *expanded;
+
+		t_expand(clientid, username, permitted_topic, &expanded);
+		if (expanded && *expanded) {
+			mosquitto_topic_matches_sub(expanded, req_topic, &topic_matches);
+			free(expanded);
+
+			if (topic_matches) {
+				return true;
+			}
 		}
 	}
 	return false;
 }
 
 // Check an embedded document of the form { "article/#": "r", "article/+/comments": "rw", "ballotbox": "w" }
-bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access)
+bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_topic, int req_access, const char *clientid, const char *username)
 {
 	bson_iter_t iter;
 	bson_iter_recurse(topics, &iter);
@@ -343,17 +350,27 @@ bool be_mongo_check_acl_topics_map(const bson_iter_t *topics, const char *req_to
 		const char *permitted_topic = bson_iter_key(&iter);
 		bool topic_matches = false;
 
-		mosquitto_topic_matches_sub(permitted_topic, req_topic, &topic_matches);
-		if (topic_matches) {
-			bson_type_t val_type = bson_iter_type(&iter);
-			if (val_type == BSON_TYPE_UTF8) {
-				const char *permission = bson_iter_utf8(&iter, NULL);
-				if (strcmp(permission, "r") == 0) {
-					granted = (req_access & 1) > 0;
-				} else if (strcmp(permission, "w") == 0) {
-					granted = (req_access & 2) > 0;
-				} else if (strcmp(permission, "rw") == 0) {
-					granted = true;
+		char *expanded;
+
+		t_expand(clientid, username, permitted_topic, &expanded);
+		if (expanded && *expanded) {
+			mosquitto_topic_matches_sub(expanded, req_topic, &topic_matches);
+			free(expanded);
+
+			if (topic_matches) {
+				bson_type_t val_type = bson_iter_type(&iter);
+				if (val_type == BSON_TYPE_UTF8) {
+					// NOTE: can req_access be any other value than 1 or 2?
+					// in that case this may not be correct:
+					// e.g. req_access == 3 (rw) -> granted = (3 & 1 > 0) == true
+					const char *permission = bson_iter_utf8(&iter, NULL);
+					if (strcmp(permission, "r") == 0) {
+						granted = (req_access & 1) > 0;
+					} else if (strcmp(permission, "w") == 0) {
+						granted = (req_access & 2) > 0;
+					} else if (strcmp(permission, "rw") == 0) {
+						granted = true;
+					}
 				}
 			}
 		}

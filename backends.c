@@ -38,9 +38,10 @@
  * new malloc'd string at `res' with those tokens interpolated into it.
  */
 
-void t_expand(const char *clientid, const char *username, char *in, char **res)
+void t_expand(const char *clientid, const char *username, const char *in, char **res)
 {
-	char *s, *work, *wp;
+	const char *s;
+	char *work, *wp;
 	int c_specials = 0, u_specials = 0, len;
 	const char *ct, *ut;
 
