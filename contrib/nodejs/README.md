@@ -4,7 +4,7 @@ mosquitto-pbkdf2
 
 A small module to generate/validate PBKDF2-sha256 passwords as required by mosquitto-auth-plug in node.js 
 
-Usage
+USAGE
 =====
 
 
@@ -25,7 +25,7 @@ verifyCredentials(password, PBKDF2Hash, callback);
 
 See test.js for a more detailed example.
 
-License
+LICENSE
 =======
 
 MIT :-)

@@ -1,7 +1,8 @@
 {
   "name": "mosquitto-pbkdf2",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Small module to generate/verify PBKDF2 as needed by mosquitto-auth-plug",
+  "license": "MIT",
   "main": "mosquitto_pbkdf2.js",
   "scripts": {
     "test": "node test.js",
@@ -22,12 +23,18 @@
       "name": "Daniel Jimenez Jerez",
       "email": "unknown@unknown.com",
       "url": "https://github.com/djimenezjerez"
+    },
+    {
+      "name": "Stefan Seide",
+      "email": "unknown@unknown.com",
+      "url": "https://github.com/sseide"
     }
+
   ],
   "repository": "https://github.com/manolodd/mosquitto-pbkdf2",
   "dependencies": {
     "pbkdf2": "3.0.14",
-    "prompt": "1.0.0"
+    "promptly": "3.0.3"
   },
   "engines": {
     "node": ">= 0.10.0"
