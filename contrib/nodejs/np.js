@@ -1,29 +1,34 @@
 var mosquittoPBKDF2 = require('./mosquitto_pbkdf2');
-var prompt = require('prompt');
+var promptly = require('promptly');
 
-var schema = {
-    properties: {
-        pwd1: {
-            hidden: true,
-            required: true,
-            description: "Enter password"
-        },
-        pwd2: {
-            hidden: true,
-            required: true,
-            description: "Re-enter password"
-        }
+// do not allow empty password here...
+var errFunc = function(err) {
+    // err object not set for some reason
+    console.log('Password must not be empty');
+};
+var notEmptyValidator = function (value) {
+    if (value.length < 1) {
+        throw new Error('Password must not be empty');
     }
+    return value;
 };
 
-prompt.get(schema, function (err, result) {
-    if (!err) {
-        if (result.pwd1 !== result.pwd2) {
+var options = {
+    validator: notEmptyValidator,
+    replace: '*',
+    retry: false,
+    default: ''
+};
+
+promptly.password('Enter password: ', options).then(function(pwd1) {
+    promptly.password('Re-enter password: ', options).then(function(pwd2) {
+        if (pwd1 !== pwd2) {
             console.log('Passwords do not match!');
-        } else {
-            mosquittoPBKDF2.createPasswordAsync(result.pwd1, function(newPBKDF2Password){
+        }
+        else {
+            mosquittoPBKDF2.createPasswordAsync(pwd1, function(newPBKDF2Password){
                 console.log('New PBKDF2 hash: '+newPBKDF2Password);
             });
         }
-    }
-});
+    }, errFunc);
+}, errFunc);
