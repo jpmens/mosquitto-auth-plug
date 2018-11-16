@@ -285,9 +285,10 @@ void *be_http_init()
 	_log(LOG_DEBUG, "getuser_uri=%s", getuser_uri);
 	_log(LOG_DEBUG, "superuser_uri=%s", superuser_uri);
 	_log(LOG_DEBUG, "aclcheck_uri=%s", aclcheck_uri);
+
 	_log(LOG_DEBUG, "getuser_params=%s", conf->getuser_envs);
 	_log(LOG_DEBUG, "superuser_params=%s", conf->superuser_envs);
-	_log(LOG_DEBUG, "aclcheck_paramsi=%s", conf->aclcheck_envs);
+	_log(LOG_DEBUG, "aclcheck_params=%s", conf->aclcheck_envs);
 	_log(LOG_DEBUG, "retry_count=%d", conf->retry_count);
 
 	return (conf);
