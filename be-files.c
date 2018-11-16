@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
+#include <mosquitto_broker.h>
 #include "log.h"
 #include "hash.h"
 #include "backends.h"
@@ -95,10 +96,12 @@ static inline bool dllist_empty(const dllist * thiz)
 	return (thiz->head.next == &thiz->head);
 }
 
+#if !(defined(offsetof))
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #else
 #define offsetof(type, member) ((size_t)&((type*)NULL)->member)
+#endif
 #endif
 
 #define dllist_entry_element(ptr, type, member) \
