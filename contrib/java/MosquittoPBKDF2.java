@@ -57,7 +57,7 @@ public class MosquittoPBKDF2 {
         } catch (NoSuchAlgorithmException e) {
             System.out.println("Need a Java implementation with cryptography.");
         }
-        KeySpec ks = new PBEKeySpec(plainPassword.toCharArray(), encodedSalt, encodedIterations, 198);
+        KeySpec ks = new PBEKeySpec(plainPassword.toCharArray(), encodedSalt, encodedIterations, MosquittoPBKDF2.KEY_LENGTH);
         SecretKey s = null;
         try {
             s = f.generateSecret(ks);
