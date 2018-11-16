@@ -294,6 +294,7 @@ authentication fails.
 | binddn         |                   |     Y       | the DN of an object which may search users |
 | bindpw         |                   |     Y       | its password                               |
 | ldap_uri       |                   |     Y       | an LDAP uri with filter                    |
+| ldap_acl_deny  | false             |     N       | return DENY instead of ALLOW to ACL checks |
 
 Example configuration:
 
@@ -303,8 +304,10 @@ auth_opt_backends ldap
 auth_opt_binddn cn=manager,dc=mens,dc=de
 auth_opt_bindpw s3crit
 auth_opt_ldap_uri ldap://127.0.0.1/ou=Users,dc=mens,dc=de?cn?sub?(&(objectclass=inetOrgPerson)(uid=@))
-
+auth_opt_ldap_acl_deny false
 ```
+
+With the `ldap_acl_deny` we return DENY instead of ALLOW for every ACL check. This makes it possible to chain other backends with ldap backend, and use LDAP for authentification and ie. mysql for ACL checking.
 
 ### CDB
 
