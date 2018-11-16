@@ -37,6 +37,7 @@ struct jwt_backend {
 	char *ip;
 	int port;
 	char *hostheader;
+	char *hostname;
 	char *getuser_uri;
 	char *superuser_uri;
 	char *aclcheck_uri;

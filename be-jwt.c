@@ -103,7 +103,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	int re;
 	int respCode = 0;
 	int ok = BACKEND_DEFER;
-	char *url;
+	char url[BUFSIZ];
 	char *data;
 
 	if (token == NULL) {
@@ -122,17 +122,11 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 
-	url = (char *)malloc(strlen(conf->ip) + strlen(uri) + 20);
-	if (url == NULL) {
-		_fatal("ENOMEM");
-		return BACKEND_ERROR;
-	}
-	//enable the https
-		if (strcmp(conf->with_tls, "true") == 0) {
-		sprintf(url, "https://%s:%d%s", conf->ip, conf->port, uri);
-	} else {
-		sprintf(url, "http://%s:%d%s", conf->ip, conf->port, uri);
-	}
+	snprintf(url, sizeof(url), "%s://%s:%d/%s",
+		strcmp(conf->with_tls, "true") == 0 ? "https" : "http",
+		conf->hostname ? conf->hostname : conf->ip,
+		conf->port,
+		uri);
 
 	char *escaped_token = curl_easy_escape(curl, token, 0);
 	char *escaped_topic = curl_easy_escape(curl, topic, 0);
@@ -251,6 +245,7 @@ void *be_jwt_init()
 	conf->port = p_stab("http_port") == NULL ? 80 : atoi(p_stab("http_port"));
 	if (p_stab("http_hostname") != NULL) {
 		conf->hostheader = (char *)malloc(128);
+		conf->hostname = p_stab("http_hostname");
 		sprintf(conf->hostheader, "Host: %s", p_stab("http_hostname"));
 	} else {
 		conf->hostheader = NULL;
