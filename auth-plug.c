@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <openssl/evp.h>
 #include <mosquitto.h>
+#include <mosquitto_broker.h>
 #include <mosquitto_plugin.h>
 #include <fnmatch.h>
 #include <time.h>
@@ -605,15 +606,24 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 	int granted = MOSQ_DENY_ACL;
 #if MOSQ_AUTH_PLUGIN_VERSION >= 3
 	struct cliententry *e;
-	char *clientid = NULL;
-	char *username = NULL;
+	const char *clientid = NULL;
+	const char *username = NULL;
 	const char *topic = msg->topic;
 	HASH_FIND(hh, ud->clients, &client, sizeof(void *), e);
 	if (e) {
 		clientid = e->clientid;
 		username = e->username;
 	} else {
-		return MOSQ_ERR_PLUGIN_DEFER;
+		bool client_cert = (mosquitto_client_certificate(client) != NULL);
+
+		if (client_cert == true) {
+			clientid = mosquitto_client_id(client);
+			username = mosquitto_client_username(client);
+		}
+
+		if (client_cert == false || clientid == NULL || username == NULL) {
+			return MOSQ_ERR_PLUGIN_DEFER;
+		}
 	}
 #endif
 
