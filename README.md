@@ -811,6 +811,12 @@ Received PUBLISH from mosqpub/90759-tiggr.ww. (d0, q0, r0, m0, 'x', ... (2 bytes
 Received DISCONNECT from mosqpub/90759-tiggr.ww.
 ```
 
+In the case of this MySQL example, we added the clear text of the PSK key to the database:
+
+```
+mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0BEEF', 0);
+```
+
 ## Requirements
 
 * [hiredis], the Minimalistic C client for Redis
