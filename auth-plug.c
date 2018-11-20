@@ -777,7 +777,7 @@ int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *ide
 	} else if (rc == BACKEND_DENY) {
 		psk_found = FALSE;
 	} else {
-		_log(LOG_DEBUG, "psk_key_get(%s, %s) from [%s] finds PSK: %d",
+		_log(LOG_DEBUG, "psk_key_get(hint=%s, identity=%s) from [%s] finds PSK: %d",
 			hint, identity, database,
 			psk_key ? 1 : 0);
 
