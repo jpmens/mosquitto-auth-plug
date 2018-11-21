@@ -50,7 +50,7 @@ struct http_backend {
 
 void *be_http_init();
 void be_http_destroy(void *conf);
-int be_http_getuser(void *conf, const char *username, const char *password, char **phash);
+int be_http_getuser(void *conf, const char *username, const char *password, char **phash, const char *clientid);
 int be_http_superuser(void *conf, const char *username);
 int be_http_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc);
 #endif /* BE_HTTP */

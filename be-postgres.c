@@ -162,7 +162,7 @@ void be_pg_destroy(void *handle)
 	}
 }
 
-int be_pg_getuser(void *handle, const char *username, const char *password, char **phash)
+int be_pg_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid)
 {
 	struct pg_backend *conf = (struct pg_backend *)handle;
 	char *value = NULL, *v = NULL;

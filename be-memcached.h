@@ -31,7 +31,7 @@
 
 void *be_memcached_init();
 void be_memcached_destroy(void *conf);
-int be_memcached_getuser(void *handle, const char *username, const char *password, char **phash);
+int be_memcached_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid);
 int be_memcached_superuser(void *conf, const char *username);
 int be_memcached_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc);
 #endif /* BE_MEMCACHED */

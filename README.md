@@ -163,8 +163,9 @@ The following `auth_opt_` options are supported by the mysql back-end:
 The SQL query for looking up a user's password hash is mandatory. The query
 MUST return a single row only (any other number of rows is considered to be
 "user not found"), and it MUST return a single column only with the PBKDF2
-password hash. A single `'%s'` in the query string is replaced by the
-username attempting to access the broker.
+password hash. Two `'%s'` in the userquery string are replaced by the
+username attempting to access the broker and the clientid respectively. (If the clientid is not
+to be used in the SQL, insert just a single `'%s'` into the _userquery_ parameter.)
 
 ```sql
 SELECT pw FROM users WHERE username = '%s' LIMIT 1
@@ -209,6 +210,7 @@ auth_opt_dbname test
 auth_opt_user jjj
 auth_opt_pass supersecret
 auth_opt_userquery SELECT pw FROM users WHERE username = '%s'
+# auth_opt_userquery SELECT pwhash FROM user WHERE username = '%s' AND clientid = '%s'
 auth_opt_superquery SELECT COUNT(*) FROM users WHERE username = '%s' AND super = 1
 auth_opt_aclquery SELECT topic FROM acls WHERE (username = '%s') AND (rw >= %d)
 auth_opt_anonusername AnonymouS

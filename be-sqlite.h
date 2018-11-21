@@ -38,7 +38,7 @@ struct sqlite_backend {
 
 void *be_sqlite_init();
 void be_sqlite_destroy(void *handle);
-int be_sqlite_getuser(void *handle, const char *username, const char *password, char **phash);
+int be_sqlite_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid);
 int be_sqlite_access(void *handle, const char *username, char *topic);
 int be_sqlite_superuser(void *handle, const char *username);
 int be_sqlite_aclcheck(void *handle, const char *clientid, const char *username, const char *topic, int acc);

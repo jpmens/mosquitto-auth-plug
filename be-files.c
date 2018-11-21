@@ -337,7 +337,7 @@ void be_files_destroy(void *handle)
 int be_files_getuser(void *handle,
 		            const char *username,
 		            const char *password,
-		            char **phash)
+		            char **phash, const char *clientid)
 {
 	be_files *const conf = (be_files *) handle;
 	pwd_entry *entry = find_pwd(conf, username);

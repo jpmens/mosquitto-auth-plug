@@ -114,7 +114,7 @@ mongoc_uri_t *be_mongo_new_uri_from_options() {
 	return uri;
 }
 
-int be_mongo_getuser(void *handle, const char *username, const char *password, char **phash)
+int be_mongo_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid)
 {
 	struct mongo_backend *conf = (struct mongo_backend *)handle;
 	mongoc_collection_t *collection;

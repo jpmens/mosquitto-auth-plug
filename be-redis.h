@@ -31,7 +31,7 @@
 
 void *be_redis_init();
 void be_redis_destroy(void *conf);
-int be_redis_getuser(void *conf, const char *username, const char *password, char **phash);
+int be_redis_getuser(void *conf, const char *username, const char *password, char **phash, const char *clientid);
 int be_redis_superuser(void *conf, const char *username);
 int be_redis_aclcheck(void *conf, const char *clientid, const char *username, const char *topic, int acc);
 #endif /* BE_REDIS */

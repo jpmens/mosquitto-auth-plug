@@ -305,7 +305,7 @@ void be_http_destroy(void *handle)
 	}
 };
 
-int be_http_getuser(void *handle, const char *username, const char *password, char **phash) {
+int be_http_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid) {
 	struct http_backend *conf = (struct http_backend *)handle;
 	int re, try;
 	if (username == NULL) {

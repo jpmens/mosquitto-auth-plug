@@ -284,7 +284,7 @@ void be_jwt_destroy(void *handle)
 	}
 };
 
-int be_jwt_getuser(void *handle, const char *token, const char *pass, char **phash)
+int be_jwt_getuser(void *handle, const char *token, const char *pass, char **phash, const char *clientid)
 {
 	struct jwt_backend *conf = (struct jwt_backend *)handle;
 	int re;

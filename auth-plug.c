@@ -552,7 +552,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 			free(phash);
 			phash = NULL;
 		}
-		rc = b->getuser(b->conf, username, password, &phash);
+		rc = b->getuser(b->conf, username, password, &phash, mosquitto_client_id(client));
 		if (rc == BACKEND_ALLOW) {
 			backend_name = (*bep)->name;
 			authenticated = TRUE;

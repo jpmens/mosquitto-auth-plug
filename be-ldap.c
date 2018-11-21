@@ -186,7 +186,7 @@ static int user_bind(char *connstr, char *dn, const char *password)
 
 }
 
-int be_ldap_getuser(void *handle, const char *username, const char *password, char **phash)
+int be_ldap_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid)
 {
 	struct ldap_backend *conf = (struct ldap_backend *)handle;
 	LDAPMessage *msg,*entry;

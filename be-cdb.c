@@ -85,7 +85,7 @@ void be_cdb_destroy(void *handle)
 	}
 }
 
-int be_cdb_getuser(void *handle, const char *username, const char *password, char **phash)
+int be_cdb_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid)
 {
 	struct cdb_backend *conf = (struct cdb_backend *)handle;
 	char *k, *v = NULL;

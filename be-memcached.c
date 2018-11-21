@@ -136,7 +136,7 @@ void be_memcached_destroy(void *handle)
 	}
 }
 
-int be_memcached_getuser(void *handle, const char *username, const char *password, char **phash)
+int be_memcached_getuser(void *handle, const char *username, const char *password, char **phash, const char *clientid)
 {
 	struct memcached_backend *conf = (struct memcached_backend *)handle;
 
