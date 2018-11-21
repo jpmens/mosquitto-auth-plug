@@ -71,7 +71,7 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 		//_log(LOG_DEBUG, "escaped_key=%s", escaped_key);
 		//_log(LOG_DEBUG, "escaped_val=%s", escaped_envvalue);
 
-		data = (char *)malloc(strlen(escaped_key) + strlen(escaped_val) + 1);
+		data = (char *)malloc(strlen(escaped_key) + strlen(escaped_val) + 4);
 		if ( data == NULL ) {
 			_fatal("ENOMEM");
 			return (-1);
@@ -83,6 +83,8 @@ static int get_string_envs(CURL *curl, const char *required_env, char *querystri
 			strcat(querystring, data);
 		}
 		free(data);
+		curl_free(escaped_key);
+		curl_free(escaped_val);
 	}
 
 	if (escaped_key) free(escaped_key);
