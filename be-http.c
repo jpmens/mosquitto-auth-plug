@@ -132,12 +132,11 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		return BACKEND_ERROR;
 	}
 
-	// enable the https
-	if (strcmp(conf->with_tls, "true") == 0){
-		sprintf(url, "https://%s:%d%s", conf->hostname, conf->port, uri);
-	}else{
-		sprintf(url, "http://%s:%d%s", conf->hostname, conf->port, uri);
-	}
+	snprintf(url, sizeof(url), "%s://%s:%d/%s",
+		strcmp(conf->with_tls, "true") == 0 ? "https" : "http",
+		conf->hostname ? conf->hostname : "127.0.0.1",
+		conf->port,
+		uri);
 
 	char* escaped_username = curl_easy_escape(curl, username, 0);
 	char* escaped_password = curl_easy_escape(curl, password, 0);
