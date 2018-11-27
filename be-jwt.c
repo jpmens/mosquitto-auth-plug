@@ -242,13 +242,13 @@ void *be_jwt_init()
 	}
 	conf = (struct jwt_backend *)malloc(sizeof(struct jwt_backend));
 	conf->ip = ip;
+	conf->hostname = NULL;
+	conf->hostheader = NULL;
 	conf->port = p_stab("http_port") == NULL ? 80 : atoi(p_stab("http_port"));
 	if (p_stab("http_hostname") != NULL) {
 		conf->hostheader = (char *)malloc(128);
 		conf->hostname = p_stab("http_hostname");
 		sprintf(conf->hostheader, "Host: %s", p_stab("http_hostname"));
-	} else {
-		conf->hostheader = NULL;
 	}
 	conf->getuser_uri = getuser_uri;
 	conf->superuser_uri = superuser_uri;
@@ -279,6 +279,8 @@ void be_jwt_destroy(void *handle)
 	struct jwt_backend *conf = (struct jwt_backend *)handle;
 
 	if (conf) {
+		if (conf->hostname) free(conf->hostname);
+		if (conf->hostheader) free(conf->hostheader);
 		curl_global_cleanup();
 		free(conf);
 	}
