@@ -202,7 +202,6 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	curl_easy_cleanup(curl);
 	curl_slist_free_all(headerlist);
-	free(url);
 	free(data);
 	free(string_envs);
 	free(escaped_token);
