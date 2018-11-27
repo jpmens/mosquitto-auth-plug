@@ -122,7 +122,8 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 
-	snprintf(url, sizeof(url), "%s://%s:%d/%s",
+	// uri begins with a slash
+	snprintf(url, sizeof(url), "%s://%s:%d%s",
 		strcmp(conf->with_tls, "true") == 0 ? "https" : "http",
 		conf->hostname ? conf->hostname : conf->ip,
 		conf->port,

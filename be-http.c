@@ -132,7 +132,8 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 		return BACKEND_ERROR;
 	}
 
-	snprintf(url, sizeof(url), "%s://%s:%d/%s",
+	// uri begins with a slash
+	snprintf(url, sizeof(url), "%s://%s:%d%s",
 		strcmp(conf->with_tls, "true") == 0 ? "https" : "http",
 		conf->hostname ? conf->hostname : "127.0.0.1",
 		conf->port,
