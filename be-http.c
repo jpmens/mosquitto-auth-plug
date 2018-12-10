@@ -98,7 +98,7 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 	struct http_backend *conf = (struct http_backend *)handle;
 	CURL *curl;
 	struct curl_slist *headerlist=NULL;
-	int re;
+	int re, urllen = 0;
 	int respCode = 0;
 	int ok = BACKEND_DEFER;
 	char *url;
@@ -126,14 +126,15 @@ static int http_post(void *handle, char *uri, const char *clientid, const char *
 
 	//_log(LOG_NOTICE, "u=%s p=%s t=%s acc=%d", username, password, topic, acc);
 
-	url = (char *)malloc(strlen(conf->hostname) + strlen(uri) + 20);
+	urllen = strlen(conf->hostname) + strlen(uri) + 20;
+	url = (char *)malloc(urllen);
 	if (url == NULL) {
 		_fatal("ENOMEM");
 		return BACKEND_ERROR;
 	}
 
 	// uri begins with a slash
-	snprintf(url, sizeof(url), "%s://%s:%d%s",
+	snprintf(url, urllen, "%s://%s:%d%s",
 		strcmp(conf->with_tls, "true") == 0 ? "https" : "http",
 		conf->hostname ? conf->hostname : "127.0.0.1",
 		conf->port,
