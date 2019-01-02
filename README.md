@@ -47,8 +47,7 @@ plugin as `auth_opt_anonusername` and they
 are handled by a so-called _fallback back-end_ which is the *first* configured
 back-end.
 
-Passwords are obtained from the back-end as PBKDF2 strings (see section
-on Passwords below). If you store a clear-text password or any hash not generated the same way,
+Passwords are obtained from the back-end as PBKDF2 strings (see [Passwords](#passwords) below). If you store a clear-text password or any hash not generated the same way,
 the comparison and the authentication will fail.
 
 The mysql and mongo back-ends support expansion of `%c` and `%u` as clientid and username
@@ -681,87 +680,6 @@ topic dd
 
 The syntax for the ACL file is that as described in `mosquitto.conf(5)`.
 
-## Passwords
-
-A user's password is stored as a [PBKDF2] hash in the back-end. An example
-"password" is a string with five pieces in it, delimited by `$`, inspired by
-[this][1].
-
-```
-PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
---^--- --^--- -^- ------^--------- -------------^------------------
-  |      |     |        |                       |
-  |      |     |        |                       +-- : hashed password
-  |      |     |        +-------------------------- : salt
-  |      |     +----------------------------------- : iterations
-  |      +----------------------------------------- : hash function
-  +------------------------------------------------ : marker
-```
-
-Note that the `salt` by default will be taken as-is (thus it will not be
-base64 decoded before the validation). In case your own implementation uses
-the raw bytes when hashing the password and base64 is only used for display
-purpose, compile this project with the `-DRAW_SALT` flag (you could add this
-in the `config.mk` file to `CFG_CFLAGS`).
-
-## Creating a user
-
-A trivial utility to generate hashes is included as `np`. Copy and paste the
-whole string generated into the respective back-end.
-
-```bash
-$ np
-Enter password:
-Re-enter same password:
-PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
-```
-
-For example, in [Redis][Redis-Ext]:
-
-```
-$ redis-cli
-> SET n2 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
-> QUIT
-```
-
-## Configure Mosquitto
-
-```
-listener 1883
-
-auth_plugin /path/to/auth-plug.so
-auth_opt_redis_host 127.0.0.1
-auth_opt_redis_port 6379
-
-# Usernames with this fnmatch(3) (a.k.a glob(3))  pattern are exempt from the
-# module's ACL checking
-auth_opt_superusers S*
-```
-
-## ACL
-
-In addition to ACL checking which is possibly performed by a back-end,
-there's a more "static" checking which can be configured in `mosquitto.conf`.
-
-Note that if ACLs are being verified by the plugin, this also applies to
-Will topics (_last will and testament_). Failing to correctly set up
-an ACL for these, will cause a broker to silently fail with a 'not
-authorized' message.
-
-Users can be given "superuser" status (i.e. they may access any topic)
-if their username matches the _glob_ specified in `auth_opt_superusers`.
-
-In our example above, any user with a username beginning with a capital `"S"`
-is exempt from ACL-checking.
-
-## PUB/SUB
-
-At this point you ought to be able to connect to [Mosquitto].
-
-```
-mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
-```
-
 ## PSK auth
 
 If [Mosquitto] has been built with PSK support, and _auth-plug_ has been built
@@ -820,14 +738,96 @@ In the case of this MySQL example, we added the clear text of the PSK key to the
 mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0BEEF', 0);
 ```
 
+## Passwords
+
+A user's password is stored as a [PBKDF2] hash in the back-end. An example
+"password" is a string with five pieces in it, delimited by `$`, inspired by
+[this][1].
+
+```
+PBKDF2$sha256$901$8ebTR72Pcmjl3cYq$SCVHHfqn9t6Ev9sE6RMTeF3pawvtGqTu
+--^--- --^--- -^- ------^--------- -------------^------------------
+  |      |     |        |                       |
+  |      |     |        |                       +-- : hashed password
+  |      |     |        +-------------------------- : salt
+  |      |     +----------------------------------- : iterations
+  |      +----------------------------------------- : hash function
+  +------------------------------------------------ : marker
+```
+
+Note that the `salt` by default will be taken as-is (thus it will not be
+base64 decoded before the validation). In case your own implementation uses
+the raw bytes when hashing the password and base64 is only used for display
+purpose, compile this project with the `-DRAW_SALT` flag (you could add this
+in the `config.mk` file to `CFG_CFLAGS`).
+
+## Creating a user
+
+A trivial utility to generate hashes is included as `np`. Copy and paste the
+whole string generated into the respective back-end.
+
+```bash
+$ np
+Enter password:
+Re-enter same password:
+PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
+```
+
+For example, in [Redis][Redis-Ext]:
+
+```
+$ redis-cli
+> SET n2 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
+> QUIT
+```
+
+## Configuring Mosquitto
+
+```
+listener 1883
+
+auth_plugin /path/to/auth-plug.so
+auth_opt_redis_host 127.0.0.1
+auth_opt_redis_port 6379
+
+# Usernames with this fnmatch(3) (a.k.a glob(3))  pattern are exempt from the
+# module's ACL checking
+auth_opt_superusers S*
+```
+
+## ACL
+
+In addition to the ACL checking which might be performed by a back-end,
+there's a more "static" checking which can be configured in `mosquitto.conf`.
+
+Note that if ACLs are being verified by the plugin, this also applies to
+Will topics (_last will and testament_). Failing to correctly set up
+an ACL for these, will cause a broker to silently fail with a 'not
+authorized' message.
+
+Users can be given "superuser" status (i.e. they may access any topic)
+if their username matches the _glob_ specified in `auth_opt_superusers`.
+
+In our example above, any user with a username beginning with a capital `"S"`
+is exempt from ACL-checking.
+
+## PUB/SUB
+
+At this point you ought to be able to connect to [Mosquitto] using, e.g., the Mosquitto client: 
+
+```
+mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
+```
+
 ## Requirements
 
-* [hiredis], the Minimalistic C client for Redis
-* OpenSSL (tested with 1.0.0c, but should work with earlier versions)
 * A [Mosquitto] broker
-* A [Redis][Redis-Ext] server
-* MySQL
-* [TinyCDB](http://www.corpit.ru/mjt/tinycdb.html) by Michael Tokarev (included in `contrib/`).
+* OpenSSL (tested with 1.0.0c, but should work with earlier versions)
+
+Some of the back-ends require a server instance or client libraries. For example:
+* for [redis]: a [Redis][Redis-Ext] server and [hiredis], the Minimalistic C client for Redis
+* for [cdb]: [TinyCDB](http://www.corpit.ru/mjt/tinycdb.html) by Michael Tokarev (included in `contrib/`)
+* for [postgres]: the latest `dev` version of `postgresql-server`
 
 ## Credits
 
@@ -858,6 +858,7 @@ mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0B
 
 ## Possibly related
 
+ * [docker-mosquitto](https://github.com/jllopis/docker-mosquitto) - easy installation of this plugin
  * [mosquitto_pyauth](https://github.com/mbachry/mosquitto_pyauth)
  * [mosquitto-auth-plugin-http](https://github.com/hadleyrich/mosquitto-auth-plugin-http)
  * [lua_auth_plugin](https://github.com/DenkiYagi/lua_auth_plugin)
@@ -866,3 +867,5 @@ mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0B
 
  * [How to make Access Control Lists (ACL) work for Mosquitto MQTT Broker with Auth Plugin](http://my-classes.com/2015/02/05/acl-mosquitto-mqtt-broker-auth-plugin/)
  * [PostgreSQL-based MQTT access control](https://mberka.com/web/postgresql-based-mqtt-access-control)
+ * [Raspberry Pi: How to install MQTT broker and mosquitto auth plugin](http://wei48221.blogspot.com/2017/08/raspberry-pi-how-to-install-mqtt-broker.html)
+ * [Securing MQT connection using Mosquitto Auth Plugin - HTTP API](http://www.yasith.me/2016/04/securing-mqtt-connection-using.html)
