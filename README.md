@@ -1,32 +1,32 @@
 # mosquitto-auth-plug
 
-This is a plugin to authenticate and authorize [Mosquitto] users from one
-of several distinct back-ends:
+This is a plugin to authenticate and authorize [Mosquitto] users from one or more
+of a variety of back-ends:
 
-* [MySQL](#mysql-auth)
-* [PostgreSQL](#postgresql-auth)
-* [CDB](#cdb-auth)
-* [SQLite3 database](#sqlite-auth)
-* [Redis](#redis-auth) key/value store
-* TLS PSK (the `psk` back-end is a bit of a shim which piggy-backs onto the other database back-ends)
-* [LDAP](#ldap-auth)
-* [HTTP](#http-auth) (custom HTTP API)
-* [JWT](#jwt-auth)
-* [MongoDB](#mongodb-auth)
-* [Files](#files-auth)
+* [CDB][cdb]
+* [Files][files]
+* **[HTTP][http]** (custom HTTP API)
+* **[JWT][jwt]**
+* [LDAP][ldap]
+* **[MongoDB][mongo]**
+* **[MySQL][mysql]**
+* **[PostgreSQL][postgres]**
+* [Redis][redis] key/value store
+* [SQLite3 database][sqlite]
+* [TLS PSK][psk] (the `psk` back-end is a bit of a shim which piggy-backs on the other database back-ends)
 
 ## Introduction
 
 This plugin can perform authentication (check username / password)
-and authorization (ACL). Currently not all back-ends have the same capabilities
+and authorization (grant permission to subscribe and/or publish to specific topics via ACL). Currently, not all back-ends have the same capabilities
 (see the section on the back-end you're interested in).
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB | Files |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: | :----:
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      | Y
-| superusers                 |   Y   |       |       |        |      |  3  |    Y     |  Y   |  Y  |  Y      | N
-| acl checking               |   Y   |   1   |   2   |   2    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
+| Capability                 | [cdb] |[files]|[http]|[jwt]|[ldap]| [mongo] |[mysql]|[postgres]|[psk]|[redis]|[sqlite]|
+| -------------------------- | :---: | :----:| :--: | :-: | :-:  | :-----: | :---: | :------: | :-: | :---: | :---:
+| authentication             |   Y   | Y     |  Y   |  Y  |  Y   |  Y      |   Y   |    Y     |  Y  |   Y   |   Y
+| superusers                 |       |       |  Y   |  Y  |      |  Y      |   Y   |    Y     |  3  |       |        |
+| acl checking               |   2   | Y     |  Y   |  Y  |      |  Y      |   Y   |    Y     |  3  |   1   |   2
+| static superusers          |   Y   | Y     |  Y   |  Y  |      |  Y      |   Y   |    Y     |  3  |   Y   |   Y
 
  1. Topic wildcards (+/#) are not supported
  2. Currently not implemented; back-end returns TRUE
@@ -716,7 +716,7 @@ Re-enter same password:
 PBKDF2$sha256$901$Qh18ysY4wstXoHhk$g8d2aDzbz3rYztvJiO3dsV698jzECxSg
 ```
 
-For example, in [Redis]:
+For example, in [Redis][Redis-Ext]:
 
 ```
 $ redis-cli
@@ -762,7 +762,7 @@ At this point you ought to be able to connect to [Mosquitto].
 mosquitto_pub  -t '/location/n2' -m hello -u n2 -P secret
 ```
 
-## PSK
+## PSK auth
 
 If [Mosquitto] has been built with PSK support, and _auth-plug_ has been built
 with `BE_PSK` defined, it supports authenticating PSK connections over TLS, as
@@ -825,7 +825,7 @@ mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0B
 * [hiredis], the Minimalistic C client for Redis
 * OpenSSL (tested with 1.0.0c, but should work with earlier versions)
 * A [Mosquitto] broker
-* A [Redis] server
+* A [Redis][Redis-Ext] server
 * MySQL
 * [TinyCDB](http://www.corpit.ru/mjt/tinycdb.html) by Michael Tokarev (included in `contrib/`).
 
@@ -833,16 +833,28 @@ mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0B
 
 * Uses `base64.[ch]` (and yes, I know OpenSSL has base64 routines, but no thanks). These files are
 >  Copyright (c) 1995, 1996, 1997 Kungliga Tekniska Hgskolan (Royal Institute of Technology, Stockholm, Sweden).
-* Uses [uthash][2] by Troy D. Hanson.
+* Uses [uthash] by Troy D. Hanson.
 
 
  [Mosquitto]: http://mosquitto.org
- [Redis]: http://redis.io
+ [Redis-Ext]: http://redis.io
  [pbkdf2]: http://en.wikipedia.org/wiki/PBKDF2
  [1]: https://exyr.org/2011/hashing-passwords/
  [hiredis]: https://github.com/redis/hiredis
  [uthash]: http://troydhanson.github.io/uthash/
  [MongoDB connection string]: https://docs.mongodb.com/manual/reference/connection-string/
+ 
+ [mysql]: #mysql-auth
+ [postgres]: #postgresql-auth
+ [cdb]: #cdb-auth
+ [sqlite]: #sqlite-auth
+ [redis]: #redis-auth
+ [psk]: #psk-auth
+ [ldap]: #ldap-auth
+ [http]: #http-auth
+ [jwt]: #jwt-auth
+ [mongo]: #mongodb-auth
+ [files]: #files-auth
 
 ## Possibly related
 
@@ -853,3 +865,4 @@ mysql> INSERT INTO user (username, pwhash, superuser) VALUES ('mylistener', 'F0B
 ## Press
 
  * [How to make Access Control Lists (ACL) work for Mosquitto MQTT Broker with Auth Plugin](http://my-classes.com/2015/02/05/acl-mosquitto-mqtt-broker-auth-plugin/)
+ * [PostgreSQL-based MQTT access control](https://mberka.com/web/postgresql-based-mqtt-access-control)
